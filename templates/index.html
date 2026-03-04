@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparativa de Farmacias</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --zarzuelo: #c0392b;
+      --zarzuelo-light: #fdecea;
+      --barris: #1a6fa8;
+      --barris-light: #e8f3fb;
+      --bg: #f7f5f0;
+      --surface: #ffffff;
+      --border: #e0ddd7;
+      --text: #1c1a17;
+      --muted: #7a7670;
+      --accent: #2c3e50;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--accent);
+      color: white;
+      padding: 2.5rem 3rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      right: -60px; top: -60px;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      pointer-events: none;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      right: 80px; bottom: -100px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.03);
+      pointer-events: none;
+    }
+
+    .header-eyebrow {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    header h1 em {
+      font-style: italic;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .header-badges {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.2rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-zarzuelo {
+      background: rgba(192, 57, 43, 0.25);
+      color: #f1948a;
+      border: 1px solid rgba(192, 57, 43, 0.3);
+    }
+
+    .badge-barris {
+      background: rgba(26, 111, 168, 0.25);
+      color: #7fb3d3;
+      border: 1px solid rgba(26, 111, 168, 0.3);
+    }
+
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* MAIN */
+    main {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .card-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* FORM */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .label-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+      position: relative; top: -1px;
+    }
+
+    .dot-z { background: var(--zarzuelo); }
+    .dot-b { background: var(--barris); }
+
+    input[type="text"] {
+      padding: 0.65rem 0.9rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(44,62,80,0.08);
+    }
+
+    /* FILE DROP */
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      background: var(--bg);
+    }
+
+    .file-drop:hover, .file-drop.dragover {
+      border-color: var(--accent);
+      background: rgba(44,62,80,0.03);
+    }
+
+    .file-drop.has-file-z {
+      border-color: var(--zarzuelo);
+      background: var(--zarzuelo-light);
+    }
+
+    .file-drop.has-file-b {
+      border-color: var(--barris);
+      background: var(--barris-light);
+    }
+
+    .file-drop input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .drop-text {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .drop-text strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .drop-filename {
+      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: none;
+    }
+
+    .has-file-z .drop-filename { color: var(--zarzuelo); display: block; }
+    .has-file-b .drop-filename { color: var(--barris); display: block; }
+
+    /* SUBMIT */
+    .form-footer {
+      margin-top: 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .form-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    button[type="submit"] {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button[type="submit"]:hover { background: #3d5166; }
+    button[type="submit"]:active { transform: scale(0.98); }
+    button[type="submit"]:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* LOADING */
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 2.5rem;
+    }
+
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-state p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    /* ERROR */
+    .error-box {
+      display: none;
+      background: #fdecea;
+      border: 1px solid #f5c6c2;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: var(--zarzuelo);
+    }
+
+    /* LEGEND */
+    .legend {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .legend-swatch {
+      width: 24px; height: 10px;
+      border-radius: 3px;
+    }
+
+    .sw-z { background: var(--zarzuelo-light); border: 1px solid var(--zarzuelo); }
+    .sw-b { background: var(--barris-light); border: 1px solid var(--barris); }
+    .sw-both { background: white; border: 1px solid var(--border); }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <p class="header-eyebrow">Sistema de análisis · Stock &amp; Ventas</p>
+  <h1>Comparativa <em>de farmacias</em></h1>
+  <div class="header-badges">
+    <span class="badge badge-zarzuelo"><span class="badge-dot"></span>Farmacia Zarzuelo</span>
+    <span class="badge badge-barris"><span class="badge-dot"></span>Farmacia Barris</span>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <p class="card-title">Subir PDFs para comparar</p>
+
+    <form id="mainForm" action="/comparar" method="POST" enctype="multipart/form-data">
+      <div class="form-grid">
+
+        <!-- Farmacia 1 -->
+        <div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label><span class="label-dot dot-z"></span>Nombre Farmacia 1</label>
+            <input type="text" name="name1" value="Zarzuelo" required>
+          </div>
+          <div class="form-group">
+            <label><span class="label-dot dot-z"></span>PDF Farmacia 1</label>
+            <div class="file-drop" id="drop1">
+              <input type="file" name="pdf1" accept=".pdf" required id="file1">
+              <span class="drop-icon">📄</span>
+              <p class="drop-text"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF</p>
+              <p class="drop-filename" id="name1-file"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Farmacia 2 -->
+        <div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label><span class="label-dot dot-b"></span>Nombre Farmacia 2</label>
+            <input type="text" name="name2" value="Barris" required>
+          </div>
+          <div class="form-group">
+            <label><span class="label-dot dot-b"></span>PDF Farmacia 2</label>
+            <div class="file-drop" id="drop2">
+              <input type="file" name="pdf2" accept=".pdf" required id="file2">
+              <span class="drop-icon">📄</span>
+              <p class="drop-text"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF</p>
+              <p class="drop-filename" id="name2-file"></p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="error-box" id="errorBox"></div>
+
+      <div class="form-footer">
+        <span class="form-hint">Genera un PDF comparativo descargable</span>
+        <button type="submit" id="submitBtn">
+          <span>⚡</span> Generar comparativa
+        </button>
+      </div>
+    </form>
+
+    <div class="loading-state" id="loadingState">
+      <div class="spinner"></div>
+      <p>Procesando PDFs… esto puede tardar unos segundos</p>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch sw-z"></div>Solo en Farmacia 1 (rojo)</div>
+    <div class="legend-item"><div class="legend-swatch sw-b"></div>Solo en Farmacia 2 (azul)</div>
+    <div class="legend-item"><div class="legend-swatch sw-both"></div>En ambas farmacias</div>
+  </div>
+</main>
+
+<footer>
+  Comparativa de Stock · Farmacia Zarzuelo &amp; Farmacia Barris
+</footer>
+
+<script>
+  function setupFileDrop(inputId, dropId, filenameId, colorClass) {
+    const input = document.getElementById(inputId);
+    const drop  = document.getElementById(dropId);
+    const fname = document.getElementById(filenameId);
+
+    input.addEventListener('change', () => {
+      if (input.files.length) {
+        drop.className = 'file-drop ' + colorClass;
+        fname.textContent = '✓ ' + input.files[0].name;
+      }
+    });
+
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      drop.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) {
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        input.files = dt.files;
+        drop.className = 'file-drop ' + colorClass;
+        fname.textContent = '✓ ' + e.dataTransfer.files[0].name;
+      }
+    });
+  }
+
+  setupFileDrop('file1', 'drop1', 'name1-file', 'has-file-z');
+  setupFileDrop('file2', 'drop2', 'name2-file', 'has-file-b');
+
+  document.getElementById('mainForm').addEventListener('submit', function(e) {
+    const f1 = document.getElementById('file1').files.length;
+    const f2 = document.getElementById('file2').files.length;
+    const err = document.getElementById('errorBox');
+
+    if (!f1 || !f2) {
+      e.preventDefault();
+      err.style.display = 'block';
+      err.textContent = 'Por favor selecciona los dos PDFs antes de continuar.';
+      return;
+    }
+
+    err.style.display = 'none';
+    document.getElementById('submitBtn').disabled = true;
+    document.querySelector('.card form').style.display = 'none';
+    document.getElementById('loadingState').style.display = 'block';
+  });
+</script>
+
+</body>
+</html>
