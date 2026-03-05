@@ -437,10 +437,10 @@ def compare_products(products1, products2,
             description = p2['description']
         elif code in sit1:
             status = 'only1'
-            description = sit1[code]['description']
+            description = sit1[code].get('description', f'Producto {code}')
         elif code in sit2:
             status = 'only2'
-            description = sit2[code]['description']
+            description = sit2[code].get('description', f'Producto {code}')
         else:
             continue  # no deberia ocurrir
 
