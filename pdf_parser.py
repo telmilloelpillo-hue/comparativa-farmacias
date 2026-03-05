@@ -216,80 +216,75 @@ def extract_products(pdf_path):
 
 def extract_situation(pdf_path):
     """
-    Extrae productos del "Informe de situación".
+    Extrae productos del "Informe de situación" usando posiciones X fijas.
+
+    Estructura del informe (x fijas detectadas empíricamente):
+      Alm.      : x ≈ 29
+      Código    : x ≈ 58
+      Descripción: x ≈ 109–420
+      Stock     : x ≈ 420–440  ← entero en esta franja
+      PVP       : x ≈ 450–480  ← decimal con coma (12,95)
+      Caducidad : x ≈ 540–570  ← patrón MM/YYYY
+
     Devuelve dict: { código: { 'stock': int, 'caducidad': str } }
     """
+    # Rangos X para cada columna
+    STOCK_X0, STOCK_X1    = 410, 445
+    CADUCIDAD_X0, CADUCIDAD_X1 = 535, 600
+
     products = {}
 
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            table = page.extract_table(
-                table_settings={
-                    'vertical_strategy':   'lines_strict',
-                    'horizontal_strategy': 'lines_strict',
-                }
-            )
-
-            if not table:
-                table = _situation_from_words(page)
-
-            if not table:
+            words = page.extract_words(x_tolerance=4, y_tolerance=4)
+            if not words:
                 continue
 
-            for row in table:
-                if not row:
-                    continue
-                for i, cell in enumerate(row):
-                    cell_str = str(cell or '').strip()
-                    if re.match(r'^[0-9A-Z]{6}$', cell_str):
-                        code = cell_str
-                        stock     = 0
-                        caducidad = ''
+            # Agrupar palabras por fila (Y)
+            rows_dict = defaultdict(list)
+            for w in words:
+                y = round(w['top'] / 2) * 2
+                rows_dict[y].append(w)
 
-                        # Stock = último entero antes del primer PVP (ej: 12,95)
-                        # La descripción puede contener números como "200 ML" o "30 CAPS"
-                        # por eso NO tomamos el primer entero, sino el último antes del PVP
-                        last_int = None
-                        for j in range(i + 2, len(row)):
-                            val = str(row[j] or '').strip()
-                            if re.match(r'^\d+[,\.]\d+$', val):  # PVP encontrado
-                                if last_int is not None:
-                                    stock = last_int
-                                break
-                            if re.match(r'^\d+$', val):
-                                last_int = int(val)
+            for y in sorted(rows_dict.keys()):
+                row = sorted(rows_dict[y], key=lambda w: w['x0'])
+                texts = [w['text'] for w in row]
 
-                        for j in range(i + 1, len(row)):
-                            val = str(row[j] or '').strip()
-                            if re.match(r'^\d{2}/\d{4}$', val):
-                                caducidad = val
-                                break
-
-                        products[code] = {
-                            'stock':     stock,
-                            'caducidad': caducidad,
-                        }
+                # Buscar código de 6 caracteres alfanumérico
+                code = None
+                for w in row:
+                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80:
+                        code = w['text']
                         break
+
+                if not code:
+                    continue
+
+                # Stock: entero en la franja x ≈ 410–445
+                stock = 0
+                for w in row:
+                    if STOCK_X0 <= w['x0'] <= STOCK_X1:
+                        if re.match(r'^\d+$', w['text']):
+                            stock = int(w['text'])
+                            break
+
+                # Caducidad: patrón MM/YYYY en x ≈ 535–600
+                caducidad = ''
+                for w in row:
+                    if CADUCIDAD_X0 <= w['x0'] <= CADUCIDAD_X1:
+                        if re.match(r'^\d{2}/\d{4}$', w['text']):
+                            caducidad = w['text']
+                            break
+
+                products[code] = {
+                    'stock':     stock,
+                    'caducidad': caducidad,
+                }
 
     return products
 
 
-def _situation_from_words(page):
-    words = page.extract_words(x_tolerance=4, y_tolerance=4)
-    if not words:
-        return []
 
-    rows_dict = defaultdict(list)
-    for w in words:
-        y = round(w['top'] / 2) * 2
-        rows_dict[y].append(w)
-
-    table = []
-    for y in sorted(rows_dict.keys()):
-        row_words = sorted(rows_dict[y], key=lambda w: w['x0'])
-        table.append([w['text'] for w in row_words])
-
-    return table
 
 
 # ─── Comparación ──────────────────────────────────────────────────────────────
