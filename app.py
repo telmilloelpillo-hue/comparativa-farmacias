@@ -149,6 +149,9 @@ def too_large(e):
 # ── Generación del PDF ─────────────────────────────────────────────────────────
 def generate_pdf(results, output_path, name1, name2, count1, count2,
                  lab_name='', has_situation1=False, has_situation2=False):
+
+    from datetime import datetime as _dt
+
     doc = SimpleDocTemplate(
         output_path,
         pagesize=landscape(A4),
@@ -159,19 +162,19 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     title_style = ParagraphStyle('title',
         fontName='Helvetica-Bold', fontSize=11, leading=13,
         textColor=colors.white)
-
     sub_style = ParagraphStyle('sub',
         fontName='Helvetica', fontSize=7.5, leading=9,
         textColor=colors.HexColor('#a0aab4'))
-
     cell_style = ParagraphStyle('cell',
         fontName='Helvetica', fontSize=7, leading=8.5,
         textColor=colors.HexColor('#1c1a17'))
 
+    show_s365 = has_situation1 or has_situation2
+
     yr_cur  = results[0]['year_current'] if results else 2026
     yr_prev = results[0]['year_prev']    if results else 2025
 
-    today   = datetime.today().strftime('%d/%m/%Y')
+    today   = _dt.today().strftime('%d/%m/%Y')
     n_both  = sum(1 for r in results if r['status'] == 'both')
     n_only1 = sum(1 for r in results if r['status'] == 'only1')
     n_only2 = sum(1 for r in results if r['status'] == 'only2')
@@ -179,42 +182,62 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     n_par2  = sum(1 for r in results if r.get('parado2'))
 
     lab_part   = f"  ·  {lab_name}" if lab_name else ""
-    title_text = f"Comparativa de Stock{lab_part}  ·  {name1} vs {name2}  ·  Generado el {today}"
-
+    title_text = f"Comparativa de Stock{lab_part}  ·  {name1} vs {name2}  ·  {today}"
     stats_parts = [
-        f"{name1}: {count1} prod.",
-        f"{name2}: {count2} prod.",
-        f"Total: {len(results)}",
-        f"Ambas: {n_both}",
-        f"Solo {name1}: {n_only1}",
-        f"Solo {name2}: {n_only2}",
+        f"{name1}: {count1} prod.", f"{name2}: {count2} prod.",
+        f"Total: {len(results)}", f"Ambas: {n_both}",
+        f"Solo {name1}: {n_only1}", f"Solo {name2}: {n_only2}",
     ]
-    if has_situation1:
-        stats_parts.append(f"Parados {name1}: {n_par1}")
-    if has_situation2:
-        stats_parts.append(f"Parados {name2}: {n_par2}")
+    if has_situation1: stats_parts.append(f"Parados {name1}: {n_par1}")
+    if has_situation2: stats_parts.append(f"Parados {name2}: {n_par2}")
     stats_text = "  ·  ".join(stats_parts)
 
-    def hdr(text, size=7.5, bold=True, align=1):
+    def hdr(text, size=7.5, bold=True):
         fn = 'Helvetica-Bold' if bold else 'Helvetica'
         return Paragraph(
             f'<font name="{fn}" size="{size}">{text}</font>',
-            ParagraphStyle('_h', leading=size + 2,
-                           alignment=align, textColor=colors.white))
+            ParagraphStyle('_h', leading=size+2, alignment=1, textColor=colors.white))
 
-    row_farmacia = [
-        '', '',
-        hdr(f'● {name1}', size=8), '', '', '',
-        hdr(f'● {name2}', size=8), '', '', '',
-    ]
+    # ── Cabeceras ─────────────────────────────────────────────────────────────
+    # Con S.365: 12 cols por farmacia (6 cada una); sin S.365: 10 cols (5 c/u)
+    n_ph = 6 if show_s365 else 5   # columnas por farmacia (sin código/desc)
 
-    row_cols = [
-        hdr('Código', size=7), hdr('Descripción', size=7),
-        hdr('Stock', size=7), hdr('S.min', size=7),
-        hdr(f'V.{yr_cur}', size=7), hdr(f'V.{yr_prev}', size=7),
-        hdr('Stock', size=7), hdr('S.min', size=7),
-        hdr(f'V.{yr_cur}', size=7), hdr(f'V.{yr_prev}', size=7),
-    ]
+    if show_s365:
+        row_farmacia = ['', '',
+            hdr(f'● {name1}', size=8), '', '', '', '', '',
+            hdr(f'● {name2}', size=8), '', '', '', '', '']
+        row_cols = [
+            hdr('Cód', size=7), hdr('Descripción', size=7),
+            hdr('Stock',size=7), hdr('S.min',size=7),
+            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7), hdr('S.365',size=7),
+            hdr('Stock',size=7), hdr('S.min',size=7),
+            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7), hdr('S.365',size=7),
+        ]
+        span1_end = 6; span2_start = 7; span2_end = 11
+        divider_col = 6   # línea divisoria entre farmacias
+        col_widths = [
+            1.6*cm, 5.8*cm,
+            1.2*cm, 1.2*cm, 1.3*cm, 1.3*cm, 1.2*cm,
+            1.2*cm, 1.2*cm, 1.3*cm, 1.3*cm, 1.2*cm,
+        ]
+    else:
+        row_farmacia = ['', '',
+            hdr(f'● {name1}', size=8), '', '', '',
+            hdr(f'● {name2}', size=8), '', '', '']
+        row_cols = [
+            hdr('Código',size=7), hdr('Descripción',size=7),
+            hdr('Stock',size=7), hdr('S.min',size=7),
+            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7),
+            hdr('Stock',size=7), hdr('S.min',size=7),
+            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7),
+        ]
+        span1_end = 5; span2_start = 6; span2_end = 9
+        divider_col = 5
+        col_widths = [
+            1.8*cm, 6.2*cm,
+            1.3*cm, 1.3*cm, 1.4*cm, 1.4*cm,
+            1.3*cm, 1.3*cm, 1.4*cm, 1.4*cm,
+        ]
 
     def _fmt(v):
         if v in ('—', '⚠️') or v is None: return str(v) if v else '⚠️'
@@ -226,136 +249,337 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     for r in results:
         idx = len(data)
         desc_text = r['description']
-        if len(desc_text) > 52:
-            desc_text = desc_text[:50] + '…'
+        max_desc = 48 if show_s365 else 52
+        if len(desc_text) > max_desc:
+            desc_text = desc_text[:max_desc-2] + '…'
         warn_flag = ' ⚠' if r['needs_review'] else ''
         desc_para = Paragraph(desc_text + warn_flag, cell_style)
 
-        data.append([
-            r['code'], desc_para,
-            _fmt(r['stock1']),  _fmt(r['smin1']),
-            _fmt(r['total1']),  _fmt(r['total1_prev']),
-            _fmt(r['stock2']),  _fmt(r['smin2']),
-            _fmt(r['total2']),  _fmt(r['total2_prev']),
-        ])
-        row_meta.append((
-            idx,
-            r['status'],
-            r['needs_review'],
-            r.get('parado1', False),
-            r.get('parado2', False),
-        ))
-
-    col_widths = [
-        1.8*cm, 6.2*cm,
-        1.3*cm, 1.3*cm, 1.4*cm, 1.4*cm,
-        1.3*cm, 1.3*cm, 1.4*cm, 1.4*cm,
-    ]
+        if show_s365:
+            row = [
+                r['code'], desc_para,
+                _fmt(r['stock1']), _fmt(r['smin1']),
+                _fmt(r['total1']), _fmt(r['total1_prev']), _fmt(r.get('s365_1','—')),
+                _fmt(r['stock2']), _fmt(r['smin2']),
+                _fmt(r['total2']), _fmt(r['total2_prev']), _fmt(r.get('s365_2','—')),
+            ]
+        else:
+            row = [
+                r['code'], desc_para,
+                _fmt(r['stock1']), _fmt(r['smin1']),
+                _fmt(r['total1']), _fmt(r['total1_prev']),
+                _fmt(r['stock2']), _fmt(r['smin2']),
+                _fmt(r['total2']), _fmt(r['total2_prev']),
+            ]
+        data.append(row)
+        row_meta.append((idx, r['status'], r['needs_review'],
+                         r.get('parado1',False), r.get('parado2',False)))
 
     table = Table(data, colWidths=col_widths, repeatRows=2)
 
     ts = TableStyle([
-        ('BACKGROUND',    (0, 0), (1, 0),  C_HEADER),
-        ('BACKGROUND',    (2, 0), (5, 0),  C_Z_HDR),
-        ('BACKGROUND',    (6, 0), (9, 0),  C_B_HDR),
-        ('SPAN',          (2, 0), (5, 0)),
-        ('SPAN',          (6, 0), (9, 0)),
-        ('ALIGN',         (0, 0), (-1, 0), 'CENTER'),
-        ('VALIGN',        (0, 0), (-1, 0), 'MIDDLE'),
-        ('ROWHEIGHT',     (0, 0), (0, 0),  16),
-        ('BACKGROUND',    (0, 1), (1, 1),  C_HEADER),
-        ('BACKGROUND',    (2, 1), (5, 1),  C_Z_HDR),
-        ('BACKGROUND',    (6, 1), (9, 1),  C_B_HDR),
-        ('ALIGN',         (0, 1), (-1, 1), 'CENTER'),
-        ('VALIGN',        (0, 1), (-1, 1), 'MIDDLE'),
-        ('ROWHEIGHT',     (0, 1), (0, 1),  13),
-        ('FONTNAME',      (0, 2), (-1, -1), 'Helvetica'),
-        ('FONTSIZE',      (0, 2), (-1, -1), 7),
-        ('ALIGN',         (0, 2), (-1, -1), 'CENTER'),
-        ('ALIGN',         (1, 2), (1, -1),  'LEFT'),
-        ('VALIGN',        (0, 2), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('LEFTPADDING',   (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
-        ('GRID',          (0, 0), (-1, -1), 0.25, C_GRID),
-        ('LINEBELOW',     (0, 0), (-1, 0),  0.8,  colors.white),
-        ('LINEBELOW',     (0, 1), (-1, 1),  0.8,  colors.white),
-        ('LINEAFTER',     (1, 0), (1, -1),  0.8, C_GRID),
-        ('LINEAFTER',     (5, 0), (5, -1),  1.2, C_HEADER),
+        ('BACKGROUND',    (0,0), (1,0),           C_HEADER),
+        ('BACKGROUND',    (2,0), (span1_end,0),   C_Z_HDR),
+        ('BACKGROUND',    (span2_start,0), (-1,0),C_B_HDR),
+        ('SPAN',          (2,0), (span1_end,0)),
+        ('SPAN',          (span2_start,0), (-1,0)),
+        ('ALIGN',         (0,0), (-1,0),  'CENTER'),
+        ('VALIGN',        (0,0), (-1,0),  'MIDDLE'),
+        ('ROWHEIGHT',     (0,0), (0,0),   16),
+        ('BACKGROUND',    (0,1), (1,1),           C_HEADER),
+        ('BACKGROUND',    (2,1), (span1_end,1),   C_Z_HDR),
+        ('BACKGROUND',    (span2_start,1), (-1,1),C_B_HDR),
+        ('ALIGN',         (0,1), (-1,1),  'CENTER'),
+        ('VALIGN',        (0,1), (-1,1),  'MIDDLE'),
+        ('ROWHEIGHT',     (0,1), (0,1),   13),
+        ('FONTNAME',      (0,2), (-1,-1), 'Helvetica'),
+        ('FONTSIZE',      (0,2), (-1,-1), 7),
+        ('ALIGN',         (0,2), (-1,-1), 'CENTER'),
+        ('ALIGN',         (1,2), (1,-1),  'LEFT'),
+        ('VALIGN',        (0,2), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING',    (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LEFTPADDING',   (0,0), (-1,-1), 4),
+        ('RIGHTPADDING',  (0,0), (-1,-1), 4),
+        ('GRID',          (0,0), (-1,-1), 0.25, C_GRID),
+        ('LINEBELOW',     (0,0), (-1,0),  0.8,  colors.white),
+        ('LINEBELOW',     (0,1), (-1,1),  0.8,  colors.white),
+        ('LINEAFTER',     (1,0), (1,-1),  0.8,  C_GRID),
+        ('LINEAFTER',     (divider_col,0),(divider_col,-1), 1.2, C_HEADER),
     ])
 
     for idx, status, needs_review, parado1, parado2 in row_meta:
         if needs_review:
-            ts.add('BACKGROUND', (0, idx), (-1, idx), C_WARNING)
+            ts.add('BACKGROUND', (0,idx), (-1,idx), C_WARNING)
         elif status == 'only1':
-            ts.add('BACKGROUND', (0, idx), (-1, idx), C_Z_BG)
-            ts.add('TEXTCOLOR',  (6, idx), (9, idx),  colors.HexColor('#bbbbbb'))
+            ts.add('BACKGROUND', (0,idx), (-1,idx), C_Z_BG)
+            ts.add('TEXTCOLOR',  (span2_start,idx), (-1,idx), colors.HexColor('#bbbbbb'))
         elif status == 'only2':
-            ts.add('BACKGROUND', (0, idx), (-1, idx), C_B_BG)
-            ts.add('TEXTCOLOR',  (2, idx), (5, idx),  colors.HexColor('#bbbbbb'))
+            ts.add('BACKGROUND', (0,idx), (-1,idx), C_B_BG)
+            ts.add('TEXTCOLOR',  (2,idx), (span1_end,idx), colors.HexColor('#bbbbbb'))
         elif idx % 2 == 0:
-            ts.add('BACKGROUND', (0, idx), (-1, idx), C_ROW_ALT)
+            ts.add('BACKGROUND', (0,idx), (-1,idx), C_ROW_ALT)
 
-        # Stock parado: celda de stock en naranja (tiene prioridad visual)
         if parado1:
-            ts.add('BACKGROUND', (2, idx), (2, idx), C_PARADO)
+            ts.add('BACKGROUND', (2,idx), (2,idx), C_PARADO)
+            if show_s365:  # también colorear celda S.365
+                ts.add('BACKGROUND', (span1_end,idx), (span1_end,idx), C_PARADO)
         if parado2:
-            ts.add('BACKGROUND', (6, idx), (6, idx), C_PARADO)
+            ts.add('BACKGROUND', (span2_start,idx), (span2_start,idx), C_PARADO)
+            if show_s365:
+                ts.add('BACKGROUND', (-1,idx), (-1,idx), C_PARADO)
 
     table.setStyle(ts)
 
-    # ── Leyenda de colores ────────────────────────────────────────────────────
+    # ── Leyenda ───────────────────────────────────────────────────────────────
     legend_items = [
-        (C_Z_BG,    C_Z_HDR, f'Solo en {name1}'),
-        (C_B_BG,    C_B_HDR, f'Solo en {name2}'),
-        (C_WARNING, colors.HexColor('#b8860b'), 'Revisar'),
+        (C_Z_BG,    C_Z_HDR,                    f'Solo en {name1}'),
+        (C_B_BG,    C_B_HDR,                    f'Solo en {name2}'),
+        (C_WARNING, colors.HexColor('#b8860b'),  'Revisar'),
     ]
-    if has_situation1 or has_situation2:
-        legend_items.append((C_PARADO, colors.HexColor('#e65100'), 'Stock parado (+365 días sin venta)'))
+    if show_s365:
+        legend_items.append((C_PARADO, colors.HexColor('#e65100'),
+                             'Stock parado (+365d) · celda naranja = S.365'))
 
     legend_data = [[]]
     for bg, fg, label in legend_items:
-        swatch = Table([['']], colWidths=[0.35*cm], rowHeights=[0.25*cm])
-        swatch.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (0,0), bg),
-            ('BOX',        (0,0), (0,0), 0.5, fg),
-        ]))
-        legend_data[0].append(swatch)
-        lbl_para = Paragraph(
+        sw = Table([['']], colWidths=[0.35*cm], rowHeights=[0.25*cm])
+        sw.setStyle(TableStyle([('BACKGROUND',(0,0),(0,0),bg),('BOX',(0,0),(0,0),0.5,fg)]))
+        legend_data[0].append(sw)
+        legend_data[0].append(Paragraph(
             f'<font name="Helvetica" size="6.5" color="#555555">{label}</font>',
-            ParagraphStyle('leg', leading=8)
-        )
-        legend_data[0].append(lbl_para)
+            ParagraphStyle('leg', leading=8)))
 
-    n_cols = len(legend_items) * 2
-    legend_col_widths = []
+    legend_cw = []
     for _ in legend_items:
-        legend_col_widths += [0.45*cm, 3.5*cm]
-    legend_table = Table(legend_data, colWidths=legend_col_widths)
+        legend_cw += [0.45*cm, 3.8*cm]
+    legend_table = Table(legend_data, colWidths=legend_cw)
     legend_table.setStyle(TableStyle([
-        ('VALIGN',  (0,0), (-1,-1), 'MIDDLE'),
-        ('LEFTPADDING',  (0,0), (-1,-1), 2),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+        ('LEFTPADDING',(0,0),(-1,-1),2),
+        ('RIGHTPADDING',(0,0),(-1,-1),4),
     ]))
 
     # ── Título ────────────────────────────────────────────────────────────────
-    title_data = [[
-        Paragraph(title_text, title_style),
-        Paragraph(stats_text, sub_style),
-    ]]
+    title_data = [[Paragraph(title_text, title_style), Paragraph(stats_text, sub_style)]]
     title_table = Table(title_data, colWidths=[9.5*cm, 18.3*cm])
     title_table.setStyle(TableStyle([
-        ('BACKGROUND',    (0, 0), (-1, 0), C_HEADER),
-        ('VALIGN',        (0, 0), (-1, 0), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, 0), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-        ('LEFTPADDING',   (0, 0), (-1, 0), 10),
-        ('RIGHTPADDING',  (0, 0), (-1, 0), 10),
+        ('BACKGROUND',(0,0),(-1,0),C_HEADER),
+        ('VALIGN',(0,0),(-1,0),'MIDDLE'),
+        ('TOPPADDING',(0,0),(-1,0),8),('BOTTOMPADDING',(0,0),(-1,0),8),
+        ('LEFTPADDING',(0,0),(-1,0),10),('RIGHTPADDING',(0,0),(-1,0),10),
     ]))
 
-    elements = [title_table, Spacer(1, 0.2*cm), legend_table, Spacer(1, 0.15*cm), table]
+    elements = [title_table, Spacer(1,0.2*cm), legend_table, Spacer(1,0.15*cm), table]
+
+    # ── Tabla logística (solo si hay informe de situación) ────────────────────
+    if show_s365:
+        log_elements = _build_logistics_table(
+            results, name1, name2, has_situation1, has_situation2, cell_style)
+        if log_elements:
+            elements += log_elements
+
     doc.build(elements)
+
+
+def _parse_caducidad(cad_str):
+    """Convierte 'MM/YYYY' a datetime. Devuelve None si no puede."""
+    if not cad_str:
+        return None
+    try:
+        from datetime import datetime as _dt
+        return _dt.strptime(cad_str, '%m/%Y')
+    except ValueError:
+        return None
+
+
+def _build_logistics_table(results, name1, name2,
+                            has_sit1, has_sit2, cell_style):
+    """
+    Genera la sección de análisis logístico al final del PDF.
+    Detecta 3 casos:
+      - Traspaso: parado en A (stock>0) y stock=0 en B
+      - Exceso compartido: parado en ambas
+      - Caducidad próxima: parado + caduca en ≤6 meses
+    """
+    from datetime import datetime as _dt
+    from reportlab.platypus import KeepTogether
+
+    now = _dt.today()
+    C_LOG_HDR   = colors.HexColor('#2c3e50')
+    C_TRASPASO  = colors.HexColor('#e8f5e9')   # verde suave
+    C_EXCESO    = colors.HexColor('#fff3e0')   # naranja suave
+    C_CADUCIDAD = colors.HexColor('#fce4ec')   # rojo suave
+
+    casos_traspaso  = []
+    casos_exceso    = []
+    casos_caducidad = []
+
+    for r in results:
+        p1 = r.get('parado1', False)
+        p2 = r.get('parado2', False)
+        s1 = r.get('stock1', '—')
+        s2 = r.get('stock2', '—')
+        cad1 = _parse_caducidad(r.get('caducidad1',''))
+        cad2 = _parse_caducidad(r.get('caducidad2',''))
+
+        # ── Caducidad próxima (≤6 meses) ─────────────────────────────────
+        for parado, cad, farm, stock_val, s365_key in [
+            (p1, cad1, name1, s1, 's365_1'),
+            (p2, cad2, name2, s2, 's365_2'),
+        ]:
+            if parado and cad:
+                diff_months = (cad.year - now.year)*12 + (cad.month - now.month)
+                if 0 <= diff_months <= 6:
+                    casos_caducidad.append({
+                        'code': r['code'], 'description': r['description'],
+                        'farmacia': farm, 'stock': r.get(s365_key, stock_val),
+                        'caducidad': cad.strftime('%m/%Y'),
+                        'meses': diff_months,
+                    })
+
+        # ── Exceso compartido ─────────────────────────────────────────────
+        if p1 and p2:
+            casos_exceso.append({
+                'code': r['code'], 'description': r['description'],
+                'stock1': r.get('s365_1', s1), 'stock2': r.get('s365_2', s2),
+            })
+            continue  # no añadir también a traspaso
+
+        # ── Traspaso ──────────────────────────────────────────────────────
+        def _stock_zero(v):
+            try:
+                return int(str(v)) == 0
+            except (ValueError, TypeError):
+                return v == '—'
+
+        if p1 and _stock_zero(s2):
+            casos_traspaso.append({
+                'code': r['code'], 'description': r['description'],
+                'origen': name1, 'destino': name2,
+                'stock_origen': r.get('s365_1', s1),
+            })
+        elif p2 and _stock_zero(s1):
+            casos_traspaso.append({
+                'code': r['code'], 'description': r['description'],
+                'origen': name2, 'destino': name1,
+                'stock_origen': r.get('s365_2', s2),
+            })
+
+    if not casos_traspaso and not casos_exceso and not casos_caducidad:
+        return []
+
+    def log_hdr(text, color=colors.white, size=7, bg=None):
+        return Paragraph(
+            f'<font name="Helvetica-Bold" size="{size}" color="{"white" if color==colors.white else "#1c1a17"}">{text}</font>',
+            ParagraphStyle('lh', leading=size+2, alignment=1))
+
+    def log_cell(text, size=6.5):
+        return Paragraph(
+            f'<font name="Helvetica" size="{size}">{text}</font>',
+            ParagraphStyle('lc', leading=size+1.5, textColor=colors.HexColor('#1c1a17')))
+
+    section_title_style = ParagraphStyle('sct',
+        fontName='Helvetica-Bold', fontSize=9, leading=11,
+        textColor=colors.HexColor('#2c3e50'), spaceBefore=12, spaceAfter=4)
+
+    elements = [
+        Spacer(1, 0.5*cm),
+        Paragraph('Análisis logístico · Stock parado', section_title_style),
+    ]
+
+    # ── Tabla Traspaso ────────────────────────────────────────────────────────
+    if casos_traspaso:
+        elements.append(Paragraph(
+            '<font name="Helvetica-Bold" size="7.5" color="#2e7d32">🔄 Posible traspaso — stock parado en origen, sin stock en destino</font>',
+            ParagraphStyle('sh', leading=10, spaceBefore=6, spaceAfter=2)))
+
+        t_data = [[
+            log_hdr('Código'), log_hdr('Descripción'),
+            log_hdr('Origen'), log_hdr('Destino'), log_hdr('Stock parado'),
+        ]]
+        for c in casos_traspaso:
+            t_data.append([
+                log_cell(c['code']), log_cell(c['description']),
+                log_cell(c['origen']), log_cell(c['destino']),
+                log_cell(str(c['stock_origen'])),
+            ])
+        t = Table(t_data, colWidths=[1.8*cm, 9*cm, 3*cm, 3*cm, 2.5*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND',(0,0),(-1,0), colors.HexColor('#2e7d32')),
+            ('FONTSIZE',(0,0),(-1,0), 7),
+            ('ALIGN',(0,0),(-1,-1),'CENTER'),
+            ('ALIGN',(1,1),(1,-1),'LEFT'),
+            ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+            ('ROWBACKGROUNDS',(0,1),(-1,-1),[C_TRASPASO, colors.white]),
+            ('GRID',(0,0),(-1,-1), 0.25, colors.HexColor('#c8e6c9')),
+            ('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),
+            ('LEFTPADDING',(0,0),(-1,-1),4),('RIGHTPADDING',(0,0),(-1,-1),4),
+        ]))
+        elements.append(t)
+
+    # ── Tabla Exceso compartido ───────────────────────────────────────────────
+    if casos_exceso:
+        elements.append(Paragraph(
+            f'<font name="Helvetica-Bold" size="7.5" color="#e65100">⚠️ Exceso compartido — stock parado en ambas farmacias</font>',
+            ParagraphStyle('sh', leading=10, spaceBefore=8, spaceAfter=2)))
+
+        e_data = [[
+            log_hdr('Código'), log_hdr('Descripción'),
+            log_hdr(f'S.365 {name1}'), log_hdr(f'S.365 {name2}'),
+        ]]
+        for c in casos_exceso:
+            e_data.append([
+                log_cell(c['code']), log_cell(c['description']),
+                log_cell(str(c['stock1'])), log_cell(str(c['stock2'])),
+            ])
+        t = Table(e_data, colWidths=[1.8*cm, 10*cm, 3*cm, 3*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND',(0,0),(-1,0), colors.HexColor('#e65100')),
+            ('FONTSIZE',(0,0),(-1,0), 7),
+            ('ALIGN',(0,0),(-1,-1),'CENTER'),
+            ('ALIGN',(1,1),(1,-1),'LEFT'),
+            ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+            ('ROWBACKGROUNDS',(0,1),(-1,-1),[C_EXCESO, colors.white]),
+            ('GRID',(0,0),(-1,-1), 0.25, colors.HexColor('#ffe0b2')),
+            ('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),
+            ('LEFTPADDING',(0,0),(-1,-1),4),('RIGHTPADDING',(0,0),(-1,-1),4),
+        ]))
+        elements.append(t)
+
+    # ── Tabla Caducidad próxima ───────────────────────────────────────────────
+    if casos_caducidad:
+        casos_caducidad.sort(key=lambda x: x['meses'])
+        elements.append(Paragraph(
+            '<font name="Helvetica-Bold" size="7.5" color="#c62828">🕐 Caducidad próxima — stock parado con caducidad en ≤6 meses</font>',
+            ParagraphStyle('sh', leading=10, spaceBefore=8, spaceAfter=2)))
+
+        c_data = [[
+            log_hdr('Código'), log_hdr('Descripción'),
+            log_hdr('Farmacia'), log_hdr('S.365'), log_hdr('Caduca'), log_hdr('Meses restantes'),
+        ]]
+        for c in casos_caducidad:
+            c_data.append([
+                log_cell(c['code']), log_cell(c['description']),
+                log_cell(c['farmacia']), log_cell(str(c['stock'])),
+                log_cell(c['caducidad']),
+                log_cell(str(c['meses']) if c['meses'] > 0 else '¡Este mes!'),
+            ])
+        t = Table(c_data, colWidths=[1.8*cm, 8.5*cm, 2.5*cm, 1.8*cm, 2*cm, 2.7*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND',(0,0),(-1,0), colors.HexColor('#c62828')),
+            ('FONTSIZE',(0,0),(-1,0), 7),
+            ('ALIGN',(0,0),(-1,-1),'CENTER'),
+            ('ALIGN',(1,1),(1,-1),'LEFT'),
+            ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+            ('ROWBACKGROUNDS',(0,1),(-1,-1),[C_CADUCIDAD, colors.white]),
+            ('GRID',(0,0),(-1,-1), 0.25, colors.HexColor('#f8bbd0')),
+            ('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),
+            ('LEFTPADDING',(0,0),(-1,-1),4),('RIGHTPADDING',(0,0),(-1,-1),4),
+        ]))
+        elements.append(t)
+
+    return elements
 
 
 if __name__ == '__main__':

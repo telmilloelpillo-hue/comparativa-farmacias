@@ -390,11 +390,12 @@ def compare_products(products1, products2,
     Si se proporcionan, cada resultado incluirá 'parado1' y 'parado2'
     indicando si ese producto aparece en el informe de situación (stock parado).
     """
-    all_codes = sorted(set(products1.keys()) | set(products2.keys()))
-    results = []
-
     sit1 = situation1 or {}
     sit2 = situation2 or {}
+
+    # Incluir también códigos solo en informe de situación (sin ventas registradas)
+    all_codes = set(products1.keys()) | set(products2.keys()) | set(sit1.keys()) | set(sit2.keys())
+    results = []
 
     # ── Determinar el año de referencia global ─────────────────────────────────
     all_yr_cur = [p.get('year_current', 0)
@@ -431,9 +432,17 @@ def compare_products(products1, products2,
         elif p1:
             status = 'only1'
             description = p1['description']
-        else:
+        elif p2:
             status = 'only2'
             description = p2['description']
+        elif code in sit1:
+            status = 'only1'
+            description = sit1[code]['description']
+        elif code in sit2:
+            status = 'only2'
+            description = sit2[code]['description']
+        else:
+            continue  # no deberia ocurrir
 
         warnings = []
         if p1 and p1.get('warnings'):
@@ -444,6 +453,11 @@ def compare_products(products1, products2,
         t1_cur, t1_prev = _totals(p1)
         t2_cur, t2_prev = _totals(p2)
 
+        # ── S.365: stock del informe ──────────────────────────────────────
+        # Se muestra si el producto aparece en el informe, con o sin ventas
+        s365_1 = sit1[code]['stock'] if code in sit1 else '—'
+        s365_2 = sit2[code]['stock'] if code in sit2 else '—'
+
         results.append({
             'code':         code,
             'description':  description,
@@ -452,21 +466,26 @@ def compare_products(products1, products2,
             'smin1':        _val(p1, 'smin'),
             'total1':       t1_cur,
             'total1_prev':  t1_prev,
+            's365_1':       s365_1,
             'stock2':       _val(p2, 'stock'),
             'smin2':        _val(p2, 'smin'),
             'total2':       t2_cur,
             'total2_prev':  t2_prev,
+            's365_2':       s365_2,
             'year_current': global_yr_cur,
             'year_prev':    global_yr_prev,
             'warnings':     warnings,
             'needs_review': bool(warnings),
             # ── Stock parado (informe de situación) ──────────────────────
+            # True si el código aparece en el informe (con o sin ventas)
             'parado1':      code in sit1,
             'parado2':      code in sit2,
             'caducidad1':   sit1.get(code, {}).get('caducidad', ''),
             'caducidad2':   sit2.get(code, {}).get('caducidad', ''),
         })
 
+    # Ordenar alfabéticamente por descripción
+    results.sort(key=lambda r: r["description"].upper())
     return results
 
 
