@@ -246,11 +246,18 @@ def extract_situation(pdf_path):
                         stock     = 0
                         caducidad = ''
 
+                        # Stock = último entero antes del primer PVP (ej: 12,95)
+                        # La descripción puede contener números como "200 ML" o "30 CAPS"
+                        # por eso NO tomamos el primer entero, sino el último antes del PVP
+                        last_int = None
                         for j in range(i + 2, len(row)):
                             val = str(row[j] or '').strip()
-                            if re.match(r'^\d+$', val):
-                                stock = int(val)
+                            if re.match(r'^\d+[,\.]\d+$', val):  # PVP encontrado
+                                if last_int is not None:
+                                    stock = last_int
                                 break
+                            if re.match(r'^\d+$', val):
+                                last_int = int(val)
 
                         for j in range(i + 1, len(row)):
                             val = str(row[j] or '').strip()
