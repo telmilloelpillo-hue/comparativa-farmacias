@@ -84,9 +84,7 @@ def comparar():
 
         # Validar que son del mismo laboratorio
         if lab1 != lab2:
-            return (f'Los PDFs son de laboratorios distintos: '
-                    f'"{lab1}" y "{lab2}". '
-                    f'Sube dos PDFs del mismo laboratorio.'), 400
+            return render_template('error.html', lab1=lab1, lab2=lab2), 400
 
         products1 = extract_products(tmp1.name)
         products2 = extract_products(tmp2.name)
