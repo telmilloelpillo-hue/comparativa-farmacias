@@ -1,25 +1,5 @@
 """
 pdf_parser.py — Parser universal para PDFs de estadísticas de ventas (Farmacias)
-
-Estructura del PDF de ventas (coordenadas X fijas para todos los laboratorios):
-  Código       : x = 29–55
-  Descripción  : x = 70–315  (puede contaminar zona de columnas numéricas)
-  Stock        : x = 216.00  (1 dígito; 2 dígitos: 216.00, 220.25)
-  S.min        : x = 244.35  (misma lógica)
-  Año          : x = 255.13–267.87  (limpio solo en Patrón A)
-  Total        : x = 318.05  (no usado: calculamos suma mensual)
-  Meses Ene–Dic: x = [357.74, 397.42, 437.11, 476.79, 516.48, 556.16,
-                       595.85, 635.53, 675.22, 714.90, 754.59, 794.27]
-
-Patrones detectados:
-  Patrón A: descripción cabe en x<255 → año legible en columna año
-  Patrón B: descripción larga contamina zona año → año inferido por contexto
-
-En ambos patrones los meses son SIEMPRE fiables.
-Stock/smin: extraídos por posición exacta (±1px).
-
-Adicionalmente, extract_situation() parsea el "Informe de situación"
-(stock parado, sin movimiento en 365 días).
 """
 
 import pdfplumber
@@ -28,30 +8,25 @@ from collections import defaultdict
 
 # ─── Posiciones X fijas del layout ────────────────────────────────────────────
 
-STOCK_X  = 216.00   # x0 del primer dígito de Stock
-SMIN_X   = 244.35   # x0 del primer dígito de S.min
-YEAR_X0  = 255.13   # inicio del año en columna Año (solo Patrón A)
-YEAR_X1  = 267.87   # fin del año
-TOTAL_X  = 318.05   # Total del PDF (no usamos, calculamos por suma)
+STOCK_X  = 216.00
+SMIN_X   = 244.35
+YEAR_X0  = 255.13
+YEAR_X1  = 267.87
+TOTAL_X  = 318.05
 
 MONTH_X = [357.74, 397.42, 437.11, 476.79, 516.48, 556.16,
            595.85, 635.53, 675.22, 714.90, 754.59, 794.27]
 
-DIGIT_W  = 4.25     # ancho de un dígito (monospace aprox.)
-X_TOL    = 1.2      # tolerancia en px para leer una columna exacta
+DIGIT_W  = 4.25
+X_TOL    = 1.2
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _digits_at(row_chars, x_anchor, max_digits=3, tol=X_TOL):
-    """
-    Extrae un número entero right-aligned cuyo último dígito está en x_anchor.
-    Busca hasta max_digits dígitos hacia la izquierda desde x_anchor.
-    Tolerancia generosa para el dígito ancla, ajustada para los anteriores.
-    """
     result = []
     for d in range(max_digits):
-        target = x_anchor - d * DIGIT_W          # busca hacia la izquierda
+        target = x_anchor - d * DIGIT_W
         tight  = tol if d == 0 else 0.5
         found  = [c for c in row_chars
                   if c['text'].isdigit()
@@ -61,12 +36,11 @@ def _digits_at(row_chars, x_anchor, max_digits=3, tol=X_TOL):
             result.append(best['text'])
         else:
             break
-    result.reverse()                              # reconstruir orden izq→der
+    result.reverse()
     return int(''.join(result)) if result else 0
 
 
 def _month_value(row_chars, target_x, window=6):
-    """Suma dígitos en la zona de una columna mensual."""
     digits = [c['text'] for c in sorted(row_chars, key=lambda c: c['x0'])
               if c['text'].isdigit()
               and (target_x - window) <= c['x0'] <= (target_x + 2)]
@@ -74,10 +48,6 @@ def _month_value(row_chars, target_x, window=6):
 
 
 def _year_from_row(row_chars):
-    """
-    Detecta el año (20xx) en la zona de columna Año (x=255–270).
-    Devuelve int o None si la zona está contaminada/ausente.
-    """
     zone = sorted(
         [c for c in row_chars if YEAR_X0 - 1 <= c['x0'] <= YEAR_X1 + 1],
         key=lambda c: c['x0']
@@ -88,10 +58,6 @@ def _year_from_row(row_chars):
 
 
 def _detect_years_global(all_rows):
-    """
-    Detecta los dos años usados en el documento mirando todas las filas.
-    Filtra falsos positivos (debe estar en zona YEAR_X0 ± 2).
-    """
     years = set()
     for row_chars in all_rows:
         yr = _year_from_row(row_chars)
@@ -99,27 +65,18 @@ def _detect_years_global(all_rows):
             years.add(yr)
     years = sorted(years)
     if len(years) >= 2:
-        return years[-1], years[-2]   # actual, anterior
+        return years[-1], years[-2]
     elif len(years) == 1:
         return years[0], years[0] - 1
     return 2026, 2025
 
 
 def _extract_description(row_chars):
-    """
-    Extrae la descripción del producto desde x=70 hasta donde termina texto
-    antes de la zona numérica. Filtra dígitos sueltos de columnas adyacentes.
-    """
     desc_chars = [c for c in sorted(row_chars, key=lambda c: c['x0'])
                   if 70 <= c['x0'] < 315]
-
-    # Construir texto carácter a carácter; parar cuando empiecen columnas puras
     tokens = []
     for c in desc_chars:
-        # Ignorar dígitos que caen exactamente en posiciones de columna
         if c['text'].isdigit():
-            # Columnas numéricas: stock y smin son right-aligned (hasta 3 dígitos)
-            # → filtrar desde x_anchor-2*DIGIT_W hasta x_anchor
             stock_xs = [STOCK_X + d * DIGIT_W for d in range(-2, 3)]
             smin_xs  = [SMIN_X  + d * DIGIT_W for d in range(-2, 3)]
             year_xs  = [YEAR_X0 + d * DIGIT_W for d in range(4)]
@@ -132,9 +89,7 @@ def _extract_description(row_chars):
             if is_col:
                 continue
         tokens.append(c['text'])
-
     desc = ''.join(tokens).strip()
-    # Limpiar espacios múltiples
     desc = re.sub(r'  +', ' ', desc)
     return desc
 
@@ -142,18 +97,11 @@ def _extract_description(row_chars):
 # ─── Extracción principal ──────────────────────────────────────────────────────
 
 def extract_products(pdf_path):
-    """
-    Extrae todos los productos de un PDF de estadísticas de ventas.
-    Devuelve dict: { código: {...} }
-    """
     products = {}
 
     with pdfplumber.open(pdf_path) as pdf:
-
-        # Paso 1: recopilar todas las filas de todas las páginas para
-        #         detectar años de forma global y robusta
         all_rows = []
-        pages_rows = []   # lista de dicts {y: [chars]}
+        pages_rows = []
 
         for page in pdf.pages:
             rows = defaultdict(list)
@@ -165,14 +113,12 @@ def extract_products(pdf_path):
 
         year_current, year_prev = _detect_years_global(all_rows)
 
-        # Paso 2: recorrer cada página
         for page_idx, rows in enumerate(pages_rows):
             sorted_ys = sorted(rows.keys())
 
             for i, y in enumerate(sorted_ys):
                 row = rows[y]
 
-                # ── Detectar código de producto ───────────────────────────
                 code_chars = sorted(
                     [c for c in row if 20 <= c['x0'] < 60],
                     key=lambda c: c['x0']
@@ -182,53 +128,39 @@ def extract_products(pdf_path):
                 if not re.match(r'^[0-9A-Z]{6}$', code):
                     continue
 
-                # ── Patrón A vs B (detectar año en columna Año) ──────────
                 yr_this_row = _year_from_row(row)
                 is_pattern_a = (yr_this_row is not None)
 
-                # ── Descripción ───────────────────────────────────────────
                 description = _extract_description(row)
 
-                # Si descripción está vacía, buscar en fila anterior
                 if not description and i > 0:
                     prev_row = rows[sorted_ys[i - 1]]
                     prev_min_x = min((c['x0'] for c in prev_row), default=999)
                     if 60 <= prev_min_x < 100:
                         description = _extract_description(prev_row)
 
-                # ── Stock y S.min ─────────────────────────────────────────
                 stock = _digits_at(row, STOCK_X)
                 smin  = _digits_at(row, SMIN_X)
 
-                # Validación: si la zona tiene letras cerca de stock/smin,
-                # puede haber contaminación → marcar para revisión
                 zone_letters = [c for c in row
                                 if 200 <= c['x0'] < 255
                                 and c['text'].isalpha()]
                 stock_warning = len(zone_letters) > 0
 
-                # ── Meses y total (SIEMPRE fiables) ──────────────────────
                 months_current = [0] * 12
                 months_prev    = [0] * 12
 
-                # Patrón B: los datos de year_current están en la fila del código
-                # Patrón A: la fila del código YA tiene el año → leer aquí directamente
                 if not is_pattern_a:
-                    # Patrón B: meses 2026 en esta misma fila
                     months_current = [_month_value(row, mx) for mx in MONTH_X]
                 elif yr_this_row == year_current:
-                    # Patrón A: código y datos del año actual en la misma fila
                     months_current = [_month_value(row, mx) for mx in MONTH_X]
                     stock = _digits_at(row, STOCK_X)
                     smin  = _digits_at(row, SMIN_X)
 
-                # Buscar filas de años adicionales (principalmente year_prev,
-                # pero también year_current si no se leyó arriba)
                 for j in range(i + 1, min(i + 8, len(sorted_ys))):
                     y2 = sorted_ys[j]
                     row2 = rows[y2]
 
-                    # Parar si encontramos otro código de producto
                     code2_chars = [c for c in row2 if 20 <= c['x0'] < 60]
                     code2 = ''.join(c['text'] for c in
                                     sorted(code2_chars, key=lambda c: c['x0'])).strip()
@@ -242,7 +174,6 @@ def extract_products(pdf_path):
                     months2 = [_month_value(row2, mx) for mx in MONTH_X]
 
                     if yr2 == year_current and yr_this_row != year_current:
-                        # Solo si no lo leímos ya de la fila del código
                         months_current = months2
                         stock = _digits_at(row2, STOCK_X)
                         smin  = _digits_at(row2, SMIN_X)
@@ -252,16 +183,12 @@ def extract_products(pdf_path):
                 total_current = sum(months_current)
                 total_prev    = sum(months_prev)
 
-                # ── Validación cruzada ────────────────────────────────────
                 warnings = []
-
                 if stock_warning:
                     warnings.append('stock_smin_zona_contaminada')
-
-                # Detectar valores de stock imposiblemente altos
                 if stock > 9999:
                     warnings.append(f'stock_sospechoso:{stock}')
-                    stock = None   # forzar revisión humana
+                    stock = None
                 if smin > 9999:
                     warnings.append(f'smin_sospechoso:{smin}')
                     smin = None
@@ -289,19 +216,13 @@ def extract_products(pdf_path):
 
 def extract_situation(pdf_path):
     """
-    Extrae productos del "Informe de situación" (stock parado, sin movimiento
-    en los últimos 365 días).
-
-    Estructura del PDF:
-      Alm. | Código | Descripción | Stock | PVP | Importe PVP | Caducidad | ...
-
+    Extrae productos del "Informe de situación".
     Devuelve dict: { código: { 'stock': int, 'caducidad': str } }
     """
     products = {}
 
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            # extract_table() maneja bien la estructura tabular limpia
             table = page.extract_table(
                 table_settings={
                     'vertical_strategy':   'lines_strict',
@@ -309,7 +230,6 @@ def extract_situation(pdf_path):
                 }
             )
 
-            # Fallback: si no detecta líneas, usar extract_words agrupados por Y
             if not table:
                 table = _situation_from_words(page)
 
@@ -319,7 +239,6 @@ def extract_situation(pdf_path):
             for row in table:
                 if not row:
                     continue
-                # Buscar código de 6 chars alfanumérico en cualquier celda
                 for i, cell in enumerate(row):
                     cell_str = str(cell or '').strip()
                     if re.match(r'^[0-9A-Z]{6}$', cell_str):
@@ -327,43 +246,28 @@ def extract_situation(pdf_path):
                         stock     = 0
                         caducidad = ''
 
-                        # Stock: primer entero puro DESPUÉS del código
-                        # (saltamos descripción que puede tener números)
-                        # Estrategia: buscar hacia la derecha, tomar el primer
-                        # valor que sea entero puro (no decimal con coma)
-                        for j in range(i + 2, len(row)):   # i+2 para saltar desc
+                        for j in range(i + 2, len(row)):
                             val = str(row[j] or '').strip()
                             if re.match(r'^\d+$', val):
                                 stock = int(val)
                                 break
 
-                        # Caducidad: patrón MM/YYYY
                         for j in range(i + 1, len(row)):
                             val = str(row[j] or '').strip()
                             if re.match(r'^\d{2}/\d{4}$', val):
                                 caducidad = val
                                 break
 
-                        # Descripción: celda inmediatamente después del código
-                        description = ''
-                        if i + 1 < len(row):
-                            description = str(row[i + 1] or '').strip()
-
                         products[code] = {
-                            'stock':       stock,
-                            'caducidad':   caducidad,
-                            'description': description,
+                            'stock':     stock,
+                            'caducidad': caducidad,
                         }
-                        break  # siguiente fila
+                        break
 
     return products
 
 
 def _situation_from_words(page):
-    """
-    Fallback para extract_situation cuando extract_table no detecta líneas.
-    Agrupa palabras por Y y construye filas pseudo-tabla.
-    """
     words = page.extract_words(x_tolerance=4, y_tolerance=4)
     if not words:
         return []
@@ -388,22 +292,16 @@ def compare_products(products1, products2,
                      situation1=None, situation2=None):
     """
     Compara productos de dos farmacias.
-    Gestiona correctamente PDFs con años distintos:
-    - Si una farmacia solo tiene datos de year_prev (PDF del año anterior),
-      su columna year_current aparece como '—' en el comparativo.
-
-    situation1 / situation2: dicts opcionales de extract_situation().
-    Si se proporcionan, cada resultado incluirá 'parado1' y 'parado2'
-    indicando si ese producto aparece en el informe de situación (stock parado).
+    Solo incluye productos que aparecen en ventas (products1 o products2).
+    El informe de situación solo se usa para marcar parados y S.365.
     """
     sit1 = situation1 or {}
     sit2 = situation2 or {}
 
-    # Incluir también códigos solo en informe de situación (sin ventas registradas)
-    all_codes = set(products1.keys()) | set(products2.keys()) | set(sit1.keys()) | set(sit2.keys())
+    # SOLO códigos de ventas — el informe NO añade filas a la tabla
+    all_codes = set(products1.keys()) | set(products2.keys())
     results = []
 
-    # ── Determinar el año de referencia global ─────────────────────────────────
     all_yr_cur = [p.get('year_current', 0)
                   for p in list(products1.values()) + list(products2.values())]
     global_yr_cur  = max(all_yr_cur) if all_yr_cur else 2026
@@ -441,14 +339,8 @@ def compare_products(products1, products2,
         elif p2:
             status = 'only2'
             description = p2['description']
-        elif code in sit1:
-            status = 'only1'
-            description = sit1[code].get('description', f'Producto {code}')
-        elif code in sit2:
-            status = 'only2'
-            description = sit2[code]['description']
         else:
-            continue  # no deberia ocurrir
+            continue
 
         warnings = []
         if p1 and p1.get('warnings'):
@@ -459,8 +351,7 @@ def compare_products(products1, products2,
         t1_cur, t1_prev = _totals(p1)
         t2_cur, t2_prev = _totals(p2)
 
-        # ── S.365: stock del informe ──────────────────────────────────────
-        # Se muestra si el producto aparece en el informe, con o sin ventas
+        # S.365: stock del informe (solo si el código está en el informe)
         s365_1 = sit1[code]['stock'] if code in sit1 else '—'
         s365_2 = sit2[code]['stock'] if code in sit2 else '—'
 
@@ -482,8 +373,6 @@ def compare_products(products1, products2,
             'year_prev':    global_yr_prev,
             'warnings':     warnings,
             'needs_review': bool(warnings),
-            # ── Stock parado (informe de situación) ──────────────────────
-            # True si el código aparece en el informe (con o sin ventas)
             'parado1':      code in sit1,
             'parado2':      code in sit2,
             'caducidad1':   sit1.get(code, {}).get('caducidad', ''),
@@ -491,7 +380,7 @@ def compare_products(products1, products2,
         })
 
     # Ordenar alfabéticamente por descripción
-    results.sort(key=lambda r: r["description"].upper())
+    results.sort(key=lambda r: r['description'].upper())
     return results
 
 
@@ -515,7 +404,7 @@ _STOP = {
     'TOTAL','PURE','LIGHT','RICH','MAX','PRO','ONE','AIR','ACTIVE',
     'REPAIR','CARE','SKIN','FACE','BODY','MANOS','PIES','OJOS',
     'LABIOS','CUELLO','CONTORNO','ZONA','ZONAS','INVISIBLE',
-    'MINERAL','SOLAR','SOLAR','PROTECCION','SUNSCREEN','SENSITIVE',
+    'MINERAL','SOLAR','PROTECCION','SUNSCREEN','SENSITIVE',
 }
 
 _NORMALIZE = {
@@ -578,6 +467,8 @@ _NORMALIZE = {
     'PRURICED': 'Uriage', 'ROSELIANE': 'Uriage',
     'VICHY': 'Vichy', 'LIFTACTIV': 'Vichy', 'NORMADERM': 'Vichy',
     'DERMABLEND': 'Vichy', 'AQUALIA': 'Vichy',
+    'ESI': 'ESI', 'MELATONIN': 'ESI', 'NORMOLIP': 'ESI',
+    'PROPOLAID': 'ESI', 'SERENESI': 'ESI',
 }
 
 
@@ -621,14 +512,6 @@ def _guess_from_descriptions(pdf_path):
 
 
 def detect_lab(pdf_path):
-    """
-    Detecta el nombre del laboratorio de un PDF de estadísticas o de situación.
-    Estrategia:
-      1. Busca 'Laboratorio: XXXX' en la última página
-      2. Busca el código en labs.json
-      3. Si no está, deduce por descripciones
-      4. Guarda en labs.json si lo deduce
-    """
     labs = _load_labs()
 
     with pdfplumber.open(pdf_path) as pdf:
