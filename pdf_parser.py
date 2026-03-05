@@ -344,9 +344,15 @@ def extract_situation(pdf_path):
                                 caducidad = val
                                 break
 
+                        # Descripción: celda inmediatamente después del código
+                        description = ''
+                        if i + 1 < len(row):
+                            description = str(row[i + 1] or '').strip()
+
                         products[code] = {
-                            'stock':     stock,
-                            'caducidad': caducidad,
+                            'stock':       stock,
+                            'caducidad':   caducidad,
+                            'description': description,
                         }
                         break  # siguiente fila
 
@@ -440,7 +446,7 @@ def compare_products(products1, products2,
             description = sit1[code].get('description', f'Producto {code}')
         elif code in sit2:
             status = 'only2'
-            description = sit2[code].get('description', f'Producto {code}')
+            description = sit2[code]['description']
         else:
             continue  # no deberia ocurrir
 
