@@ -13,6 +13,8 @@
       --zarzuelo-light: #fdecea;
       --barris: #1a6fa8;
       --barris-light: #e8f3fb;
+      --parado: #ff8c00;
+      --parado-light: #fff3e0;
       --bg: #f7f5f0;
       --surface: #ffffff;
       --border: #e0ddd7;
@@ -38,7 +40,6 @@
       position: relative;
       overflow: hidden;
     }
-
     header::before {
       content: '';
       position: absolute;
@@ -48,7 +49,6 @@
       background: rgba(255,255,255,0.04);
       pointer-events: none;
     }
-
     header::after {
       content: '';
       position: absolute;
@@ -58,7 +58,6 @@
       background: rgba(255,255,255,0.03);
       pointer-events: none;
     }
-
     .header-eyebrow {
       font-size: 0.7rem;
       letter-spacing: 0.15em;
@@ -67,7 +66,6 @@
       margin-bottom: 0.5rem;
       font-weight: 500;
     }
-
     header h1 {
       font-family: 'DM Serif Display', serif;
       font-size: 2rem;
@@ -75,18 +73,15 @@
       letter-spacing: -0.01em;
       line-height: 1.2;
     }
-
     header h1 em {
       font-style: italic;
       color: rgba(255,255,255,0.6);
     }
-
     .header-badges {
       display: flex;
       gap: 0.75rem;
       margin-top: 1.2rem;
     }
-
     .badge {
       display: inline-flex;
       align-items: center;
@@ -97,19 +92,16 @@
       border-radius: 999px;
       letter-spacing: 0.02em;
     }
-
     .badge-zarzuelo {
       background: rgba(192, 57, 43, 0.25);
       color: #f1948a;
       border: 1px solid rgba(192, 57, 43, 0.3);
     }
-
     .badge-barris {
       background: rgba(26, 111, 168, 0.25);
       color: #7fb3d3;
       border: 1px solid rgba(26, 111, 168, 0.3);
     }
-
     .badge-dot {
       width: 6px; height: 6px;
       border-radius: 50%;
@@ -120,7 +112,7 @@
     main {
       flex: 1;
       padding: 2.5rem 3rem;
-      max-width: 900px;
+      max-width: 960px;
       width: 100%;
       margin: 0 auto;
     }
@@ -132,7 +124,6 @@
       padding: 2rem;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-
     .card-title {
       font-family: 'DM Serif Display', serif;
       font-size: 1.1rem;
@@ -142,11 +133,17 @@
       border-bottom: 1px solid var(--border);
     }
 
-    /* FORM */
+    /* FORM GRID */
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
+      gap: 2rem;
+    }
+
+    .pharmacy-col {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
 
     .form-group {
@@ -161,17 +158,29 @@
       letter-spacing: 0.05em;
       text-transform: uppercase;
       color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .label-badge-optional {
+      font-size: 0.62rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      background: var(--parado-light);
+      color: var(--parado);
+      border: 1px solid rgba(255,140,0,0.3);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-left: auto;
     }
 
     .label-dot {
       display: inline-block;
       width: 7px; height: 7px;
       border-radius: 50%;
-      margin-right: 0.35rem;
-      vertical-align: middle;
-      position: relative; top: -1px;
     }
-
     .dot-z { background: var(--zarzuelo); }
     .dot-b { background: var(--barris); }
 
@@ -186,39 +195,53 @@
       transition: border-color 0.2s, box-shadow 0.2s;
       outline: none;
     }
-
     input[type="text"]:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(44,62,80,0.08);
     }
 
-    /* FILE DROP */
+    /* SECTION DIVIDER */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* FILE DROP — Ventas (required) */
     .file-drop {
       border: 2px dashed var(--border);
       border-radius: 10px;
-      padding: 1.5rem;
+      padding: 1.25rem;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
       background: var(--bg);
     }
-
     .file-drop:hover, .file-drop.dragover {
       border-color: var(--accent);
       background: rgba(44,62,80,0.03);
     }
-
     .file-drop.has-file-z {
       border-color: var(--zarzuelo);
       background: var(--zarzuelo-light);
     }
-
     .file-drop.has-file-b {
       border-color: var(--barris);
       background: var(--barris-light);
     }
-
     .file-drop input[type="file"] {
       position: absolute;
       inset: 0;
@@ -227,33 +250,64 @@
       width: 100%;
       height: 100%;
     }
-
-    .drop-icon {
-      font-size: 1.8rem;
-      margin-bottom: 0.5rem;
-      display: block;
-    }
-
-    .drop-text {
-      font-size: 0.85rem;
-      color: var(--muted);
-      font-weight: 400;
-    }
-
-    .drop-text strong {
-      color: var(--text);
-      font-weight: 600;
-    }
-
+    .drop-icon { font-size: 1.6rem; margin-bottom: 0.35rem; display: block; }
+    .drop-text { font-size: 0.82rem; color: var(--muted); font-weight: 400; }
+    .drop-text strong { color: var(--text); font-weight: 600; }
     .drop-filename {
-      margin-top: 0.4rem;
-      font-size: 0.8rem;
+      margin-top: 0.35rem;
+      font-size: 0.78rem;
       font-weight: 600;
       display: none;
     }
-
     .has-file-z .drop-filename { color: var(--zarzuelo); display: block; }
     .has-file-b .drop-filename { color: var(--barris); display: block; }
+
+    /* FILE DROP — Situación (optional) — más compacto */
+    .file-drop-sm {
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .file-drop-sm:hover, .file-drop-sm.dragover {
+      border-color: var(--parado);
+      background: var(--parado-light);
+    }
+    .file-drop-sm.has-file-sit {
+      border-color: var(--parado);
+      background: var(--parado-light);
+    }
+    .file-drop-sm input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-sm-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .drop-sm-text { text-align: left; }
+    .drop-sm-text span {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: block;
+    }
+    .drop-sm-text strong { color: var(--text); font-weight: 600; font-size: 0.8rem; }
+    .drop-sm-filename {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--parado);
+      display: none;
+    }
+    .has-file-sit .drop-sm-filename { display: block; }
+    .has-file-sit .drop-sm-hint     { display: none; }
 
     /* SUBMIT */
     .form-footer {
@@ -264,11 +318,7 @@
       padding-top: 1.25rem;
       border-top: 1px solid var(--border);
     }
-
-    .form-hint {
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
+    .form-hint { font-size: 0.78rem; color: var(--muted); }
 
     button[type="submit"] {
       background: var(--accent);
@@ -285,22 +335,12 @@
       gap: 0.5rem;
       transition: background 0.2s, transform 0.1s;
     }
-
     button[type="submit"]:hover { background: #3d5166; }
     button[type="submit"]:active { transform: scale(0.98); }
-    button[type="submit"]:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
     /* LOADING */
-    .loading-state {
-      display: none;
-      text-align: center;
-      padding: 2.5rem;
-    }
-
+    .loading-state { display: none; text-align: center; padding: 2.5rem; }
     .spinner {
       width: 36px; height: 36px;
       border: 3px solid var(--border);
@@ -309,13 +349,8 @@
       animation: spin 0.8s linear infinite;
       margin: 0 auto 1rem;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    .loading-state p {
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
+    .loading-state p { color: var(--muted); font-size: 0.9rem; }
 
     /* ERROR */
     .error-box {
@@ -332,14 +367,14 @@
     /* LEGEND */
     .legend {
       display: flex;
-      gap: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1.25rem;
       margin-top: 1.5rem;
       padding: 1rem 1.25rem;
       background: var(--bg);
       border-radius: 8px;
       border: 1px solid var(--border);
     }
-
     .legend-item {
       display: flex;
       align-items: center;
@@ -347,17 +382,15 @@
       font-size: 0.78rem;
       color: var(--muted);
     }
-
     .legend-swatch {
       width: 24px; height: 10px;
       border-radius: 3px;
     }
+    .sw-z    { background: var(--zarzuelo-light); border: 1px solid var(--zarzuelo); }
+    .sw-b    { background: var(--barris-light);   border: 1px solid var(--barris); }
+    .sw-both { background: white;                 border: 1px solid var(--border); }
+    .sw-par  { background: #ffe0b2;               border: 1px solid var(--parado); }
 
-    .sw-z { background: var(--zarzuelo-light); border: 1px solid var(--zarzuelo); }
-    .sw-b { background: var(--barris-light); border: 1px solid var(--barris); }
-    .sw-both { background: white; border: 1px solid var(--border); }
-
-    /* FOOTER */
     footer {
       text-align: center;
       padding: 1.5rem;
@@ -385,41 +418,83 @@
     <form id="mainForm" action="/comparar" method="POST" enctype="multipart/form-data">
       <div class="form-grid">
 
-        <!-- Farmacia 1 -->
-        <div>
-          <div class="form-group" style="margin-bottom:1rem">
+        <!-- ── Farmacia 1 ── -->
+        <div class="pharmacy-col">
+          <div class="form-group">
             <label><span class="label-dot dot-z"></span>Nombre Farmacia 1</label>
             <input type="text" name="name1" value="Zarzuelo" required>
           </div>
+
+          <p class="section-label">Estadísticas de ventas</p>
+
           <div class="form-group">
-            <label><span class="label-dot dot-z"></span>PDF Farmacia 1</label>
+            <label><span class="label-dot dot-z"></span>PDF Ventas · Farmacia 1</label>
             <div class="file-drop" id="drop1">
               <input type="file" name="pdf1" accept=".pdf" required id="file1">
-              <span class="drop-icon">📄</span>
-              <p class="drop-text"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF</p>
+              <span class="drop-icon">📊</span>
+              <p class="drop-text"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF de ventas</p>
               <p class="drop-filename" id="name1-file"></p>
             </div>
           </div>
-        </div>
 
-        <!-- Farmacia 2 -->
-        <div>
-          <div class="form-group" style="margin-bottom:1rem">
-            <label><span class="label-dot dot-b"></span>Nombre Farmacia 2</label>
-            <input type="text" name="name2" value="Barris" required>
-          </div>
+          <p class="section-label">Stock parado</p>
+
           <div class="form-group">
-            <label><span class="label-dot dot-b"></span>PDF Farmacia 2</label>
-            <div class="file-drop" id="drop2">
-              <input type="file" name="pdf2" accept=".pdf" required id="file2">
-              <span class="drop-icon">📄</span>
-              <p class="drop-text"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF</p>
-              <p class="drop-filename" id="name2-file"></p>
+            <label>
+              <span class="label-dot dot-z"></span>Informe de situación · Farmacia 1
+              <span class="label-badge-optional">Opcional</span>
+            </label>
+            <div class="file-drop-sm" id="drop-sit1">
+              <input type="file" name="sit1" accept=".pdf" id="file-sit1">
+              <span class="drop-sm-icon">📋</span>
+              <div class="drop-sm-text">
+                <strong class="drop-sm-hint">Arrastra o haz clic</strong>
+                <span class="drop-sm-hint">Stock parado · Sin ventas en +365 días</span>
+                <span class="drop-sm-filename" id="name-sit1-file"></span>
+              </div>
             </div>
           </div>
         </div>
 
-      </div>
+        <!-- ── Farmacia 2 ── -->
+        <div class="pharmacy-col">
+          <div class="form-group">
+            <label><span class="label-dot dot-b"></span>Nombre Farmacia 2</label>
+            <input type="text" name="name2" value="Barris" required>
+          </div>
+
+          <p class="section-label">Estadísticas de ventas</p>
+
+          <div class="form-group">
+            <label><span class="label-dot dot-b"></span>PDF Ventas · Farmacia 2</label>
+            <div class="file-drop" id="drop2">
+              <input type="file" name="pdf2" accept=".pdf" required id="file2">
+              <span class="drop-icon">📊</span>
+              <p class="drop-text"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF de ventas</p>
+              <p class="drop-filename" id="name2-file"></p>
+            </div>
+          </div>
+
+          <p class="section-label">Stock parado</p>
+
+          <div class="form-group">
+            <label>
+              <span class="label-dot dot-b"></span>Informe de situación · Farmacia 2
+              <span class="label-badge-optional">Opcional</span>
+            </label>
+            <div class="file-drop-sm" id="drop-sit2">
+              <input type="file" name="sit2" accept=".pdf" id="file-sit2">
+              <span class="drop-sm-icon">📋</span>
+              <div class="drop-sm-text">
+                <strong class="drop-sm-hint">Arrastra o haz clic</strong>
+                <span class="drop-sm-hint">Stock parado · Sin ventas en +365 días</span>
+                <span class="drop-sm-filename" id="name-sit2-file"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /form-grid -->
 
       <div class="error-box" id="errorBox"></div>
 
@@ -435,12 +510,13 @@
       <div class="spinner"></div>
       <p>Procesando PDFs… esto puede tardar unos segundos</p>
     </div>
-  </div>
+  </div><!-- /card -->
 
   <div class="legend">
     <div class="legend-item"><div class="legend-swatch sw-z"></div>Solo en Farmacia 1 (rojo)</div>
     <div class="legend-item"><div class="legend-swatch sw-b"></div>Solo en Farmacia 2 (azul)</div>
     <div class="legend-item"><div class="legend-swatch sw-both"></div>En ambas farmacias</div>
+    <div class="legend-item"><div class="legend-swatch sw-par"></div>Celda naranja = stock parado (+365 días sin venta)</div>
   </div>
 </main>
 
@@ -449,6 +525,7 @@
 </footer>
 
 <script>
+  // ── Drop zones para PDFs de ventas ─────────────────────────────────────────
   function setupFileDrop(inputId, dropId, filenameId, colorClass) {
     const input = document.getElementById(inputId);
     const drop  = document.getElementById(dropId);
@@ -460,7 +537,6 @@
         fname.textContent = '✓ ' + input.files[0].name;
       }
     });
-
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
     drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
     drop.addEventListener('drop', e => {
@@ -476,18 +552,48 @@
     });
   }
 
+  // ── Drop zones para informes de situación ──────────────────────────────────
+  function setupSituationDrop(inputId, dropId, filenameId) {
+    const input = document.getElementById(inputId);
+    const drop  = document.getElementById(dropId);
+    const fname = document.getElementById(filenameId);
+
+    input.addEventListener('change', () => {
+      if (input.files.length) {
+        drop.classList.add('has-file-sit');
+        fname.textContent = '✓ ' + input.files[0].name;
+      }
+    });
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      drop.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) {
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        input.files = dt.files;
+        drop.classList.add('has-file-sit');
+        fname.textContent = '✓ ' + e.dataTransfer.files[0].name;
+      }
+    });
+  }
+
   setupFileDrop('file1', 'drop1', 'name1-file', 'has-file-z');
   setupFileDrop('file2', 'drop2', 'name2-file', 'has-file-b');
+  setupSituationDrop('file-sit1', 'drop-sit1', 'name-sit1-file');
+  setupSituationDrop('file-sit2', 'drop-sit2', 'name-sit2-file');
 
+  // ── Submit ─────────────────────────────────────────────────────────────────
   document.getElementById('mainForm').addEventListener('submit', function(e) {
-    const f1 = document.getElementById('file1').files.length;
-    const f2 = document.getElementById('file2').files.length;
+    const f1  = document.getElementById('file1').files.length;
+    const f2  = document.getElementById('file2').files.length;
     const err = document.getElementById('errorBox');
 
     if (!f1 || !f2) {
       e.preventDefault();
       err.style.display = 'block';
-      err.textContent = 'Por favor selecciona los dos PDFs antes de continuar.';
+      err.textContent = 'Por favor selecciona los dos PDFs de ventas antes de continuar.';
       return;
     }
 

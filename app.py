@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, send_file, session, redirect, url_for
 import os, tempfile
 from datetime import datetime
-from pdf_parser import extract_products, compare_products, detect_lab
+from pdf_parser import extract_products, compare_products, detect_lab, extract_situation
 
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
@@ -10,10 +10,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 
 app = Flask(__name__)
-app.secret_key = 'farmacias_barris_zarzuelo_2026'  # cambia esto por algo único tuyo
+app.secret_key = 'farmacias_barris_zarzuelo_2026'
 
 # ── Configuración ──────────────────────────────────────────────────────────────
-PASSWORD             = "farmacias2026"       # ← cambia esta contraseña
+PASSWORD             = "farmacias2026"
 MAX_PDF_MB           = 20
 app.config['MAX_CONTENT_LENGTH'] = MAX_PDF_MB * 1024 * 1024
 
@@ -26,6 +26,7 @@ C_B_HDR     = colors.HexColor('#1a6fa8')
 C_ROW_ALT   = colors.HexColor('#f7f5f0')
 C_GRID      = colors.HexColor('#d0cdc8')
 C_WARNING   = colors.HexColor('#fff3cd')
+C_PARADO    = colors.HexColor('#ffe0b2')   # naranja suave → stock parado
 
 # ── Login ──────────────────────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
@@ -59,36 +60,65 @@ def index():
 def comparar():
     file1 = request.files.get('pdf1')
     file2 = request.files.get('pdf2')
+    sit1  = request.files.get('sit1')   # opcional
+    sit2  = request.files.get('sit2')   # opcional
     name1 = request.form.get('name1', 'Farmacia 1').strip()
     name2 = request.form.get('name2', 'Farmacia 2').strip()
 
     if not file1 or not file2:
-        return 'Debes subir los dos PDFs', 400
+        return 'Debes subir los dos PDFs de ventas', 400
 
-    # Verificar que son PDFs reales
+    # Verificar que los PDFs obligatorios son reales
     for f, nombre in [(file1, name1), (file2, name2)]:
         header = f.read(4)
         f.seek(0)
         if header != b'%PDF':
             return f'El archivo de {nombre} no es un PDF válido', 400
 
-    tmp1 = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
-    tmp2 = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    # Verificar PDFs opcionales si se subieron (y no están vacíos)
+    def _is_valid_pdf(f):
+        if not f or f.filename == '':
+            return False
+        header = f.read(4)
+        f.seek(0)
+        return header == b'%PDF'
+
+    has_sit1 = _is_valid_pdf(sit1)
+    has_sit2 = _is_valid_pdf(sit2)
+
+    # Guardar archivos temporales
+    tmp1  = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    tmp2  = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
     file1.save(tmp1.name)
     file2.save(tmp2.name)
 
+    tmp_sit1 = tmp_sit2 = None
+    if has_sit1:
+        tmp_sit1 = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+        sit1.save(tmp_sit1.name)
+    if has_sit2:
+        tmp_sit2 = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+        sit2.save(tmp_sit2.name)
+
     try:
-        # Detectar laboratorio de cada PDF
+        # Detectar laboratorio de los PDFs de ventas
         lab1 = detect_lab(tmp1.name)
         lab2 = detect_lab(tmp2.name)
 
-        # Validar que son del mismo laboratorio
         if lab1 != lab2:
             return render_template('error.html', lab1=lab1, lab2=lab2), 400
 
         products1 = extract_products(tmp1.name)
         products2 = extract_products(tmp2.name)
-        results   = compare_products(products1, products2, name1, name2)
+
+        # Parsear informes de situación si se han subido
+        situation1 = extract_situation(tmp_sit1.name) if has_sit1 else None
+        situation2 = extract_situation(tmp_sit2.name) if has_sit2 else None
+
+        results = compare_products(
+            products1, products2, name1, name2,
+            situation1=situation1, situation2=situation2
+        )
 
         lab_slug = (lab1.replace(' ', '_').replace('-', '_')
                        .replace("'", '').replace('é','e')
@@ -96,8 +126,11 @@ def comparar():
         download_name = f'comparativa_{lab_slug}.pdf'
 
         output = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
-        generate_pdf(results, output.name, name1, name2,
-                     len(products1), len(products2), lab1)
+        generate_pdf(
+            results, output.name, name1, name2,
+            len(products1), len(products2), lab1,
+            has_situation1=has_sit1, has_situation2=has_sit2
+        )
 
         return send_file(output.name, as_attachment=True,
                          download_name=download_name,
@@ -105,6 +138,8 @@ def comparar():
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)
+        if tmp_sit1: os.unlink(tmp_sit1.name)
+        if tmp_sit2: os.unlink(tmp_sit2.name)
 
 @app.errorhandler(413)
 def too_large(e):
@@ -112,7 +147,8 @@ def too_large(e):
 
 
 # ── Generación del PDF ─────────────────────────────────────────────────────────
-def generate_pdf(results, output_path, name1, name2, count1, count2, lab_name=''):
+def generate_pdf(results, output_path, name1, name2, count1, count2,
+                 lab_name='', has_situation1=False, has_situation2=False):
     doc = SimpleDocTemplate(
         output_path,
         pagesize=landscape(A4),
@@ -139,14 +175,25 @@ def generate_pdf(results, output_path, name1, name2, count1, count2, lab_name=''
     n_both  = sum(1 for r in results if r['status'] == 'both')
     n_only1 = sum(1 for r in results if r['status'] == 'only1')
     n_only2 = sum(1 for r in results if r['status'] == 'only2')
+    n_par1  = sum(1 for r in results if r.get('parado1'))
+    n_par2  = sum(1 for r in results if r.get('parado2'))
 
     lab_part   = f"  ·  {lab_name}" if lab_name else ""
     title_text = f"Comparativa de Stock{lab_part}  ·  {name1} vs {name2}  ·  Generado el {today}"
-    stats_text = (
-        f"{name1}: {count1} prod.  ·  {name2}: {count2} prod.  ·  "
-        f"Total: {len(results)}  ·  Ambas: {n_both}  ·  "
-        f"Solo {name1}: {n_only1}  ·  Solo {name2}: {n_only2}"
-    )
+
+    stats_parts = [
+        f"{name1}: {count1} prod.",
+        f"{name2}: {count2} prod.",
+        f"Total: {len(results)}",
+        f"Ambas: {n_both}",
+        f"Solo {name1}: {n_only1}",
+        f"Solo {name2}: {n_only2}",
+    ]
+    if has_situation1:
+        stats_parts.append(f"Parados {name1}: {n_par1}")
+    if has_situation2:
+        stats_parts.append(f"Parados {name2}: {n_par2}")
+    stats_text = "  ·  ".join(stats_parts)
 
     def hdr(text, size=7.5, bold=True, align=1):
         fn = 'Helvetica-Bold' if bold else 'Helvetica'
@@ -191,7 +238,13 @@ def generate_pdf(results, output_path, name1, name2, count1, count2, lab_name=''
             _fmt(r['stock2']),  _fmt(r['smin2']),
             _fmt(r['total2']),  _fmt(r['total2_prev']),
         ])
-        row_meta.append((idx, r['status'], r['needs_review']))
+        row_meta.append((
+            idx,
+            r['status'],
+            r['needs_review'],
+            r.get('parado1', False),
+            r.get('parado2', False),
+        ))
 
     col_widths = [
         1.8*cm, 6.2*cm,
@@ -232,7 +285,7 @@ def generate_pdf(results, output_path, name1, name2, count1, count2, lab_name=''
         ('LINEAFTER',     (5, 0), (5, -1),  1.2, C_HEADER),
     ])
 
-    for idx, status, needs_review in row_meta:
+    for idx, status, needs_review, parado1, parado2 in row_meta:
         if needs_review:
             ts.add('BACKGROUND', (0, idx), (-1, idx), C_WARNING)
         elif status == 'only1':
@@ -244,8 +297,49 @@ def generate_pdf(results, output_path, name1, name2, count1, count2, lab_name=''
         elif idx % 2 == 0:
             ts.add('BACKGROUND', (0, idx), (-1, idx), C_ROW_ALT)
 
+        # Stock parado: celda de stock en naranja (tiene prioridad visual)
+        if parado1:
+            ts.add('BACKGROUND', (2, idx), (2, idx), C_PARADO)
+        if parado2:
+            ts.add('BACKGROUND', (6, idx), (6, idx), C_PARADO)
+
     table.setStyle(ts)
 
+    # ── Leyenda de colores ────────────────────────────────────────────────────
+    legend_items = [
+        (C_Z_BG,    C_Z_HDR, f'Solo en {name1}'),
+        (C_B_BG,    C_B_HDR, f'Solo en {name2}'),
+        (C_WARNING, colors.HexColor('#b8860b'), 'Revisar'),
+    ]
+    if has_situation1 or has_situation2:
+        legend_items.append((C_PARADO, colors.HexColor('#e65100'), 'Stock parado (+365 días sin venta)'))
+
+    legend_data = [[]]
+    for bg, fg, label in legend_items:
+        swatch = Table([['']], colWidths=[0.35*cm], rowHeights=[0.25*cm])
+        swatch.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (0,0), bg),
+            ('BOX',        (0,0), (0,0), 0.5, fg),
+        ]))
+        legend_data[0].append(swatch)
+        lbl_para = Paragraph(
+            f'<font name="Helvetica" size="6.5" color="#555555">{label}</font>',
+            ParagraphStyle('leg', leading=8)
+        )
+        legend_data[0].append(lbl_para)
+
+    n_cols = len(legend_items) * 2
+    legend_col_widths = []
+    for _ in legend_items:
+        legend_col_widths += [0.45*cm, 3.5*cm]
+    legend_table = Table(legend_data, colWidths=legend_col_widths)
+    legend_table.setStyle(TableStyle([
+        ('VALIGN',  (0,0), (-1,-1), 'MIDDLE'),
+        ('LEFTPADDING',  (0,0), (-1,-1), 2),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+    ]))
+
+    # ── Título ────────────────────────────────────────────────────────────────
     title_data = [[
         Paragraph(title_text, title_style),
         Paragraph(stats_text, sub_style),
@@ -260,11 +354,10 @@ def generate_pdf(results, output_path, name1, name2, count1, count2, lab_name=''
         ('RIGHTPADDING',  (0, 0), (-1, 0), 10),
     ]))
 
-    elements = [title_table, Spacer(1, 0.3*cm), table]
+    elements = [title_table, Spacer(1, 0.2*cm), legend_table, Spacer(1, 0.15*cm), table]
     doc.build(elements)
 
 
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)

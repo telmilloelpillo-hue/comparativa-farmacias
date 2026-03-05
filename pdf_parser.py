@@ -1,7 +1,7 @@
 """
 pdf_parser.py — Parser universal para PDFs de estadísticas de ventas (Farmacias)
 
-Estructura del PDF (coordenadas X fijas para todos los laboratorios):
+Estructura del PDF de ventas (coordenadas X fijas para todos los laboratorios):
   Código       : x = 29–55
   Descripción  : x = 70–315  (puede contaminar zona de columnas numéricas)
   Stock        : x = 216.00  (1 dígito; 2 dígitos: 216.00, 220.25)
@@ -17,6 +17,9 @@ Patrones detectados:
 
 En ambos patrones los meses son SIEMPRE fiables.
 Stock/smin: extraídos por posición exacta (±1px).
+
+Adicionalmente, extract_situation() parsea el "Informe de situación"
+(stock parado, sin movimiento en 365 días).
 """
 
 import pdfplumber
@@ -282,39 +285,130 @@ def extract_products(pdf_path):
     return products
 
 
+# ─── Informe de situación (stock parado) ───────────────────────────────────────
+
+def extract_situation(pdf_path):
+    """
+    Extrae productos del "Informe de situación" (stock parado, sin movimiento
+    en los últimos 365 días).
+
+    Estructura del PDF:
+      Alm. | Código | Descripción | Stock | PVP | Importe PVP | Caducidad | ...
+
+    Devuelve dict: { código: { 'stock': int, 'caducidad': str } }
+    """
+    products = {}
+
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            # extract_table() maneja bien la estructura tabular limpia
+            table = page.extract_table(
+                table_settings={
+                    'vertical_strategy':   'lines_strict',
+                    'horizontal_strategy': 'lines_strict',
+                }
+            )
+
+            # Fallback: si no detecta líneas, usar extract_words agrupados por Y
+            if not table:
+                table = _situation_from_words(page)
+
+            if not table:
+                continue
+
+            for row in table:
+                if not row:
+                    continue
+                # Buscar código de 6 chars alfanumérico en cualquier celda
+                for i, cell in enumerate(row):
+                    cell_str = str(cell or '').strip()
+                    if re.match(r'^[0-9A-Z]{6}$', cell_str):
+                        code = cell_str
+                        stock     = 0
+                        caducidad = ''
+
+                        # Stock: primer entero puro DESPUÉS del código
+                        # (saltamos descripción que puede tener números)
+                        # Estrategia: buscar hacia la derecha, tomar el primer
+                        # valor que sea entero puro (no decimal con coma)
+                        for j in range(i + 2, len(row)):   # i+2 para saltar desc
+                            val = str(row[j] or '').strip()
+                            if re.match(r'^\d+$', val):
+                                stock = int(val)
+                                break
+
+                        # Caducidad: patrón MM/YYYY
+                        for j in range(i + 1, len(row)):
+                            val = str(row[j] or '').strip()
+                            if re.match(r'^\d{2}/\d{4}$', val):
+                                caducidad = val
+                                break
+
+                        products[code] = {
+                            'stock':     stock,
+                            'caducidad': caducidad,
+                        }
+                        break  # siguiente fila
+
+    return products
+
+
+def _situation_from_words(page):
+    """
+    Fallback para extract_situation cuando extract_table no detecta líneas.
+    Agrupa palabras por Y y construye filas pseudo-tabla.
+    """
+    words = page.extract_words(x_tolerance=4, y_tolerance=4)
+    if not words:
+        return []
+
+    rows_dict = defaultdict(list)
+    for w in words:
+        y = round(w['top'] / 2) * 2
+        rows_dict[y].append(w)
+
+    table = []
+    for y in sorted(rows_dict.keys()):
+        row_words = sorted(rows_dict[y], key=lambda w: w['x0'])
+        table.append([w['text'] for w in row_words])
+
+    return table
+
+
 # ─── Comparación ──────────────────────────────────────────────────────────────
 
 def compare_products(products1, products2,
-                     name1='Farmacia 1', name2='Farmacia 2'):
+                     name1='Farmacia 1', name2='Farmacia 2',
+                     situation1=None, situation2=None):
     """
     Compara productos de dos farmacias.
     Gestiona correctamente PDFs con años distintos:
     - Si una farmacia solo tiene datos de year_prev (PDF del año anterior),
       su columna year_current aparece como '—' en el comparativo.
+
+    situation1 / situation2: dicts opcionales de extract_situation().
+    Si se proporcionan, cada resultado incluirá 'parado1' y 'parado2'
+    indicando si ese producto aparece en el informe de situación (stock parado).
     """
     all_codes = sorted(set(products1.keys()) | set(products2.keys()))
     results = []
 
+    sit1 = situation1 or {}
+    sit2 = situation2 or {}
+
     # ── Determinar el año de referencia global ─────────────────────────────────
-    # Es el año más reciente encontrado entre ambos PDFs
     all_yr_cur = [p.get('year_current', 0)
                   for p in list(products1.values()) + list(products2.values())]
     global_yr_cur  = max(all_yr_cur) if all_yr_cur else 2026
     global_yr_prev = global_yr_cur - 1
 
     def _totals(p):
-        """
-        Devuelve (total_cur, total_prev) normalizados al año global.
-        Si el PDF de la farmacia solo llega hasta global_yr_prev,
-        su 'year_current' es en realidad global_yr_prev → total_cur='—'
-        """
         if p is None:
             return '—', '—'
         yr = p.get('year_current', global_yr_cur)
         if yr == global_yr_cur:
             return p.get('total_current', 0), p.get('total_prev', 0)
         elif yr == global_yr_prev:
-            # PDF solo tiene datos del año anterior: cur→prev, prev→vacío
             return '—', p.get('total_current', 0)
         else:
             return p.get('total_current', 0), p.get('total_prev', 0)
@@ -366,10 +460,14 @@ def compare_products(products1, products2,
             'year_prev':    global_yr_prev,
             'warnings':     warnings,
             'needs_review': bool(warnings),
+            # ── Stock parado (informe de situación) ──────────────────────
+            'parado1':      code in sit1,
+            'parado2':      code in sit2,
+            'caducidad1':   sit1.get(code, {}).get('caducidad', ''),
+            'caducidad2':   sit2.get(code, {}).get('caducidad', ''),
         })
 
     return results
-
 
 
 # ─── Detección de laboratorio ──────────────────────────────────────────────────
@@ -381,7 +479,6 @@ from pathlib import Path as _Path
 
 _LABS_FILE = _Path(__file__).parent / 'labs.json'
 
-# Stopwords que no son nombres de marca
 _STOP = {
     'ENVASE','TUBO','BOTE','FRASCO','UNIDAD','CAPSULAS','CAPS',
     'COMPRIMIDOS','COMP','AMPOLLA','SPRAY','CREMA','GEL','LOCION',
@@ -396,9 +493,7 @@ _STOP = {
     'MINERAL','SOLAR','SOLAR','PROTECCION','SUNSCREEN','SENSITIVE',
 }
 
-# Normalizaciones: palabra frecuente en nombres de producto → laboratorio
 _NORMALIZE = {
-    # Aboca
     'ABOCA': 'Aboca', 'GRINTUSS': 'Aboca', 'NEOBIANACID': 'Aboca',
     'MELILAX': 'Aboca', 'LENODIAR': 'Aboca', 'ALIVIOLAS': 'Aboca',
     'COLIGAS': 'Aboca', 'COLILEN': 'Aboca', 'FITONASAL': 'Aboca',
@@ -406,96 +501,62 @@ _NORMALIZE = {
     'IMMUNOMIX': 'Aboca', 'LIBRAMED': 'Aboca', 'LYNFASE': 'Aboca',
     'METARECOD': 'Aboca', 'NEOFITOROID': 'Aboca', 'OROBEN': 'Aboca',
     'SEDIVITAX': 'Aboca', 'PROPOL': 'Aboca',
-    # Arkopharma
     'ARKOPHARMA': 'Arkopharma', 'ARKO': 'Arkopharma', 'ARKOFLEX': 'Arkopharma',
     'ARKOREAL': 'Arkopharma', 'ARKOVOX': 'Arkopharma', 'ARKOCAPS': 'Arkopharma',
     'ARKOVITAL': 'Arkopharma',
-    # Bioderma
     'BIODERMA': 'Bioderma', 'SENSIBIO': 'Bioderma', 'SEBIUM': 'Bioderma',
     'ATODERM': 'Bioderma', 'PHOTODERM': 'Bioderma', 'PIGMENTBIO': 'Bioderma',
     'CICABIO': 'Bioderma',
-    # Bipole / Viñas
     'BIPOLE': 'Bipole', 'INTEGRALIA': 'Bipole',
-    # Bepanthol
     'BEPANTHOL': 'Bepanthol',
-    # Caudalie
     'CAUDALIE': 'Caudalie', 'VINOPERFECT': 'Caudalie', 'VINOSOURCE': 'Caudalie',
     'VINOCLEAN': 'Caudalie', 'VINERGETIC': 'Caudalie',
-    # CeraVe
     'CERAVE': 'CeraVe',
-    # Cinfa
     'CINFA': 'Cinfa',
-    # Colnatur
     'COLNATUR': 'Colnatur / Ordesa', 'BLEVIT': 'Colnatur / Ordesa',
     'BLEMIL': 'Colnatur / Ordesa', 'SANUTRI': 'Colnatur / Ordesa',
-    # Cumlaude
     'CUMLAUDE': 'Cumlaude', 'DAYLONG': 'Cumlaude',
-    # Dememory
     'DEMEMORY': 'Dememory',
-    # Epaplus
     'EPAPLUS': 'Epaplus',
-    # Eucerin
     'EUCERIN': 'Eucerin', 'UREAREPAIR': 'Eucerin', 'AQUAPHOR': 'Eucerin',
-    # Heliocare
     'HELIOCARE': 'Heliocare',
-    # ISDIN
     'ISDIN': 'ISDIN', 'UREADIN': 'ISDIN', 'ERYFOTONA': 'ISDIN',
     'NUTRADEICA': 'ISDIN', 'LAMBDAPIL': 'ISDIN',
-    # Juanola
     'JUANOLA': 'Juanola / Angelini', 'ANGELINI': 'Juanola / Angelini',
-    # Kin
     'KINERASE': 'Kin',
-    # La Roche-Posay
     'POSAY': 'La Roche-Posay', 'ANTHELIOS': 'La Roche-Posay',
     'CICAPLAST': 'La Roche-Posay', 'EFFACLAR': 'La Roche-Posay',
     'LIPIKAR': 'La Roche-Posay', 'TOLERIANE': 'La Roche-Posay',
     'HYDRAPHASE': 'La Roche-Posay', 'SUBSTIANE': 'La Roche-Posay',
     'PIGMENTCLAR': 'La Roche-Posay', 'SPOTSCAN': 'La Roche-Posay',
-    # L'Oreal
     'LOREAL': "L'Oreal", 'REVITALIFT': "L'Oreal",
-    # Martiderm
     'MARTIDERM': 'Martiderm',
-    # Mesoestetic
     'MESOESTETIC': 'Mesoestetic',
-    # Mustela / Varisan
     'MUSTELA': 'Mustela', 'VARISAN': 'Varisan',
     'STELATOPIA': 'Mustela', 'STELATRIA': 'Mustela',
     'CICASTELA': 'Mustela',
-    # Neostrata
     'NEOSTRATA': 'Neostrata',
-    # Neutrogena
     'NEUTROGENA': 'Neutrogena',
-    # Nivea
     'NIVEA': 'Nivea',
-    # Nutralie
     'NUTRALIE': 'Nutralie',
-    # Nuxe
     'NUXE': 'Nuxe', 'HUILE': 'Nuxe',
-    # Reckitt
     'NUROFEN': 'Reckitt', 'STREPSILS': 'Reckitt', 'GAVISCON': 'Reckitt',
     'DUREX': 'Reckitt', 'MUCINEX': 'Reckitt',
-    # Rilastil (Cumlaude Lab)
     'RILASTIL': 'Rilastil',
-    # Sensilis / Pierre Fabre
     'SENSILIS': 'Sensilis / Pierre Fabre', 'FABRE': 'Sensilis / Pierre Fabre',
     'KLORANE': 'Sensilis / Pierre Fabre', 'AVENE': 'Sensilis / Pierre Fabre',
     'DUCRAY': 'Sensilis / Pierre Fabre', 'KERTYOL': 'Sensilis / Pierre Fabre',
     'ANACAPS': 'Sensilis / Pierre Fabre', 'ICTYANE': 'Sensilis / Pierre Fabre',
-    # Sesderma
     'SESDERMA': 'Sesderma', 'ENDOCARE': 'Sesderma', 'RETISES': 'Sesderma',
-    # SVR
     'SVRGEL': 'SVR', 'CICAVIT': 'SVR', 'SEBIACLEAR': 'SVR', 'CLAIRIAL': 'SVR',
-    # Uriage
     'URIAGE': 'Uriage', 'XEMOSE': 'Uriage', 'BARIEDERM': 'Uriage',
     'PRURICED': 'Uriage', 'ROSELIANE': 'Uriage',
-    # Vichy
     'VICHY': 'Vichy', 'LIFTACTIV': 'Vichy', 'NORMADERM': 'Vichy',
     'DERMABLEND': 'Vichy', 'AQUALIA': 'Vichy',
 }
 
 
 def _load_labs():
-    """Carga el mapa código→nombre desde labs.json."""
     if _LABS_FILE.exists():
         with open(_LABS_FILE, 'r', encoding='utf-8') as f:
             data = _json.load(f)
@@ -504,7 +565,6 @@ def _load_labs():
 
 
 def _save_lab(code, name):
-    """Guarda un código nuevo en labs.json para futuras referencias."""
     labs = {}
     if _LABS_FILE.exists():
         with open(_LABS_FILE, 'r', encoding='utf-8') as f:
@@ -515,29 +575,20 @@ def _save_lab(code, name):
 
 
 def _guess_from_descriptions(pdf_path):
-    """
-    Intenta deducir el nombre del lab analizando las palabras más frecuentes
-    en la zona de descripciones de producto. Devuelve un nombre legible o None.
-    """
     word_count = _Counter()
     with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages[:-1]:  # ignorar última página (criterios)
-            # Usar extract_words para tener palabras limpias
+        for page in pdf.pages[:-1]:
             words = page.extract_words(x_tolerance=4, y_tolerance=4)
             for w in words:
-                # Solo zona de descripción (x aprox 60-210)
                 if 60 <= w['x0'] <= 210:
                     tok = w['text'].upper()
-                    # Solo palabras de 4+ letras, solo letras
                     if len(tok) >= 4 and tok.isalpha() and tok not in _STOP:
                         word_count[tok] += 1
 
-    # Buscar la primera coincidencia en _NORMALIZE
     for word, _ in word_count.most_common(15):
         if word in _NORMALIZE:
             return _NORMALIZE[word]
 
-    # Fallback: devolver la palabra más frecuente capitalizada
     if word_count:
         top = word_count.most_common(1)[0][0]
         return top.capitalize()
@@ -546,33 +597,28 @@ def _guess_from_descriptions(pdf_path):
 
 def detect_lab(pdf_path):
     """
-    Detecta el nombre del laboratorio de un PDF de estadísticas.
-    
+    Detecta el nombre del laboratorio de un PDF de estadísticas o de situación.
     Estrategia:
-      1. Extrae el código del PDF (última página: 'Laboratorio: XXXX')
+      1. Busca 'Laboratorio: XXXX' en la última página
       2. Busca el código en labs.json
-      3. Si no está, intenta deducirlo de las descripciones de producto
-      4. Si lo deduce, lo guarda en labs.json para el futuro
-      5. Fallback: devuelve 'Lab XXXX'
+      3. Si no está, deduce por descripciones
+      4. Guarda en labs.json si lo deduce
     """
     labs = _load_labs()
 
     with pdfplumber.open(pdf_path) as pdf:
         last_text = pdf.pages[-1].extract_text() or ''
-    
+
     m = _re.search(r'Laboratorio[:\s]+(\w+)', last_text)
     code = m.group(1).strip() if m else None
 
-    # Código conocido en labs.json
     if code and code in labs:
         return labs[code]
 
-    # Auto-detección desde descripciones
     guessed = _guess_from_descriptions(pdf_path)
     if guessed:
         if code:
-            _save_lab(code, guessed)  # aprender para el futuro
+            _save_lab(code, guessed)
         return guessed
 
-    # Último recurso
     return f'Lab {code}' if code else 'Laboratorio desconocido'
