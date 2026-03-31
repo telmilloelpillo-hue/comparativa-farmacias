@@ -133,6 +133,21 @@ def extract_products(pdf_path):
 
                 description = _extract_description(row)
 
+                # Continuar descripción en la fila siguiente si no tiene código propio
+                if i + 1 < len(sorted_ys):
+                    y_next = sorted_ys[i + 1]
+                    if y_next - y < 20:
+                        next_row = rows[y_next]
+                        next_code_chars = [c for c in next_row if 20 <= c['x0'] < 60]
+                        next_code = ''.join(
+                            c['text'] for c in sorted(next_code_chars, key=lambda c: c['x0'])
+                        ).strip()
+                        if not re.match(r'^[0-9A-Z]{6}$', next_code):
+                            continuation = _extract_description(next_row)
+                            if continuation:
+                                description = re.sub(r'  +', ' ',
+                                                     (description + ' ' + continuation).strip())
+
                 if not description and i > 0:
                     prev_row = rows[sorted_ys[i - 1]]
                     prev_min_x = min((c['x0'] for c in prev_row), default=999)
@@ -183,6 +198,11 @@ def extract_products(pdf_path):
                 total_current = sum(months_current)
                 total_prev    = sum(months_prev)
 
+                last_month_idx = max(
+                    (idx for idx, v in enumerate(months_current) if v > 0), default=-1
+                )
+                close_month = last_month_idx + 1  # 1-12; 0 = sin datos
+
                 warnings = []
                 if stock_warning:
                     warnings.append('stock_smin_zona_contaminada')
@@ -204,6 +224,7 @@ def extract_products(pdf_path):
                     'total_prev':     total_prev,
                     'months_current': months_current,
                     'months_prev':    months_prev,
+                    'close_month':    close_month,
                     'pattern':        'A' if is_pattern_a else 'B',
                     'warnings':       warnings,
                     'needs_review':   len(warnings) > 0,
@@ -287,6 +308,28 @@ def extract_situation(pdf_path):
 
 
 
+# ─── Cálculo de pedido sugerido ───────────────────────────────────────────────
+
+import math as _math
+
+def calculate_pedido(product):
+    """
+    Pedido sugerido = max(0, ceil(ventas_12m / 4) - stock)
+    Ventas_12m: suma de los 12 meses anteriores al mes de cierre.
+    """
+    if product is None:
+        return 0
+    mc = product.get('months_current', [0] * 12)
+    mp = product.get('months_prev',    [0] * 12)
+    cm = product.get('close_month', 0)
+    if cm == 0:
+        return 0
+    # Ene-cierre del año actual + (cierre+1)-Dic del año anterior
+    ventas_12m = sum(mc[:cm]) + sum(mp[cm:12])
+    stock = product.get('stock') or 0
+    return max(0, _math.ceil(ventas_12m / 4) - stock)
+
+
 # ─── Comparación ──────────────────────────────────────────────────────────────
 
 def compare_products(products1, products2,
@@ -366,11 +409,13 @@ def compare_products(products1, products2,
             'total1':       t1_cur,
             'total1_prev':  t1_prev,
             's365_1':       s365_1,
+            'pedido1':      calculate_pedido(p1),
             'stock2':       _val(p2, 'stock'),
             'smin2':        _val(p2, 'smin'),
             'total2':       t2_cur,
             'total2_prev':  t2_prev,
             's365_2':       s365_2,
+            'pedido2':      calculate_pedido(p2),
             'year_current': global_yr_cur,
             'year_prev':    global_yr_prev,
             'warnings':     warnings,

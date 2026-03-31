@@ -27,6 +27,7 @@ C_ROW_ALT   = colors.HexColor('#f7f5f0')
 C_GRID      = colors.HexColor('#d0cdc8')
 C_WARNING   = colors.HexColor('#fff3cd')
 C_PARADO    = colors.HexColor('#ffe0b2')   # naranja suave → stock parado
+C_PEDIDO    = colors.HexColor('#d4edda')   # verde suave → pedido > 0
 
 # ── Login ──────────────────────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
@@ -199,44 +200,51 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
             ParagraphStyle('_h', leading=size+2, alignment=1, textColor=colors.white))
 
     # ── Cabeceras ─────────────────────────────────────────────────────────────
-    # Con S.365: 12 cols por farmacia (6 cada una); sin S.365: 10 cols (5 c/u)
-    n_ph = 6 if show_s365 else 5   # columnas por farmacia (sin código/desc)
+    # Con S.365: 14 cols (2 + 6 farm1 + 6 farm2); sin S.365: 12 cols (2+5+5)
 
     if show_s365:
+        # Cols 0-1: Cód/Desc | 2-7: Farm1 | 8-13: Farm2
         row_farmacia = ['', '',
             hdr(f'● {name1}', size=8), '', '', '', '', '',
             hdr(f'● {name2}', size=8), '', '', '', '', '']
         row_cols = [
             hdr('Cód', size=7), hdr('Descripción', size=7),
             hdr('Stock',size=7), hdr('S.min',size=7),
-            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7), hdr('S.365',size=7),
+            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7),
+            hdr('S.365',size=7), hdr('Pedido',size=7),
             hdr('Stock',size=7), hdr('S.min',size=7),
-            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7), hdr('S.365',size=7),
+            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7),
+            hdr('S.365',size=7), hdr('Pedido',size=7),
         ]
-        span1_end = 6; span2_start = 7; span2_end = 11
-        divider_col = 6   # línea divisoria entre farmacias
+        span1_end = 7; span2_start = 8; span2_end = 13
+        divider_col = 7
+        s365_1_col = 6; s365_2_col = 12
+        pedido1_col = 7; pedido2_col = 13
         col_widths = [
-            1.6*cm, 5.8*cm,
-            1.2*cm, 1.2*cm, 1.3*cm, 1.3*cm, 1.2*cm,
-            1.2*cm, 1.2*cm, 1.3*cm, 1.3*cm, 1.2*cm,
+            1.6*cm, 5.5*cm,
+            1.1*cm, 1.1*cm, 1.2*cm, 1.2*cm, 1.1*cm, 1.2*cm,
+            1.1*cm, 1.1*cm, 1.2*cm, 1.2*cm, 1.1*cm, 1.2*cm,
         ]
     else:
+        # Cols 0-1: Cód/Desc | 2-6: Farm1 | 7-11: Farm2
         row_farmacia = ['', '',
-            hdr(f'● {name1}', size=8), '', '', '',
-            hdr(f'● {name2}', size=8), '', '', '']
+            hdr(f'● {name1}', size=8), '', '', '', '',
+            hdr(f'● {name2}', size=8), '', '', '', '']
         row_cols = [
             hdr('Código',size=7), hdr('Descripción',size=7),
             hdr('Stock',size=7), hdr('S.min',size=7),
-            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7),
+            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7), hdr('Pedido',size=7),
             hdr('Stock',size=7), hdr('S.min',size=7),
-            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7),
+            hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7), hdr('Pedido',size=7),
         ]
-        span1_end = 5; span2_start = 6; span2_end = 9
-        divider_col = 5
+        span1_end = 6; span2_start = 7; span2_end = 11
+        divider_col = 6
+        s365_1_col = None; s365_2_col = None
+        pedido1_col = 6; pedido2_col = 11
         col_widths = [
-            1.8*cm, 6.2*cm,
-            1.3*cm, 1.3*cm, 1.4*cm, 1.4*cm,
-            1.3*cm, 1.3*cm, 1.4*cm, 1.4*cm,
+            1.8*cm, 6.0*cm,
+            1.2*cm, 1.2*cm, 1.3*cm, 1.3*cm, 1.2*cm,
+            1.2*cm, 1.2*cm, 1.3*cm, 1.3*cm, 1.2*cm,
         ]
 
     def _fmt(v):
@@ -260,20 +268,25 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
                 r['code'], desc_para,
                 _fmt(r['stock1']), _fmt(r['smin1']),
                 _fmt(r['total1']), _fmt(r['total1_prev']), _fmt(r.get('s365_1','—')),
+                str(r.get('pedido1', 0)),
                 _fmt(r['stock2']), _fmt(r['smin2']),
                 _fmt(r['total2']), _fmt(r['total2_prev']), _fmt(r.get('s365_2','—')),
+                str(r.get('pedido2', 0)),
             ]
         else:
             row = [
                 r['code'], desc_para,
                 _fmt(r['stock1']), _fmt(r['smin1']),
                 _fmt(r['total1']), _fmt(r['total1_prev']),
+                str(r.get('pedido1', 0)),
                 _fmt(r['stock2']), _fmt(r['smin2']),
                 _fmt(r['total2']), _fmt(r['total2_prev']),
+                str(r.get('pedido2', 0)),
             ]
         data.append(row)
         row_meta.append((idx, r['status'], r['needs_review'],
-                         r.get('parado1',False), r.get('parado2',False)))
+                         r.get('parado1',False), r.get('parado2',False),
+                         r.get('pedido1', 0), r.get('pedido2', 0)))
 
     table = Table(data, colWidths=col_widths, repeatRows=2)
 
@@ -308,7 +321,7 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
         ('LINEAFTER',     (divider_col,0),(divider_col,-1), 1.2, C_HEADER),
     ])
 
-    for idx, status, needs_review, parado1, parado2 in row_meta:
+    for idx, status, needs_review, parado1, parado2, pedido1, pedido2 in row_meta:
         if needs_review:
             ts.add('BACKGROUND', (0,idx), (-1,idx), C_WARNING)
         elif status == 'only1':
@@ -322,12 +335,17 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
 
         if parado1:
             ts.add('BACKGROUND', (2,idx), (2,idx), C_PARADO)
-            if show_s365:  # también colorear celda S.365
-                ts.add('BACKGROUND', (span1_end,idx), (span1_end,idx), C_PARADO)
+            if show_s365:
+                ts.add('BACKGROUND', (s365_1_col,idx), (s365_1_col,idx), C_PARADO)
         if parado2:
             ts.add('BACKGROUND', (span2_start,idx), (span2_start,idx), C_PARADO)
             if show_s365:
-                ts.add('BACKGROUND', (-1,idx), (-1,idx), C_PARADO)
+                ts.add('BACKGROUND', (s365_2_col,idx), (s365_2_col,idx), C_PARADO)
+
+        if pedido1 > 0:
+            ts.add('BACKGROUND', (pedido1_col,idx), (pedido1_col,idx), C_PEDIDO)
+        if pedido2 > 0:
+            ts.add('BACKGROUND', (pedido2_col,idx), (pedido2_col,idx), C_PEDIDO)
 
     table.setStyle(ts)
 
@@ -336,6 +354,7 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
         (C_Z_BG,    C_Z_HDR,                    f'Solo en {name1}'),
         (C_B_BG,    C_B_HDR,                    f'Solo en {name2}'),
         (C_WARNING, colors.HexColor('#b8860b'),  'Revisar'),
+        (C_PEDIDO,  colors.HexColor('#2e7d32'),  'Pedido sugerido'),
     ]
     if show_s365:
         legend_items.append((C_PARADO, colors.HexColor('#e65100'),
