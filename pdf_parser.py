@@ -315,17 +315,11 @@ import math as _math
 def calculate_pedido(product):
     """
     Pedido sugerido = max(0, ceil(ventas_12m / 4) - stock)
-    Ventas_12m: suma de los 12 meses anteriores al mes de cierre.
+    Ventas_12m = total_current + total_prev (los totales del PDF ya cubren 12 meses).
     """
     if product is None:
         return 0
-    mc = product.get('months_current', [0] * 12)
-    mp = product.get('months_prev',    [0] * 12)
-    cm = product.get('close_month', 0)
-    if cm == 0:
-        return 0
-    # Ene-cierre del año actual + (cierre+1)-Dic del año anterior
-    ventas_12m = sum(mc[:cm]) + sum(mp[cm:12])
+    ventas_12m = product.get('total_current', 0) + product.get('total_prev', 0)
     stock = product.get('stock') or 0
     return max(0, _math.ceil(ventas_12m / 4) - stock)
 
