@@ -196,12 +196,12 @@
 
     /* ── DECISION PANEL ── */
     .decision-panel {
-      width: 0; overflow: hidden; border-left: 1px solid var(--border);
+      width: 0; overflow-x: hidden; overflow-y: visible; border-left: 1px solid var(--border);
       background: white; display: flex; flex-direction: column;
       transition: width 0.22s ease; flex-shrink: 0;
     }
     .decision-panel.open { width: var(--panel-w); }
-    .panel-inner { width: var(--panel-w); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+    .panel-inner { width: var(--panel-w); display: flex; flex-direction: column; height: 100%; overflow-x: hidden; overflow-y: hidden; }
 
     .panel-header {
       padding: 0.8rem 0.9rem 0.65rem; border-bottom: 1px solid var(--border);
