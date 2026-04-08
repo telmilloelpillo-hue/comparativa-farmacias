@@ -53,12 +53,12 @@
 
     .btn {
       display: inline-flex; align-items: center; gap: 0.35rem;
-      padding: 0.4rem 0.9rem; border-radius: var(--radius);
+      padding: 0.4rem 0.9rem; border-radius: 6px;
       font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
       cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
-      white-space: nowrap;
+      white-space: nowrap; letter-spacing: 0.01em;
     }
-    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary { background: #3b82f6; color: white; box-shadow: 0 1px 2px rgba(37,99,235,0.2); }
     .btn-primary:hover { background: #2563eb; }
     .btn-ghost   { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.15); }
     .btn-ghost:hover { background: rgba(255,255,255,0.18); }
@@ -137,17 +137,17 @@
       padding: 0.5rem 0.5rem; text-align: center; white-space: nowrap;
       position: sticky; top: 0; z-index: 10;
       border-right: 1px solid rgba(255,255,255,0.08);
+      letter-spacing: 0.02em;
     }
-    thead tr:first-child th { font-size: 0.77rem; }
+    thead tr:first-child th { font-size: 0.75rem; }
     thead tr:nth-child(2) th {
-      font-size: 0.67rem; font-weight: 500; color: rgba(255,255,255,0.85);
-      padding: 0.3rem 0.5rem 0.42rem;
+      font-size: 0.66rem; font-weight: 500; color: rgba(255,255,255,0.82);
+      padding: 0.3rem 0.5rem 0.42rem; letter-spacing: 0.04em;
     }
 
     th.th-z   { background: var(--z); }
     th.th-b   { background: var(--b); }
     th.th-meta{ background: #2d3748; }
-    th.th-cov { background: #374151; }
 
     th.sticky-col  { left: 0;    z-index: 20; }
     th.sticky-col-2{ left: 68px; z-index: 20; }
@@ -176,8 +176,10 @@
     tbody tr.row-only1 td { background: var(--z-light) !important; }
     tbody tr.row-only2 td { background: var(--b-light) !important; }
     tbody tr.row-warn  td { background: var(--warn)    !important; }
-    tbody tr.row-selected td { box-shadow: inset 0 0 0 2px #3b82f6; }
-    tbody tr:hover td { filter: brightness(0.97); }
+    tbody tr.data-row td { transition: background-color 0.18s ease; }
+    tbody tr.row-selected td { background-color: rgba(59, 130, 246, 0.08) !important; }
+    tbody tr.row-selected td:first-child { border-left: 3px solid #3b82f6; }
+    tbody tr:hover:not(.row-selected) td { background: #f1f5f9 !important; }
 
     td {
       padding: 0.4rem 0.5rem; text-align: center; color: var(--text);
@@ -185,10 +187,6 @@
     }
     td.td-desc { text-align: left; white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
     td.td-code { font-family: monospace; font-size: 0.72rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
-    td.td-cov  { font-size: 0.72rem; color: var(--muted); }
-    td.td-cov.cov-ok     { color: #16a34a; font-weight: 600; }
-    td.td-cov.cov-warn   { color: #ea580c; font-weight: 600; }
-    td.td-cov.cov-danger { color: #dc2626; font-weight: 700; }
 
     td.cell-parado { background: var(--parado) !important; }
     td.cell-pedido { background: var(--pedido) !important; font-weight: 700; color: #1a6636; }
@@ -232,41 +230,48 @@
 
     /* CRITICAL: panel body scrolls */
     .panel-body {
-      flex: 1; min-height: 0; overflow-y: auto;
+      flex: 1; min-height: 0; overflow-y: scroll;
       padding: 0.9rem;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
     }
+    .panel-body::-webkit-scrollbar { width: 5px; }
+    .panel-body::-webkit-scrollbar-track { background: transparent; }
+    .panel-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
 
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
 
     .section-title {
-      font-size: 0.63rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.07em; color: var(--muted); margin: 0.9rem 0 0.45rem;
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.09em; color: #94a3b8; margin: 1.1rem 0 0.5rem;
+      padding-bottom: 0.3rem; border-bottom: 1px solid #f1f5f9;
     }
     .section-title:first-child { margin-top: 0; }
 
     /* Data base grid */
     .base-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
     .base-card {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
-      padding: 0.5rem 0.65rem;
+      background: #f8fafc; border: 1px solid #e9eef5; border-radius: 8px;
+      padding: 0.55rem 0.7rem; transition: border-color 0.15s;
     }
-    .base-label { font-size: 0.6rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
-    .base-value { font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 0.1rem; line-height: 1; }
+    .base-card:hover { border-color: #c7d2e0; }
+    .base-label { font-size: 0.58rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .base-value { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-top: 0.15rem; line-height: 1; }
     .base-value.red  { color: #dc2626; }
     .base-value.blue { color: #2563eb; }
 
     /* Sparkline */
-    .sparkline-wrap { }
-    .spark-months { display: flex; justify-content: space-between; margin-top: 0.1rem; }
-    .spark-month-label { font-size: 0.52rem; color: #94a3b8; text-align: center; width: 8%; }
+    .sparkline-wrap { overflow: hidden; }
+    .spark-months { display: flex; justify-content: space-between; margin-top: 0.15rem; }
+    .spark-month-label { font-size: 0.5rem; color: #94a3b8; text-align: center; flex: 1; }
     .spark-empty { font-size: 0.72rem; color: #cbd5e1; }
 
     /* Alertas */
     .alert-list { display: flex; flex-wrap: wrap; gap: 0.3rem; }
     .alert-badge {
-      font-size: 0.65rem; font-weight: 600; padding: 0.18rem 0.55rem;
-      border-radius: 4px; letter-spacing: 0.01em;
+      font-size: 0.67rem; font-weight: 600; padding: 0.22rem 0.6rem;
+      border-radius: 5px; letter-spacing: 0.01em;
     }
     .ab-red    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
     .ab-orange { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
@@ -431,6 +436,7 @@
   </div>
   <span class="result-count" id="resultCount"></span>
   <div class="bar-actions">
+    <button id="btnResetSort" class="bar-btn" style="display:none" onclick="resetSort()">&#8635; Orden original</button>
     <button class="bar-btn" onclick="exportCSV()">Exportar CSV</button>
     <span class="hint-text">Clic en fila para analizar &nbsp;|&nbsp; Clic en columna para ordenar</span>
   </div>
@@ -454,8 +460,6 @@
     {% set p1_ped  = p1_base + 4 + (1 if has_sit else 0) %}
     {% set p2_base = p1_ped + 1 %}
     {% set p2_ped  = p2_base + 4 + (1 if has_sit else 0) %}
-    {% set col_dz  = p2_ped + 1 %}
-    {% set col_db  = col_dz + 1 %}
 
     <table id="mainTable">
       <thead>
@@ -464,7 +468,6 @@
           <th class="th-meta sticky-col-2" rowspan="2" style="min-width:200px;text-align:left">Descripcion</th>
           <th class="th-z" colspan="{{ 5 + (1 if has_sit else 0) }}">{{ name1 }}</th>
           <th class="th-b col-divider" colspan="{{ 5 + (1 if has_sit else 0) }}">{{ name2 }}</th>
-          <th class="th-cov" colspan="2" rowspan="2" style="min-width:80px">Dias cob.</th>
         </tr>
         <tr>
           <th class="th-z sortable" data-col="{{ p1_base }}"     onclick="sortTable({{ p1_base }})">Stock <span class="sort-icon">&#8597;</span></th>
@@ -520,9 +523,6 @@
           {% if has_sit %}<td class="{{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.s365_2 }}</td>{% endif %}
           <td id="pedido2-{{ r.code }}" class="{{ 'cell-pedido' if pedido2_val else ('cell-muted' if r.status == 'only1') }}">{{ pedido2_val if pedido2_val else '—' }}</td>
 
-          <!-- Dias cobertura (JS rellena) -->
-          <td class="td-cov" id="dcov1-{{ r.code }}">—</td>
-          <td class="td-cov" id="dcov2-{{ r.code }}">—</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -556,7 +556,7 @@
           <p class="section-title">Datos base</p>
           <div class="base-grid" id="base-z"></div>
 
-          <p class="section-title">Tendencia de ventas — año actual</p>
+          <p class="section-title">Tendencia de ventas — 18 meses</p>
           <div class="sparkline-wrap" id="spark-z"></div>
 
           <p class="section-title">Alertas</p>
@@ -583,7 +583,7 @@
           <p class="section-title">Datos base</p>
           <div class="base-grid" id="base-b"></div>
 
-          <p class="section-title">Tendencia de ventas — año actual</p>
+          <p class="section-title">Tendencia de ventas — 18 meses</p>
           <div class="sparkline-wrap" id="spark-b"></div>
 
           <p class="section-title">Alertas</p>
@@ -618,11 +618,6 @@
   <div class="legend-item"><div class="legend-swatch" style="background:var(--warn);border-color:#d97706"></div>Revisar</div>
   <div class="legend-item"><div class="legend-swatch" style="background:var(--parado);border-color:#e65100"></div>Stock parado</div>
   <div class="legend-item"><div class="legend-swatch" style="background:var(--pedido);border-color:#2e7d32"></div>Pedido activo</div>
-  <div class="legend-item" style="margin-left:auto;gap:0.65rem">
-    <span style="font-size:0.65rem;color:#16a34a;font-weight:600">Dias cob. &lt;30</span>
-    <span style="font-size:0.65rem;color:#ea580c;font-weight:600">31–90</span>
-    <span style="font-size:0.65rem;color:#dc2626;font-weight:600">&gt;90 / critico</span>
-  </div>
 </div>
 
 <!-- ── MODAL PEDIDO ── -->
@@ -675,35 +670,8 @@ const manualPedidos = {};
 let selectedIdx  = null;
 let activeFilter = 'all';
 let sortState    = { col: null, asc: true };
-const MONTH_LABELS = ['E','F','M','A','M','J','J','A','S','O','N','D'];
-
-// ─── DIAS COBERTURA (calcula en tabla al cargar) ──────────────────────────────
-function calcDiasCobertura(stock, totalAnual) {
-  const s = parseInt(stock);
-  const t = parseInt(totalAnual);
-  if (isNaN(s) || isNaN(t) || t === 0) return null;
-  return Math.round((s / (t / 12)) * 30);
-}
-
-function renderCoberturaTable() {
-  PRODUCTS.forEach(p => {
-    const dc1 = calcDiasCobertura(p.stock1, p.total1);
-    const dc2 = calcDiasCobertura(p.stock2, p.total2);
-
-    const el1 = document.getElementById('dcov1-' + p.code);
-    const el2 = document.getElementById('dcov2-' + p.code);
-    if (el1) setCobText(el1, dc1, p.status === 'only2');
-    if (el2) setCobText(el2, dc2, p.status === 'only1');
-  });
-}
-
-function setCobText(el, dc, isGray) {
-  if (isGray || dc === null) { el.textContent = '—'; el.className = 'td-cov cell-muted'; return; }
-  el.textContent = dc + 'd';
-  if (dc < 30)       el.className = 'td-cov cov-danger';
-  else if (dc <= 90) el.className = 'td-cov cov-warn';
-  else               el.className = 'td-cov cov-ok';
-}
+// Últimos 6 meses del año anterior (Jul–Dic) + 12 del año actual
+const MONTH_LABELS = ['J','A','S','O','N','D','E','F','M','A','M','J','J','A','S','O','N','D'];
 
 // ─── FILTER + SEARCH ─────────────────────────────────────────────────────────
 function setFilter(el, filter) {
@@ -765,6 +733,7 @@ function sortTable(colIdx) {
   });
 
   rows.forEach(r => tbody.appendChild(r));
+  document.getElementById('btnResetSort').style.display = '';
 
   // Update header icons
   document.querySelectorAll('th.sortable').forEach(th => {
@@ -782,39 +751,87 @@ function sortTable(colIdx) {
   });
 }
 
+function resetSort() {
+  const tbody = document.querySelector('#mainTable tbody');
+  const rows  = Array.from(tbody.querySelectorAll('tr.data-row'));
+  rows.sort((a, b) => parseInt(a.dataset.idx) - parseInt(b.dataset.idx));
+  rows.forEach(r => tbody.appendChild(r));
+  sortState = { col: null, asc: true };
+  document.querySelectorAll('th.sortable .sort-icon').forEach(ic => ic.innerHTML = '&#8597;');
+  document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc','sort-desc'));
+  document.getElementById('btnResetSort').style.display = 'none';
+}
+
 // ─── SPARKLINE ────────────────────────────────────────────────────────────────
-function renderSparkline(container, values, color) {
-  const mc = (values || []).map(Number);
-  if (mc.every(v => v === 0)) {
-    container.innerHTML = '<span class="spark-empty">Sin ventas registradas en el año actual</span>';
+function renderSparkline(container, curValues, prevValues, color) {
+  const cur  = (curValues  || []).map(Number);
+  const prev = (prevValues || []).map(Number);
+  // Últimos 6 meses del año anterior + 12 meses del año actual
+  const prev6 = prev.slice(6); // Jul–Dic del año anterior
+  const allData = prev6.length === 6 ? [...prev6, ...cur] : cur;
+  const hasPrev = prev6.length === 6 && prev6.some(v => v > 0);
+  const splitIdx = hasPrev ? 6 : 0; // índice donde empieza el año actual
+
+  if (allData.every(v => v === 0)) {
+    container.innerHTML = '<span class="spark-empty">Sin ventas registradas</span>';
     return;
   }
-  const W = 350, H = 46;
-  const max = Math.max(...mc, 1);
-  const n = mc.length;
-  const toX = i => (i / (n - 1)) * (W - 4) + 2;
-  const toY = v => H - 3 - ((v / max) * (H - 8));
-  const pts = mc.map((v, i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
-  const fillPts = mc.map((v,i) => `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`);
-  const fill = `M ${fillPts[0]} L ${fillPts.join(' L ')} L ${(W-2).toFixed(1)},${(H-1).toFixed(1)} L 2,${(H-1).toFixed(1)} Z`;
-  const gid  = 'sg' + color.replace('#','');
-  const dots = mc.map((v,i) => v > 0
-    ? `<circle cx="${toX(i).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="2.2" fill="${color}"/>`
+
+  const W = 360, H = 52;
+  const n = allData.length;
+  const max = Math.max(...allData, 1);
+  const toX = i => (i / (n - 1)) * (W - 6) + 3;
+  const toY = v => H - 4 - ((v / max) * (H - 10));
+
+  const gid = 'sg' + color.replace('#','') + Math.random().toString(36).slice(2,5);
+
+  // Línea del año actual (desde splitIdx)
+  const curPts  = allData.slice(splitIdx).map((v, i) =>
+    `${toX(splitIdx + i).toFixed(1)},${toY(v).toFixed(1)}`
+  ).join(' ');
+
+  // Fill del año actual
+  const curFill = allData.slice(splitIdx).map((v, i) =>
+    `${toX(splitIdx + i).toFixed(1)},${toY(v).toFixed(1)}`
+  );
+  const fillPath = curFill.length > 1
+    ? `M ${curFill[0]} L ${curFill.join(' L ')} L ${toX(n-1).toFixed(1)},${(H-2).toFixed(1)} L ${toX(splitIdx).toFixed(1)},${(H-2).toFixed(1)} Z`
+    : '';
+
+  // Línea del año anterior (prev6)
+  const prevLine = hasPrev
+    ? allData.slice(0, splitIdx).map((v, i) =>
+        `${toX(i).toFixed(1)},${toY(v).toFixed(1)}`
+      ).join(' ')
+    : '';
+
+  // Puntos del año actual
+  const curDots = allData.slice(splitIdx).map((v, i) => v > 0
+    ? `<circle cx="${toX(splitIdx + i).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="2" fill="${color}"/>`
     : '').join('');
 
+  // Línea divisoria entre años
+  const divLine = hasPrev
+    ? `<line x1="${toX(splitIdx).toFixed(1)}" y1="2" x2="${toX(splitIdx).toFixed(1)}" y2="${H-2}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,2"/>`
+    : '';
+
+  const labels = hasPrev ? MONTH_LABELS : MONTH_LABELS.slice(6);
+
   container.innerHTML = `
-    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block">
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;width:100%;max-width:${W}px">
       <defs>
         <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${color}" stop-opacity="0.18"/>
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.15"/>
           <stop offset="100%" stop-color="${color}" stop-opacity="0.01"/>
         </linearGradient>
       </defs>
-      <path d="${fill}" fill="url(#${gid})" stroke="none"/>
-      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
-      ${dots}
+      ${divLine}
+      ${fillPath ? `<path d="${fillPath}" fill="url(#${gid})" stroke="none"/>` : ''}
+      ${hasPrev ? `<polyline points="${prevLine}" fill="none" stroke="${color}" stroke-width="1.2" stroke-dasharray="3,2" stroke-linecap="round" opacity="0.4"/>` : ''}
+      <polyline points="${curPts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+      ${curDots}
     </svg>
-    <div class="spark-months">${MONTH_LABELS.map((l,i)=>`<span class="spark-month-label" style="color:${mc[i]>0?'#64748b':'#e2e8f0'}">${l}</span>`).join('')}</div>`;
+    <div class="spark-months">${labels.map((l,i)=>`<span class="spark-month-label">${l}</span>`).join('')}</div>`;
 }
 
 // ─── ALERTAS (sin emojis) ─────────────────────────────────────────────────────
@@ -850,8 +867,9 @@ function renderFarmTab(suffix, r) {
   const totCur = r[isZ ? 'total1' : 'total2'];
   const totPrev= r[isZ ? 'total1_prev' : 'total2_prev'];
   const s365   = r[isZ ? 's365_1' : 's365_2'];
-  const months = r[isZ ? 'months1_current' : 'months2_current'] || Array(12).fill(0);
-  const color  = isZ ? '#c0392b' : '#1a6fa8';
+  const months     = r[isZ ? 'months1_current' : 'months2_current'] || Array(12).fill(0);
+  const prevMonths = r[isZ ? 'months1_prev'    : 'months2_prev']    || [];
+  const color      = isZ ? '#c0392b' : '#1a6fa8';
 
   const baseCards = [
     { label: 'Stock actual',     value: stock === 0 ? stock : stock, cls: stock === 0 && parseInt(totCur) > 0 ? 'red' : '' },
@@ -868,7 +886,7 @@ function renderFarmTab(suffix, r) {
     </div>`
   ).join('');
 
-  renderSparkline(document.getElementById('spark-' + suffix), months, color);
+  renderSparkline(document.getElementById('spark-' + suffix), months, prevMonths, color);
 
   const totalAnual = parseInt(totCur) || 0;
   const alerts = computeAlerts(months, stock, totalAnual);
@@ -1033,15 +1051,13 @@ function exportCSV() {
   if (hasSit) header += `,S365 ${NAME1}`;
   header += `,Pedido ${NAME1},Stock ${NAME2},Smin ${NAME2},V.${yr0} ${NAME2},V.${yr1} ${NAME2}`;
   if (hasSit) header += `,S365 ${NAME2}`;
-  header += `,Pedido ${NAME2},Dias cob. ${NAME1},Dias cob. ${NAME2}\n`;
+  header += `,Pedido ${NAME2}\n`;
 
   const visible = Array.from(document.querySelectorAll('tbody tr.data-row:not(.hidden-row)'));
   const visibleCodes = new Set(visible.map(r => r.dataset.code));
   const rows = PRODUCTS.filter(p => visibleCodes.has(p.code));
 
   const body = rows.map(p => {
-    const dc1 = calcDiasCobertura(p.stock1, p.total1);
-    const dc2 = calcDiasCobertura(p.stock2, p.total2);
     const kz  = manualPedidos[p.code + '_z'] || 0;
     const kb  = manualPedidos[p.code + '_b'] || 0;
     const parts = [
@@ -1052,8 +1068,6 @@ function exportCSV() {
       p.stock2, p.smin2, p.total2, p.total2_prev,
       ...(hasSit ? [p.s365_2] : []),
       kb > 0 ? kb : (p.pedido2 || 0),
-      dc1 !== null ? dc1 : '',
-      dc2 !== null ? dc2 : '',
     ];
     return parts.join(',');
   }).join('\n');
@@ -1066,7 +1080,6 @@ function exportCSV() {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-renderCoberturaTable();
 applySearch();
 </script>
 </body>
