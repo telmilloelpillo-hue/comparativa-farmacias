@@ -297,9 +297,17 @@ def extract_situation(pdf_path):
                             caducidad = w['text']
                             break
 
+                # Descripción: texto entre el código (x≈80) y el stock (x≈410)
+                description = ' '.join(
+                    w['text'] for w in row
+                    if 80 <= w['x0'] < STOCK_X0 and w['text'] != code
+                )
+                description = re.sub(r'  +', ' ', description).strip()
+
                 products[code] = {
-                    'stock':     stock,
-                    'caducidad': caducidad,
+                    'stock':       stock,
+                    'caducidad':   caducidad,
+                    'description': description,
                 }
 
     return products
@@ -337,8 +345,9 @@ def compare_products(products1, products2,
     sit1 = situation1 or {}
     sit2 = situation2 or {}
 
-    # SOLO códigos de ventas — el informe NO añade filas a la tabla
-    all_codes = set(products1.keys()) | set(products2.keys())
+    # Códigos de ventas + informe de situación (productos sin ventas también visibles)
+    all_codes = (set(products1.keys()) | set(products2.keys())
+                 | set(sit1.keys()) | set(sit2.keys()))
     results = []
 
     all_yr_cur = [p.get('year_current', 0)
@@ -378,6 +387,16 @@ def compare_products(products1, products2,
         elif p2:
             status = 'only2'
             description = p2['description']
+        elif code in sit1 and code in sit2:
+            status = 'both'
+            description = (sit1[code].get('description', '')
+                           or sit2[code].get('description', ''))
+        elif code in sit1:
+            status = 'only1'
+            description = sit1[code].get('description', '')
+        elif code in sit2:
+            status = 'only2'
+            description = sit2[code].get('description', '')
         else:
             continue
 
@@ -394,18 +413,26 @@ def compare_products(products1, products2,
         s365_1 = sit1[code]['stock'] if code in sit1 else '—'
         s365_2 = sit2[code]['stock'] if code in sit2 else '—'
 
+        # Para productos sin ventas, usar el stock del informe de situación
+        stock1 = (_val(p1, 'stock') if p1
+                  else (sit1[code]['stock'] if code in sit1 else '—'))
+        stock2 = (_val(p2, 'stock') if p2
+                  else (sit2[code]['stock'] if code in sit2 else '—'))
+        smin1  = _val(p1, 'smin') if p1 else '—'
+        smin2  = _val(p2, 'smin') if p2 else '—'
+
         results.append({
             'code':         code,
             'description':  description,
             'status':       status,
-            'stock1':       _val(p1, 'stock'),
-            'smin1':        _val(p1, 'smin'),
+            'stock1':       stock1,
+            'smin1':        smin1,
             'total1':       t1_cur,
             'total1_prev':  t1_prev,
             's365_1':       s365_1,
             'pedido1':      calculate_pedido(p1),
-            'stock2':       _val(p2, 'stock'),
-            'smin2':        _val(p2, 'smin'),
+            'stock2':       stock2,
+            'smin2':        smin2,
             'total2':       t2_cur,
             'total2_prev':  t2_prev,
             's365_2':       s365_2,
