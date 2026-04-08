@@ -143,6 +143,7 @@
     thead tr:nth-child(2) th {
       font-size: 0.66rem; font-weight: 500; color: rgba(255,255,255,0.82);
       padding: 0.3rem 0.5rem 0.42rem; letter-spacing: 0.04em;
+      top: 34px;
     }
 
     th.th-z   { background: var(--z); }
@@ -173,13 +174,10 @@
     tbody tr:nth-child(even) td.sticky-col,
     tbody tr:nth-child(even) td.sticky-col-2 { background: #f8fafc; }
 
-    tbody tr.row-only1 td { background: var(--z-light) !important; }
-    tbody tr.row-only2 td { background: var(--b-light) !important; }
-    tbody tr.row-warn  td { background: var(--warn)    !important; }
     tbody tr.data-row td { transition: background-color 0.18s ease; }
     tbody tr.row-selected td { background-color: rgba(59, 130, 246, 0.08) !important; }
     tbody tr.row-selected td:first-child { border-left: 3px solid #3b82f6; }
-    tbody tr:hover:not(.row-selected) td { background: #f1f5f9 !important; }
+    tbody tr:hover:not(.row-selected) td { background: #eef2f7 !important; }
 
     td {
       padding: 0.4rem 0.5rem; text-align: center; color: var(--text);
@@ -188,7 +186,7 @@
     td.td-desc { text-align: left; white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
     td.td-code { font-family: monospace; font-size: 0.72rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
 
-    td.cell-parado { background: var(--parado) !important; }
+    td.cell-parado { }
     td.cell-pedido { background: var(--pedido) !important; font-weight: 700; color: #1a6636; }
     td.cell-muted  { color: #bbb; }
 
