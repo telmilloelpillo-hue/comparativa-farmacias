@@ -25,6 +25,7 @@
       --muted:   #64748b;
       --accent:  #1e293b;
       --radius:  8px;
+      --panel-w: 400px;
     }
 
     body {
@@ -34,6 +35,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden; /* prevent body scroll; sections scroll independently */
     }
 
     /* ── TOP BAR ── */
@@ -45,125 +47,58 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      flex-shrink: 0;
+      z-index: 200;
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
-    .topbar-left {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
+    .topbar-left { display: flex; align-items: center; gap: 1rem; }
     .topbar-logo {
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: -0.01em;
-      color: white;
-      text-decoration: none;
+      font-size: 0.85rem; font-weight: 700;
+      letter-spacing: -0.01em; color: white; text-decoration: none;
     }
     .topbar-sep { color: rgba(255,255,255,0.25); font-size: 1.2rem; }
-    .topbar-title {
-      font-size: 0.82rem;
-      color: rgba(255,255,255,0.7);
-      font-weight: 400;
-    }
+    .topbar-title { font-size: 0.82rem; color: rgba(255,255,255,0.7); font-weight: 400; }
     .topbar-right { display: flex; align-items: center; gap: 0.75rem; }
 
     .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.45rem 1rem;
-      border-radius: var(--radius);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all 0.15s;
-      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.45rem 1rem; border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
     }
-    .btn-primary {
-      background: #3b82f6;
-      color: white;
-    }
+    .btn-primary { background: #3b82f6; color: white; }
     .btn-primary:hover { background: #2563eb; }
-    .btn-ghost {
-      background: rgba(255,255,255,0.1);
-      color: rgba(255,255,255,0.85);
-      border: 1px solid rgba(255,255,255,0.15);
-    }
+    .btn-ghost { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.15); }
     .btn-ghost:hover { background: rgba(255,255,255,0.18); }
-    .btn-outline {
-      background: white;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn-outline:hover { background: var(--bg); }
+    .btn-green { background: #16a34a; color: white; }
+    .btn-green:hover { background: #15803d; }
 
     /* ── HEADER CARD ── */
     .header-card {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 1.25rem 1.5rem 1rem;
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem 0.75rem; flex-shrink: 0;
     }
-    .header-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-    .lab-name {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
-    }
-    .vs-row {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-top: 0.4rem;
-    }
+    .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .lab-name { font-size: 1.2rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+    .vs-row { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.35rem; }
     .farm-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      padding: 0.25rem 0.7rem;
-      border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.78rem; font-weight: 600; padding: 0.25rem 0.7rem; border-radius: 999px;
     }
     .farm-badge-z { background: var(--z-light); color: var(--z); border: 1px solid var(--z-mid); }
     .farm-badge-b { background: var(--b-light); color: var(--b); border: 1px solid var(--b-mid); }
     .vs-dot { color: var(--muted); font-size: 0.75rem; font-weight: 700; }
 
-    /* STATS */
-    .stats-row {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 1rem;
-      flex-wrap: wrap;
-    }
+    .stats-row { display: flex; gap: 0.6rem; margin-top: 0.75rem; flex-wrap: wrap; }
     .stat-chip {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.3rem 0.75rem;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.15s;
-      user-select: none;
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.28rem 0.65rem; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--bg); color: var(--muted);
+      cursor: pointer; transition: all 0.15s; user-select: none;
     }
     .stat-chip.active, .stat-chip:hover { border-color: var(--accent); background: var(--accent); color: white; }
-    .stat-chip-num { font-size: 0.88rem; font-weight: 700; }
+    .stat-chip-num { font-size: 0.85rem; font-weight: 700; }
     .stat-chip.chip-z.active  { background: var(--z); border-color: var(--z); }
     .stat-chip.chip-b.active  { background: var(--b); border-color: var(--b); }
     .stat-chip.chip-par.active { background: #e65100; border-color: #e65100; }
@@ -173,113 +108,72 @@
 
     /* ── SEARCH BAR ── */
     .search-bar {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 0.6rem 1.5rem; display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;
     }
-    .search-wrap {
-      position: relative;
-      flex: 1;
-      max-width: 440px;
-    }
-    .search-icon {
-      position: absolute;
-      left: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      font-size: 0.9rem;
-      pointer-events: none;
-    }
+    .search-wrap { position: relative; flex: 1; max-width: 400px; }
+    .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.9rem; pointer-events: none; }
     .search-input {
-      width: 100%;
-      padding: 0.55rem 0.75rem 0.55rem 2.2rem;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.85rem;
-      color: var(--text);
-      background: var(--bg);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%; padding: 0.5rem 0.75rem 0.5rem 2.2rem;
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.83rem; color: var(--text);
+      background: var(--bg); outline: none; transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .search-input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-      background: white;
-    }
+    .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); background: white; }
     .search-input::placeholder { color: var(--muted); }
-    .result-count {
-      font-size: 0.78rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
+    .result-count { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
     .result-count strong { color: var(--text); }
 
-    /* ── TABLE WRAP ── */
-    .table-wrap {
+    /* ── MAIN CONTENT AREA (table + panel side by side) ── */
+    .content-area {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── TABLE SECTION ── */
+    .table-section {
       flex: 1;
       overflow-x: auto;
       overflow-y: auto;
-      padding: 1rem 1.5rem 2rem;
+      min-width: 0;
+      padding: 0.75rem 1.25rem 1.5rem;
+      transition: flex 0.25s ease;
     }
 
     table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.78rem;
-      min-width: 900px;
+      width: 100%; border-collapse: collapse;
+      font-size: 0.78rem; min-width: 860px;
     }
 
-    /* Sticky header */
     thead tr th {
-      background: var(--accent);
-      color: white;
-      font-weight: 600;
-      padding: 0.55rem 0.6rem;
-      text-align: center;
-      white-space: nowrap;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      background: var(--accent); color: white; font-weight: 600;
+      padding: 0.5rem 0.55rem; text-align: center; white-space: nowrap;
+      position: sticky; top: 0; z-index: 10;
       border-right: 1px solid rgba(255,255,255,0.08);
     }
-    thead tr:first-child th { font-size: 0.8rem; padding: 0.6rem 0.6rem 0.4rem; }
-    thead tr:nth-child(2) th { font-size: 0.7rem; font-weight: 500; padding: 0.35rem 0.6rem 0.5rem; color: rgba(255,255,255,0.8); }
+    thead tr:first-child th { font-size: 0.78rem; }
+    thead tr:nth-child(2) th { font-size: 0.68rem; font-weight: 500; color: rgba(255,255,255,0.8); padding: 0.32rem 0.55rem 0.45rem; }
 
     th.th-z { background: var(--z); }
     th.th-b { background: var(--b); }
     th.th-meta { background: #2d3748; }
 
-    th.sticky-col { left: 0; z-index: 20; }
-    th.sticky-col-2 { left: 70px; z-index: 20; }
+    th.sticky-col  { left: 0;    z-index: 20; }
+    th.sticky-col-2{ left: 70px; z-index: 20; }
 
-    /* Sticky first 2 cols */
-    td.sticky-col {
-      position: sticky;
-      left: 0;
-      background: white;
-      z-index: 5;
-    }
-    td.sticky-col-2 {
-      position: sticky;
-      left: 70px;
-      background: white;
-      z-index: 5;
-    }
+    td.sticky-col  { position: sticky; left: 0;    background: white; z-index: 5; }
+    td.sticky-col-2{ position: sticky; left: 70px; background: white; z-index: 5; }
 
-    /* Divider between farmacias */
     .col-divider { border-left: 2px solid var(--accent) !important; }
 
     tbody tr {
       border-bottom: 1px solid var(--border);
-      transition: opacity 0.1s;
+      cursor: pointer;
+      transition: filter 0.1s;
     }
     tbody tr.hidden-row { display: none; }
-
     tbody tr:nth-child(even) td { background: #f8fafc; }
     tbody tr:nth-child(even) td.sticky-col,
     tbody tr:nth-child(even) td.sticky-col-2 { background: #f8fafc; }
@@ -287,57 +181,229 @@
     tbody tr.row-only1 td { background: var(--z-light) !important; }
     tbody tr.row-only2 td { background: var(--b-light) !important; }
     tbody tr.row-warn  td { background: var(--warn) !important; }
+    tbody tr.row-selected td { outline: 2px solid #3b82f6; outline-offset: -1px; }
+
+    tbody tr:hover td { filter: brightness(0.96); }
 
     td {
-      padding: 0.45rem 0.6rem;
-      text-align: center;
-      color: var(--text);
-      vertical-align: middle;
-      border-right: 1px solid var(--border);
+      padding: 0.42rem 0.55rem; text-align: center; color: var(--text);
+      vertical-align: middle; border-right: 1px solid var(--border);
     }
-    td.td-desc { text-align: left; white-space: nowrap; }
-    td.td-code { font-family: monospace; font-size: 0.75rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    td.td-desc { text-align: left; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+    td.td-code { font-family: monospace; font-size: 0.73rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
 
     td.cell-parado { background: var(--parado) !important; }
     td.cell-pedido { background: var(--pedido) !important; font-weight: 700; color: #1a6636; }
     td.cell-muted  { color: #bbb; }
 
-    /* highlight búsqueda */
     mark { background: #fef08a; color: inherit; border-radius: 2px; padding: 0 1px; }
 
-    /* NO RESULTS */
-    .no-results {
-      display: none;
-      text-align: center;
-      padding: 3rem;
-      color: var(--muted);
-      font-size: 0.9rem;
+    .no-results { display: none; text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem; }
+
+    /* ── DECISION PANEL ── */
+    .decision-panel {
+      width: 0;
+      overflow: hidden;
+      border-left: 1px solid var(--border);
+      background: white;
+      display: flex;
+      flex-direction: column;
+      transition: width 0.25s ease;
+      flex-shrink: 0;
     }
+    .decision-panel.open {
+      width: var(--panel-w);
+    }
+    .panel-inner {
+      width: var(--panel-w);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Panel header */
+    .panel-header {
+      padding: 0.9rem 1rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+    .panel-header-top {
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;
+    }
+    .panel-code {
+      font-family: monospace; font-size: 0.72rem; color: var(--muted);
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .panel-desc {
+      font-size: 0.82rem; font-weight: 600; color: var(--text);
+      line-height: 1.4; margin-top: 0.25rem; flex: 1;
+    }
+    .panel-close {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 1rem; cursor: pointer; color: var(--muted); padding: 0.2rem 0.5rem;
+      flex-shrink: 0; line-height: 1;
+    }
+    .panel-close:hover { background: var(--bg); }
+
+    /* Panel tabs */
+    .panel-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      background: #f8fafc; flex-shrink: 0;
+    }
+    .panel-tab {
+      flex: 1; padding: 0.6rem 0.4rem; font-size: 0.72rem; font-weight: 600;
+      color: var(--muted); cursor: pointer; text-align: center;
+      border-bottom: 2px solid transparent; transition: all 0.15s;
+      user-select: none;
+    }
+    .panel-tab:hover { color: var(--text); }
+    .panel-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+
+    /* Panel scroll body */
+    .panel-body {
+      flex: 1; overflow-y: auto; padding: 1rem;
+    }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Farm block */
+    .farm-block { margin-bottom: 1.25rem; }
+    .farm-block-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; margin-bottom: 0.6rem; padding-bottom: 0.35rem;
+      border-bottom: 2px solid;
+    }
+    .farm-block-title.z { color: var(--z); border-color: var(--z); }
+    .farm-block-title.b { color: var(--b); border-color: var(--b); }
+
+    /* KPI grid */
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .kpi-card {
+      background: var(--bg); border-radius: 7px; padding: 0.55rem 0.7rem;
+      border: 1px solid var(--border);
+    }
+    .kpi-label { font-size: 0.64rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+    .kpi-value { font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 0.15rem; line-height: 1; }
+    .kpi-value.green { color: #16a34a; }
+    .kpi-value.red   { color: #dc2626; }
+    .kpi-value.orange{ color: #ea580c; }
+    .kpi-value.blue  { color: #2563eb; }
+    .kpi-sub { font-size: 0.64rem; color: var(--muted); margin-top: 0.1rem; }
+
+    /* Badges/alerts */
+    .alert-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0; }
+    .badge {
+      font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.55rem;
+      border-radius: 999px; display: inline-flex; align-items: center; gap: 0.3rem;
+    }
+    .badge-red    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-green  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .badge-orange { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+    .badge-blue   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .badge-gray   { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+    /* Pedido rec */
+    .pedido-box {
+      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+      padding: 0.65rem 0.8rem; margin-top: 0.5rem;
+    }
+    .pedido-box-label { font-size: 0.65rem; color: #15803d; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .pedido-box-value { font-size: 1.4rem; font-weight: 800; color: #15803d; }
+    .pedido-box-detail { font-size: 0.68rem; color: #166534; margin-top: 0.15rem; }
+
+    .pedido-box.urgente { background: #fef2f2; border-color: #fecaca; }
+    .pedido-box.urgente .pedido-box-label,
+    .pedido-box.urgente .pedido-box-value,
+    .pedido-box.urgente .pedido-box-detail { color: #dc2626; }
+
+    /* Sparkline */
+    .sparkline-wrap { margin: 0.5rem 0; }
+    .sparkline-label { font-size: 0.65rem; color: var(--muted); margin-bottom: 0.3rem; font-weight: 500; }
+    .sparkline-svg { display: block; }
+    .spark-months { display: flex; justify-content: space-between; margin-top: 0.15rem; }
+    .spark-month-label { font-size: 0.55rem; color: #94a3b8; width: 8%; text-align: center; }
+
+    /* Comparison table */
+    .comp-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 0.5rem; }
+    .comp-table th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); font-weight: 600; }
+    .comp-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+    .comp-table td:not(:first-child) { text-align: center; font-weight: 600; }
+    .win  { color: #16a34a; }
+    .lose { color: #dc2626; }
+
+    /* Insights */
+    .insight-list { list-style: none; }
+    .insight-item {
+      display: flex; gap: 0.5rem; padding: 0.45rem 0;
+      border-bottom: 1px solid var(--border); font-size: 0.78rem; line-height: 1.4;
+    }
+    .insight-item:last-child { border-bottom: none; }
+    .insight-icon { flex-shrink: 0; margin-top: 1px; }
+
+    /* Manual controls */
+    .controls-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; margin-bottom: 0.75rem; }
+    .control-field label { display: block; font-size: 0.64rem; color: var(--muted); font-weight: 600; text-transform: uppercase; margin-bottom: 0.25rem; }
+    .control-field input {
+      width: 100%; padding: 0.45rem 0.5rem;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
+      color: var(--text); background: var(--bg); outline: none;
+    }
+    .control-field input:focus { border-color: #3b82f6; background: white; }
+
+    /* AI chat */
+    .ai-section { margin-top: 0.75rem; }
+    .ai-input-wrap { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+    .ai-input {
+      flex: 1; padding: 0.5rem 0.65rem;
+      border: 1.5px solid var(--border); border-radius: 7px;
+      font-family: 'Inter', sans-serif; font-size: 0.8rem;
+      outline: none; color: var(--text);
+    }
+    .ai-input:focus { border-color: #3b82f6; }
+    .ai-send {
+      padding: 0.5rem 0.75rem; background: #1e293b; color: white;
+      border: none; border-radius: 7px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+    }
+    .ai-send:hover { background: #334155; }
+    .ai-send:disabled { background: #94a3b8; cursor: not-allowed; }
+    .ai-bubble {
+      margin-top: 0.75rem; padding: 0.65rem 0.8rem;
+      background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;
+      font-size: 0.78rem; line-height: 1.55; color: #0c4a6e; display: none;
+    }
+    .ai-bubble.visible { display: block; }
+    .ai-quick { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.4rem; }
+    .ai-quick-btn {
+      font-size: 0.65rem; padding: 0.25rem 0.55rem;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+      cursor: pointer; color: var(--muted); font-weight: 500;
+    }
+    .ai-quick-btn:hover { background: #e2e8f0; color: var(--text); }
+
+    /* Section title inside panel */
+    .section-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted); margin: 1rem 0 0.5rem;
+    }
+    .section-title:first-child { margin-top: 0; }
 
     /* LEGEND */
     .legend-bar {
-      background: white;
-      border-top: 1px solid var(--border);
-      padding: 0.6rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
-      flex-wrap: wrap;
-      position: sticky;
-      bottom: 0;
+      background: white; border-top: 1px solid var(--border);
+      padding: 0.5rem 1.5rem; display: flex; align-items: center; gap: 1.25rem;
+      flex-wrap: wrap; flex-shrink: 0;
     }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.7rem;
-      color: var(--muted);
-    }
-    .legend-swatch {
-      width: 18px; height: 10px;
-      border-radius: 3px;
-      border: 1px solid rgba(0,0,0,0.12);
-      flex-shrink: 0;
+    .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; color: var(--muted); }
+    .legend-swatch { width: 16px; height: 9px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.12); flex-shrink: 0; }
+
+    /* Responsive: hide panel on narrow screens */
+    @media (max-width: 768px) {
+      .decision-panel.open { width: 100%; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 150; }
     }
   </style>
 </head>
@@ -351,8 +417,9 @@
     <span class="topbar-title">{{ lab }}</span>
   </div>
   <div class="topbar-right">
-    <a href="/descargar" class="btn btn-primary">↓ Descargar PDF</a>
-    <a href="/" class="btn btn-ghost">+ Nueva comparativa</a>
+    <a href="/pedido" class="btn btn-green">📋 Pedido</a>
+    <a href="/descargar" class="btn btn-primary">↓ PDF</a>
+    <a href="/" class="btn btn-ghost">+ Nueva</a>
     <a href="/logout" class="btn btn-ghost">Salir</a>
   </div>
 </div>
@@ -373,7 +440,6 @@
   {% set n_both  = results | selectattr('status','eq','both')  | list | length %}
   {% set n_only1 = results | selectattr('status','eq','only1') | list | length %}
   {% set n_only2 = results | selectattr('status','eq','only2') | list | length %}
-  {% set n_par   = results | selectattr('parado1') | list | length + results | selectattr('parado2') | list | length %}
 
   <div class="stats-row">
     <div class="stat-chip active" data-filter="all" onclick="setFilter(this,'all')">
@@ -401,85 +467,213 @@
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
     <input type="text" class="search-input" id="searchInput"
-           placeholder="Buscar por código o descripción…"
-           oninput="applySearch()">
+           placeholder="Buscar por código o descripción…" oninput="applySearch()">
   </div>
   <span class="result-count" id="resultCount"></span>
+  <span style="font-size:0.72rem;color:var(--muted);margin-left:auto">↖ Click en fila para analizar</span>
 </div>
 
-<!-- TABLE -->
-<div class="table-wrap">
-  <table id="mainTable">
-    <thead>
-      <tr>
-        <th class="th-meta sticky-col" rowspan="2" style="min-width:70px">Código</th>
-        <th class="th-meta sticky-col-2" rowspan="2" style="min-width:220px;text-align:left">Descripción</th>
-        <th class="th-z" colspan="{{ 4 + (1 if has_sit1 or has_sit2 else 0) + 1 }}">● {{ name1 }}</th>
-        <th class="th-b col-divider" colspan="{{ 4 + (1 if has_sit1 or has_sit2 else 0) + 1 }}">● {{ name2 }}</th>
-      </tr>
-      <tr>
-        <th class="th-z">Stock</th>
-        <th class="th-z">S.min</th>
-        <th class="th-z">V.{{ results[0].year_current if results else '—' }}</th>
-        <th class="th-z">V.{{ results[0].year_prev if results else '—' }}</th>
-        {% if has_sit1 or has_sit2 %}<th class="th-z">S.365</th>{% endif %}
-        <th class="th-z">Pedido</th>
+<!-- CONTENT AREA -->
+<div class="content-area">
 
-        <th class="th-b col-divider">Stock</th>
-        <th class="th-b">S.min</th>
-        <th class="th-b">V.{{ results[0].year_current if results else '—' }}</th>
-        <th class="th-b">V.{{ results[0].year_prev if results else '—' }}</th>
-        {% if has_sit1 or has_sit2 %}<th class="th-b">S.365</th>{% endif %}
-        <th class="th-b">Pedido</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in results %}
-      <tr class="data-row
-          {% if r.needs_review %}row-warn
-          {% elif r.status == 'only1' %}row-only1
-          {% elif r.status == 'only2' %}row-only2{% endif %}"
-          data-code="{{ r.code }}"
-          data-desc="{{ r.description | upper }}"
-          data-status="{{ r.status }}"
-          data-parado="{{ '1' if r.parado1 or r.parado2 else '0' }}">
+  <!-- TABLE SECTION -->
+  <div class="table-section" id="tableSection">
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <th class="th-meta sticky-col" rowspan="2" style="min-width:70px">Código</th>
+          <th class="th-meta sticky-col-2" rowspan="2" style="min-width:200px;text-align:left">Descripción</th>
+          <th class="th-z" colspan="{{ 4 + (1 if has_sit1 or has_sit2 else 0) + 1 }}">● {{ name1 }}</th>
+          <th class="th-b col-divider" colspan="{{ 4 + (1 if has_sit1 or has_sit2 else 0) + 1 }}">● {{ name2 }}</th>
+        </tr>
+        <tr>
+          <th class="th-z">Stock</th>
+          <th class="th-z">S.min</th>
+          <th class="th-z">V.{{ results[0].year_current if results else '—' }}</th>
+          <th class="th-z">V.{{ results[0].year_prev if results else '—' }}</th>
+          {% if has_sit1 or has_sit2 %}<th class="th-z">S.365</th>{% endif %}
+          <th class="th-z">Pedido</th>
+          <th class="th-b col-divider">Stock</th>
+          <th class="th-b">S.min</th>
+          <th class="th-b">V.{{ results[0].year_current if results else '—' }}</th>
+          <th class="th-b">V.{{ results[0].year_prev if results else '—' }}</th>
+          {% if has_sit1 or has_sit2 %}<th class="th-b">S.365</th>{% endif %}
+          <th class="th-b">Pedido</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        <tr class="data-row
+            {% if r.needs_review %}row-warn
+            {% elif r.status == 'only1' %}row-only1
+            {% elif r.status == 'only2' %}row-only2{% endif %}"
+            data-idx="{{ loop.index0 }}"
+            data-code="{{ r.code }}"
+            data-desc="{{ r.description | upper }}"
+            data-status="{{ r.status }}"
+            data-parado="{{ '1' if r.parado1 or r.parado2 else '0' }}"
+            onclick="openPanel({{ loop.index0 }})">
 
-        <td class="td-code sticky-col">{{ r.code }}</td>
-        <td class="td-desc sticky-col-2">{{ r.description }}{% if r.needs_review %} <span style="color:#b45309">⚠</span>{% endif %}</td>
+          <td class="td-code sticky-col">{{ r.code }}</td>
+          <td class="td-desc sticky-col-2">{{ r.description }}{% if r.needs_review %} <span style="color:#b45309">⚠</span>{% endif %}</td>
 
-        <!-- Farmacia 1 -->
-        <td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">
-          {{ r.stock1 if r.status != 'only2' else '—' }}
-        </td>
-        <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.smin1 }}</td>
-        <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1 }}</td>
-        <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1_prev }}</td>
-        {% if has_sit1 or has_sit2 %}
-        <td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ r.s365_1 }}</td>
-        {% endif %}
-        <td class="{{ 'cell-pedido' if r.pedido1 and r.pedido1 != '0' and r.pedido1 != 0 else ('cell-muted' if r.status == 'only2') }}">
-          {{ r.pedido1 }}
-        </td>
+          <!-- F1 -->
+          <td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">
+            {{ r.stock1 if r.status != 'only2' else '—' }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.smin1 }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1 }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1_prev }}</td>
+          {% if has_sit1 or has_sit2 %}
+          <td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ r.s365_1 }}</td>
+          {% endif %}
+          <td class="{{ 'cell-pedido' if r.pedido1 and r.pedido1 != '0' and r.pedido1 != 0 else ('cell-muted' if r.status == 'only2') }}">{{ r.pedido1 }}</td>
 
-        <!-- Farmacia 2 -->
-        <td class="col-divider {{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">
-          {{ r.stock2 if r.status != 'only1' else '—' }}
-        </td>
-        <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.smin2 }}</td>
-        <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2 }}</td>
-        <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2_prev }}</td>
-        {% if has_sit1 or has_sit2 %}
-        <td class="{{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.s365_2 }}</td>
-        {% endif %}
-        <td class="{{ 'cell-pedido' if r.pedido2 and r.pedido2 != '0' and r.pedido2 != 0 else ('cell-muted' if r.status == 'only1') }}">
-          {{ r.pedido2 }}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <div class="no-results" id="noResults">No se encontraron productos para esta búsqueda.</div>
-</div>
+          <!-- F2 -->
+          <td class="col-divider {{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">
+            {{ r.stock2 if r.status != 'only1' else '—' }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.smin2 }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2 }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2_prev }}</td>
+          {% if has_sit1 or has_sit2 %}
+          <td class="{{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.s365_2 }}</td>
+          {% endif %}
+          <td class="{{ 'cell-pedido' if r.pedido2 and r.pedido2 != '0' and r.pedido2 != 0 else ('cell-muted' if r.status == 'only1') }}">{{ r.pedido2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="no-results" id="noResults">No se encontraron productos para esta búsqueda.</div>
+  </div>
+
+  <!-- DECISION PANEL -->
+  <div class="decision-panel" id="decisionPanel">
+    <div class="panel-inner">
+
+      <div class="panel-header">
+        <div class="panel-header-top">
+          <div style="flex:1">
+            <div class="panel-code" id="panelCode">—</div>
+            <div class="panel-desc" id="panelDesc">Selecciona un producto</div>
+          </div>
+          <button class="panel-close" onclick="closePanel()">✕</button>
+        </div>
+      </div>
+
+      <div class="panel-tabs">
+        <div class="panel-tab active" onclick="switchTab(this,'tab-z')">{{ name1 }}</div>
+        <div class="panel-tab" onclick="switchTab(this,'tab-b')">{{ name2 }}</div>
+        <div class="panel-tab" onclick="switchTab(this,'tab-comp')">Comparar</div>
+        <div class="panel-tab" onclick="switchTab(this,'tab-ai')">IA</div>
+      </div>
+
+      <div class="panel-body">
+
+        <!-- TAB: Farmacia 1 -->
+        <div class="tab-pane active" id="tab-z">
+          <p class="section-title">Datos base · <span style="color:var(--z)">{{ name1 }}</span></p>
+          <div class="kpi-grid" id="kpi-z-base"></div>
+
+          <p class="section-title">KPIs calculados</p>
+          <div class="kpi-grid" id="kpi-z-calc"></div>
+
+          <p class="section-title">Tendencia de ventas (año actual)</p>
+          <div class="sparkline-wrap" id="spark-z"></div>
+
+          <p class="section-title">Alertas</p>
+          <div class="alert-row" id="alerts-z"></div>
+
+          <p class="section-title">Pedido recomendado</p>
+          <div class="controls-grid" id="controls-z">
+            <div class="control-field">
+              <label>Lead time (días)</label>
+              <input type="number" id="lt-z" value="15" min="1" max="60" oninput="refreshPanel()">
+            </div>
+            <div class="control-field">
+              <label>Stock seguridad</label>
+              <input type="number" id="ss-z" value="0" min="0" oninput="refreshPanel()">
+            </div>
+            <div class="control-field">
+              <label>Horizonte (meses)</label>
+              <input type="number" id="hz-z" value="2" min="1" max="6" oninput="refreshPanel()">
+            </div>
+          </div>
+          <div id="pedido-z"></div>
+        </div>
+
+        <!-- TAB: Farmacia 2 -->
+        <div class="tab-pane" id="tab-b">
+          <p class="section-title">Datos base · <span style="color:var(--b)">{{ name2 }}</span></p>
+          <div class="kpi-grid" id="kpi-b-base"></div>
+
+          <p class="section-title">KPIs calculados</p>
+          <div class="kpi-grid" id="kpi-b-calc"></div>
+
+          <p class="section-title">Tendencia de ventas (año actual)</p>
+          <div class="sparkline-wrap" id="spark-b"></div>
+
+          <p class="section-title">Alertas</p>
+          <div class="alert-row" id="alerts-b"></div>
+
+          <p class="section-title">Pedido recomendado</p>
+          <div class="controls-grid" id="controls-b">
+            <div class="control-field">
+              <label>Lead time (días)</label>
+              <input type="number" id="lt-b" value="15" min="1" max="60" oninput="refreshPanel()">
+            </div>
+            <div class="control-field">
+              <label>Stock seguridad</label>
+              <input type="number" id="ss-b" value="0" min="0" oninput="refreshPanel()">
+            </div>
+            <div class="control-field">
+              <label>Horizonte (meses)</label>
+              <input type="number" id="hz-b" value="2" min="1" max="6" oninput="refreshPanel()">
+            </div>
+          </div>
+          <div id="pedido-b"></div>
+        </div>
+
+        <!-- TAB: Comparación -->
+        <div class="tab-pane" id="tab-comp">
+          <p class="section-title">Comparación entre farmacias</p>
+          <table class="comp-table" id="compTable">
+            <thead>
+              <tr>
+                <th>Métrica</th>
+                <th>{{ name1 }}</th>
+                <th>{{ name2 }}</th>
+              </tr>
+            </thead>
+            <tbody id="compTableBody"></tbody>
+          </table>
+          <p class="section-title" style="margin-top:1rem">Insights automáticos</p>
+          <ul class="insight-list" id="insightList"></ul>
+        </div>
+
+        <!-- TAB: IA -->
+        <div class="tab-pane" id="tab-ai">
+          <p class="section-title">Preguntar a la IA</p>
+          <p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.5rem;line-height:1.5">
+            La IA analiza los datos de este producto y responde en base a ellos.
+          </p>
+          <div class="ai-quick">
+            <button class="ai-quick-btn" onclick="askQuick('¿Debería pedir más stock?')">¿Pedir más stock?</button>
+            <button class="ai-quick-btn" onclick="askQuick('¿Por qué este producto no rota?')">¿Por qué no rota?</button>
+            <button class="ai-quick-btn" onclick="askQuick('¿Cuál es la previsión de demanda?')">Previsión</button>
+            <button class="ai-quick-btn" onclick="askQuick('¿En qué farmacia funciona mejor?')">¿Dónde funciona mejor?</button>
+          </div>
+          <div class="ai-input-wrap">
+            <input type="text" class="ai-input" id="aiInput" placeholder="Escribe tu pregunta…"
+                   onkeydown="if(event.key==='Enter')sendAI()">
+            <button class="ai-send" id="aiSend" onclick="sendAI()">Enviar</button>
+          </div>
+          <div class="ai-bubble" id="aiBubble"></div>
+        </div>
+
+      </div><!-- /panel-body -->
+    </div><!-- /panel-inner -->
+  </div><!-- /decision-panel -->
+
+</div><!-- /content-area -->
 
 <!-- LEGEND -->
 <div class="legend-bar">
@@ -490,55 +684,411 @@
   <div class="legend-item"><div class="legend-swatch" style="background:var(--pedido);border-color:#2e7d32"></div>Pedido sugerido</div>
 </div>
 
+<!-- ── DATA STORE ── -->
 <script>
-  let activeFilter = 'all';
-  let searchTerm   = '';
+const PRODUCTS = {{ results | tojson }};
+const NAME1 = {{ name1 | tojson }};
+const NAME2 = {{ name2 | tojson }};
 
-  function setFilter(el, filter) {
-    document.querySelectorAll('.stat-chip').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-    activeFilter = filter;
-    applySearch();
-  }
+let activeFilter  = 'all';
+let searchTerm    = '';
+let selectedIdx   = null;
 
-  function applySearch() {
-    searchTerm = document.getElementById('searchInput').value.trim().toUpperCase();
-    const rows = document.querySelectorAll('tbody tr.data-row');
-    let visible = 0;
-
-    rows.forEach(row => {
-      const code   = row.dataset.code.toUpperCase();
-      const desc   = row.dataset.desc;
-      const status = row.dataset.status;
-      const parado = row.dataset.parado === '1';
-
-      const matchSearch = !searchTerm || code.includes(searchTerm) || desc.includes(searchTerm);
-      const matchFilter =
-        activeFilter === 'all'    ||
-        activeFilter === status   ||
-        (activeFilter === 'parado' && parado);
-
-      if (matchSearch && matchFilter) {
-        row.classList.remove('hidden-row');
-        visible++;
-      } else {
-        row.classList.add('hidden-row');
-      }
-    });
-
-    const total = rows.length;
-    const countEl = document.getElementById('resultCount');
-    if (searchTerm || activeFilter !== 'all') {
-      countEl.innerHTML = `Mostrando <strong>${visible}</strong> de ${total} productos`;
-    } else {
-      countEl.innerHTML = `<strong>${total}</strong> productos`;
-    }
-
-    document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
-  }
-
-  // Inicializar contador
+// ─────────────────────────────────────────────
+// FILTER + SEARCH
+// ─────────────────────────────────────────────
+function setFilter(el, filter) {
+  document.querySelectorAll('.stat-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = filter;
   applySearch();
+}
+
+function applySearch() {
+  searchTerm = document.getElementById('searchInput').value.trim().toUpperCase();
+  const rows = document.querySelectorAll('tbody tr.data-row');
+  let visible = 0;
+
+  rows.forEach(row => {
+    const code   = row.dataset.code.toUpperCase();
+    const desc   = row.dataset.desc;
+    const status = row.dataset.status;
+    const parado = row.dataset.parado === '1';
+
+    const matchSearch = !searchTerm || code.includes(searchTerm) || desc.includes(searchTerm);
+    const matchFilter =
+      activeFilter === 'all' ||
+      activeFilter === status ||
+      (activeFilter === 'parado' && parado);
+
+    if (matchSearch && matchFilter) {
+      row.classList.remove('hidden-row');
+      visible++;
+    } else {
+      row.classList.add('hidden-row');
+    }
+  });
+
+  const total = rows.length;
+  const countEl = document.getElementById('resultCount');
+  countEl.innerHTML = (searchTerm || activeFilter !== 'all')
+    ? `Mostrando <strong>${visible}</strong> de ${total} productos`
+    : `<strong>${total}</strong> productos`;
+
+  document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+}
+
+// ─────────────────────────────────────────────
+// KPI ENGINE
+// ─────────────────────────────────────────────
+function computeKPIs(monthsCurrent, stock, leadTime, safetyStock, horizon) {
+  const mc = monthsCurrent.map(Number);
+
+  // Últimos N meses con datos
+  const nonZero = mc.filter(v => v > 0);
+  const last3   = mc.slice(-3);
+  const prev3   = mc.slice(-6, -3);
+
+  const sum3  = last3.reduce((a,b) => a+b, 0);
+  const sumP3 = prev3.reduce((a,b) => a+b, 0);
+
+  const avgMonthly = last3.length ? sum3 / last3.filter(v => v > 0).length || sum3 / 3 : 0;
+  const avgDaily   = avgMonthly / 30;
+
+  // Tendencia
+  let trend = 'estable';
+  if (sum3 > sumP3 * 1.15) trend = 'creciente';
+  else if (sum3 < sumP3 * 0.85 && sumP3 > 0) trend = 'decreciente';
+
+  // Rotación
+  const totalAnual = mc.reduce((a,b) => a+b, 0);
+  const rotation = totalAnual > 24 ? 'alta' : totalAnual > 8 ? 'media' : 'baja';
+
+  // Días cobertura
+  const diasCobertura = avgDaily > 0 ? Math.round(stock / avgDaily) : null;
+
+  // Punto de pedido
+  const puntoPedido = Math.ceil(avgDaily * leadTime);
+
+  // Stock óptimo (cubre horizonte + lead time + seguridad)
+  const stockOptimo = Math.ceil(avgDaily * (leadTime + horizon * 30)) + safetyStock;
+
+  // Pedido recomendado
+  const pedidoRec = Math.max(0, stockOptimo - stock);
+
+  // Urgencia
+  let urgencia = 'bajo';
+  if (stock <= puntoPedido) urgencia = 'alto';
+  else if (diasCobertura !== null && diasCobertura < leadTime * 3) urgencia = 'medio';
+
+  // Alertas
+  const alerts = [];
+  if (stock <= puntoPedido && avgDaily > 0) alerts.push({ type: 'red', text: '⚠ Riesgo rotura de stock' });
+  if (diasCobertura !== null && diasCobertura > 180) alerts.push({ type: 'orange', text: '📦 Posible sobrestock' });
+  if (totalAnual === 0) alerts.push({ type: 'gray', text: '💤 Sin rotación' });
+  else if (trend === 'creciente') alerts.push({ type: 'green', text: '📈 Tendencia creciente' });
+  else if (trend === 'decreciente') alerts.push({ type: 'orange', text: '📉 Tendencia decreciente' });
+  if (stock === 0 && totalAnual > 0) alerts.push({ type: 'red', text: '🔴 Sin stock — hay demanda' });
+
+  return { avgMonthly, avgDaily, trend, rotation, totalAnual, diasCobertura, puntoPedido, stockOptimo, pedidoRec, urgencia, alerts };
+}
+
+// ─────────────────────────────────────────────
+// SPARKLINE
+// ─────────────────────────────────────────────
+const MONTH_LABELS = ['E','F','M','A','M','J','J','A','S','O','N','D'];
+
+function renderSparkline(container, values, color) {
+  const mc = values.map(Number);
+  const max = Math.max(...mc, 1);
+  const W = 358, H = 50;
+
+  if (mc.every(v => v === 0)) {
+    container.innerHTML = '<span style="color:#ccc;font-size:0.72rem">Sin ventas este año</span>';
+    return;
+  }
+
+  const n = mc.length;
+  const pts = mc.map((v, i) => {
+    const x = (i / (n - 1)) * (W - 4) + 2;
+    const y = H - 4 - ((v / max) * (H - 10));
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  const filled = mc.map((v, i) => {
+    const x = (i / (n - 1)) * (W - 4) + 2;
+    const y = H - 4 - ((v / max) * (H - 10));
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const fillPath = `M ${filled[0]} L ${filled.join(' L ')} L ${(W-2).toFixed(1)},${(H-2).toFixed(1)} L 2,${(H-2).toFixed(1)} Z`;
+
+  const dots = mc.map((v, i) => {
+    const x = (i / (n - 1)) * (W - 4) + 2;
+    const y = H - 4 - ((v / max) * (H - 10));
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${color}" title="${MONTH_LABELS[i]}: ${v}"/>`;
+  }).join('');
+
+  container.innerHTML = `
+    <svg class="sparkline-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      <defs>
+        <linearGradient id="sg-${color.replace('#','')}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <path d="${fillPath}" fill="url(#sg-${color.replace('#','')})" stroke="none"/>
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+    </svg>
+    <div class="spark-months">${MONTH_LABELS.map((l,i) => `<span class="spark-month-label" style="color:${mc[i]>0?'#64748b':'#cbd5e1'}">${l}</span>`).join('')}</div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+// PANEL RENDER
+// ─────────────────────────────────────────────
+function kpiCard(label, value, cssClass, sub) {
+  return `<div class="kpi-card">
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-value ${cssClass||''}">${value}</div>
+    ${sub ? `<div class="kpi-sub">${sub}</div>` : ''}
+  </div>`;
+}
+
+function badgeHTML(alerts) {
+  if (!alerts.length) return '<span class="badge badge-gray">Sin alertas detectadas</span>';
+  return alerts.map(a => `<span class="badge badge-${a.type}">${a.text}</span>`).join('');
+}
+
+function pedidoBox(kpis, stock) {
+  const qty = kpis.pedidoRec;
+  const urgente = kpis.urgencia === 'alto';
+  const cls = urgente ? 'pedido-box urgente' : 'pedido-box';
+  const urgLabel = kpis.urgencia === 'alto' ? '🔴 Urgente' : kpis.urgencia === 'medio' ? '🟡 Medio' : '🟢 Bajo';
+  if (kpis.totalAnual === 0) {
+    return `<div class="pedido-box" style="background:#f8fafc;border-color:#e2e8f0">
+      <div class="pedido-box-label" style="color:#64748b">Pedido recomendado</div>
+      <div class="pedido-box-value" style="color:#64748b">0</div>
+      <div class="pedido-box-detail" style="color:#94a3b8">Producto sin rotación — no se recomienda pedir</div>
+    </div>`;
+  }
+  return `<div class="${cls}">
+    <div class="pedido-box-label">Pedido recomendado · ${urgLabel}</div>
+    <div class="pedido-box-value">${qty} uds</div>
+    <div class="pedido-box-detail">
+      Stock óptimo: ${kpis.stockOptimo} · Punto de pedido: ${kpis.puntoPedido} · Stock actual: ${stock}
+    </div>
+  </div>`;
+}
+
+function renderFarmBlock(suffix, r, color) {
+  const isZ = suffix === 'z';
+  const months = r[isZ ? 'months1_current' : 'months2_current'] || Array(12).fill(0);
+  const stock  = parseInt(r[isZ ? 'stock1' : 'stock2'])  || 0;
+  const smin   = r[isZ ? 'smin1' : 'smin2'];
+  const total  = r[isZ ? 'total1' : 'total2'];
+  const totPrev= r[isZ ? 'total1_prev' : 'total2_prev'];
+  const s365   = r[isZ ? 's365_1' : 's365_2'];
+
+  const lt = parseInt(document.getElementById(`lt-${suffix}`).value) || 15;
+  const ss = parseInt(document.getElementById(`ss-${suffix}`).value) || 0;
+  const hz = parseInt(document.getElementById(`hz-${suffix}`).value) || 2;
+
+  const kpis = computeKPIs(months, stock, lt, ss, hz);
+
+  // Base KPIs
+  document.getElementById(`kpi-${suffix}-base`).innerHTML =
+    kpiCard('Stock actual', stock, stock === 0 ? 'red' : '') +
+    kpiCard('Stock mínimo', smin === '—' || smin == null ? '—' : smin) +
+    kpiCard('Ventas año actual', total === '—' ? '—' : total) +
+    kpiCard('Ventas año anterior', totPrev === '—' ? '—' : totPrev);
+
+  // Calc KPIs
+  const dcText = kpis.diasCobertura !== null ? `${kpis.diasCobertura}d` : '∞';
+  const dcClass = kpis.diasCobertura !== null
+    ? (kpis.diasCobertura < 30 ? 'red' : kpis.diasCobertura > 180 ? 'orange' : 'green')
+    : 'blue';
+
+  document.getElementById(`kpi-${suffix}-calc`).innerHTML =
+    kpiCard('Consumo/mes', kpis.avgMonthly > 0 ? kpis.avgMonthly.toFixed(1) : '—', '', 'últimos 3 meses') +
+    kpiCard('Consumo/día', kpis.avgDaily > 0 ? kpis.avgDaily.toFixed(2) : '—', '', 'promedio') +
+    kpiCard('Tendencia', kpis.trend, kpis.trend === 'creciente' ? 'green' : kpis.trend === 'decreciente' ? 'red' : '') +
+    kpiCard('Días cobertura', dcText, dcClass, 'con stock actual');
+
+  // Sparkline
+  renderSparkline(document.getElementById(`spark-${suffix}`), months, color);
+
+  // Alerts
+  document.getElementById(`alerts-${suffix}`).innerHTML = badgeHTML(kpis.alerts);
+
+  // Pedido
+  document.getElementById(`pedido-${suffix}`).innerHTML = pedidoBox(kpis, stock);
+
+  return kpis;
+}
+
+function renderCompTab(r, kpis1, kpis2) {
+  const metrics = [
+    ['Consumo/mes', kpis1.avgMonthly.toFixed(1), kpis2.avgMonthly.toFixed(1), 'higher'],
+    ['Rotación', kpis1.rotation, kpis2.rotation, 'text'],
+    ['Tendencia', kpis1.trend, kpis2.trend, 'text'],
+    ['Días cobertura', kpis1.diasCobertura !== null ? kpis1.diasCobertura+'d' : '∞', kpis2.diasCobertura !== null ? kpis2.diasCobertura+'d' : '∞', 'lower_better'],
+    ['Ventas año actual', r.total1, r.total2, 'higher'],
+    ['Ventas año anterior', r.total1_prev, r.total2_prev, 'higher'],
+    ['Stock actual', r.stock1, r.stock2, 'text'],
+    ['Pedido sugerido', kpis1.pedidoRec, kpis2.pedidoRec, 'text'],
+  ];
+
+  const rows = metrics.map(([label, v1, v2, mode]) => {
+    let c1 = '', c2 = '';
+    if (mode === 'higher') {
+      const n1 = parseFloat(v1), n2 = parseFloat(v2);
+      if (!isNaN(n1) && !isNaN(n2) && n1 !== n2) { c1 = n1 > n2 ? 'win' : 'lose'; c2 = n2 > n1 ? 'win' : 'lose'; }
+    } else if (mode === 'lower_better') {
+      const n1 = parseFloat(v1), n2 = parseFloat(v2);
+      if (!isNaN(n1) && !isNaN(n2) && n1 !== n2) { c1 = n1 < n2 ? 'win' : 'lose'; c2 = n2 < n1 ? 'win' : 'lose'; }
+    }
+    return `<tr><td>${label}</td><td class="${c1}">${v1}</td><td class="${c2}">${v2}</td></tr>`;
+  });
+  document.getElementById('compTableBody').innerHTML = rows.join('');
+
+  // Insights
+  const insights = [];
+  const n1 = NAME1, n2 = NAME2;
+
+  if (kpis1.avgMonthly > kpis2.avgMonthly * 1.2 && kpis1.avgMonthly > 0)
+    insights.push({ icon: '📊', text: `Mayor rotación en <strong>${n1}</strong> (${kpis1.avgMonthly.toFixed(1)} vs ${kpis2.avgMonthly.toFixed(1)} uds/mes)` });
+  else if (kpis2.avgMonthly > kpis1.avgMonthly * 1.2 && kpis2.avgMonthly > 0)
+    insights.push({ icon: '📊', text: `Mayor rotación en <strong>${n2}</strong> (${kpis2.avgMonthly.toFixed(1)} vs ${kpis1.avgMonthly.toFixed(1)} uds/mes)` });
+
+  if (kpis1.trend === 'creciente' && kpis2.trend !== 'creciente')
+    insights.push({ icon: '📈', text: `Tendencia creciente en <strong>${n1}</strong>, estable/decreciente en <strong>${n2}</strong>` });
+  else if (kpis2.trend === 'creciente' && kpis1.trend !== 'creciente')
+    insights.push({ icon: '📈', text: `Tendencia creciente en <strong>${n2}</strong>, estable/decreciente en <strong>${n1}</strong>` });
+  else if (kpis1.trend === 'creciente' && kpis2.trend === 'creciente')
+    insights.push({ icon: '🚀', text: `Tendencia creciente en ambas farmacias` });
+
+  if (r.total1 === '—' || parseFloat(r.total1) === 0) insights.push({ icon: '🔵', text: `Sin ventas en <strong>${n1}</strong> este año` });
+  if (r.total2 === '—' || parseFloat(r.total2) === 0) insights.push({ icon: '🔵', text: `Sin ventas en <strong>${n2}</strong> este año` });
+
+  if (r.parado1 && !r.parado2) insights.push({ icon: '⚠️', text: `Stock parado en <strong>${n1}</strong>, activo en <strong>${n2}</strong>` });
+  if (r.parado2 && !r.parado1) insights.push({ icon: '⚠️', text: `Stock parado en <strong>${n2}</strong>, activo en <strong>${n1}</strong>` });
+  if (r.parado1 && r.parado2)  insights.push({ icon: '❌', text: `Stock parado en ambas farmacias` });
+
+  if (!insights.length) insights.push({ icon: '✅', text: 'Comportamiento similar en ambas farmacias' });
+
+  document.getElementById('insightList').innerHTML = insights.map(i =>
+    `<li class="insight-item"><span class="insight-icon">${i.icon}</span><span>${i.text}</span></li>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────
+// PANEL OPEN / CLOSE
+// ─────────────────────────────────────────────
+function openPanel(idx) {
+  const r = PRODUCTS[idx];
+  if (!r) return;
+  selectedIdx = idx;
+
+  // Highlight row
+  document.querySelectorAll('tbody tr.data-row').forEach(tr => tr.classList.remove('row-selected'));
+  const row = document.querySelector(`tbody tr[data-idx="${idx}"]`);
+  if (row) row.classList.add('row-selected');
+
+  document.getElementById('panelCode').textContent = r.code;
+  document.getElementById('panelDesc').textContent = r.description || '—';
+
+  document.getElementById('decisionPanel').classList.add('open');
+
+  refreshPanel();
+}
+
+function refreshPanel() {
+  if (selectedIdx === null) return;
+  const r = PRODUCTS[selectedIdx];
+
+  const kpis1 = renderFarmBlock('z', r, '#c0392b');
+  const kpis2 = renderFarmBlock('b', r, '#1a6fa8');
+  renderCompTab(r, kpis1, kpis2);
+}
+
+function closePanel() {
+  document.getElementById('decisionPanel').classList.remove('open');
+  document.querySelectorAll('tbody tr.data-row').forEach(tr => tr.classList.remove('row-selected'));
+  selectedIdx = null;
+}
+
+// ─────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────
+function switchTab(el, paneId) {
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(paneId).classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+// AI CHAT
+// ─────────────────────────────────────────────
+function askQuick(q) {
+  document.getElementById('aiInput').value = q;
+  sendAI();
+}
+
+async function sendAI() {
+  if (selectedIdx === null) return;
+  const r = PRODUCTS[selectedIdx];
+  const question = document.getElementById('aiInput').value.trim();
+  if (!question) return;
+
+  const btn    = document.getElementById('aiSend');
+  const bubble = document.getElementById('aiBubble');
+
+  const lt1 = parseInt(document.getElementById('lt-z').value) || 15;
+  const lt2 = parseInt(document.getElementById('lt-b').value) || 15;
+  const mc1 = r.months1_current || Array(12).fill(0);
+  const mc2 = r.months2_current || Array(12).fill(0);
+  const kpis1 = computeKPIs(mc1, parseInt(r.stock1)||0, lt1, 0, 2);
+  const kpis2 = computeKPIs(mc2, parseInt(r.stock2)||0, lt2, 0, 2);
+
+  btn.disabled = true;
+  btn.textContent = '…';
+  bubble.className = 'ai-bubble visible';
+  bubble.textContent = 'Consultando a la IA…';
+
+  try {
+    const res = await fetch('/pregunta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question,
+        name1: NAME1,
+        name2: NAME2,
+        product: {
+          code: r.code, description: r.description,
+          stock1: r.stock1, smin1: r.smin1, total1: r.total1, total1_prev: r.total1_prev, s365_1: r.s365_1,
+          stock2: r.stock2, smin2: r.smin2, total2: r.total2, total2_prev: r.total2_prev, s365_2: r.s365_2,
+          year_current: r.year_current, year_prev: r.year_prev,
+          avgMonthly1: kpis1.avgMonthly.toFixed(1), trend1: kpis1.trend, diasCobertura1: kpis1.diasCobertura,
+          avgMonthly2: kpis2.avgMonthly.toFixed(1), trend2: kpis2.trend, diasCobertura2: kpis2.diasCobertura,
+        }
+      })
+    });
+    const data = await res.json();
+    bubble.textContent = data.answer || data.error || 'Sin respuesta';
+  } catch (e) {
+    bubble.textContent = 'Error al conectar con la IA.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar';
+  }
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+applySearch();
 </script>
 </body>
 </html>

@@ -133,20 +133,22 @@ def extract_products(pdf_path):
 
                 description = _extract_description(row)
 
-                # Continuar descripción en la fila siguiente si no tiene código propio
-                if i + 1 < len(sorted_ys):
-                    y_next = sorted_ys[i + 1]
-                    if y_next - y < 20:
-                        next_row = rows[y_next]
-                        next_code_chars = [c for c in next_row if 20 <= c['x0'] < 60]
-                        next_code = ''.join(
-                            c['text'] for c in sorted(next_code_chars, key=lambda c: c['x0'])
-                        ).strip()
-                        if not re.match(r'^[0-9A-Z]{6}$', next_code):
-                            continuation = _extract_description(next_row)
-                            if continuation:
-                                description = re.sub(r'  +', ' ',
-                                                     (description + ' ' + continuation).strip())
+                # Continuar descripción en filas siguientes si no tienen código propio
+                j = i + 1
+                while j < len(sorted_ys):
+                    next_row = rows[sorted_ys[j]]
+                    next_code_chars = [c for c in next_row if 20 <= c['x0'] < 60]
+                    next_code = ''.join(
+                        c['text'] for c in sorted(next_code_chars, key=lambda c: c['x0'])
+                    ).strip()
+                    if re.match(r'^[0-9A-Z]{6}$', next_code):
+                        break
+                    continuation = _extract_description(next_row)
+                    if not continuation:
+                        break
+                    description = re.sub(r'  +', ' ',
+                                         (description + ' ' + continuation).strip())
+                    j += 1
 
                 if not description and i > 0:
                     prev_row = rows[sorted_ys[i - 1]]
@@ -267,9 +269,11 @@ def extract_situation(pdf_path):
                 y = round(w['top'] / 2) * 2
                 rows_dict[y].append(w)
 
-            for y in sorted(rows_dict.keys()):
+            sorted_ys = sorted(rows_dict.keys())
+            i = 0
+            while i < len(sorted_ys):
+                y = sorted_ys[i]
                 row = sorted(rows_dict[y], key=lambda w: w['x0'])
-                texts = [w['text'] for w in row]
 
                 # Buscar código de 6 caracteres alfanumérico
                 code = None
@@ -279,6 +283,7 @@ def extract_situation(pdf_path):
                         break
 
                 if not code:
+                    i += 1
                     continue
 
                 # Stock: entero en la franja x ≈ 410–445
@@ -302,6 +307,26 @@ def extract_situation(pdf_path):
                     w['text'] for w in row
                     if 80 <= w['x0'] < STOCK_X0 and w['text'] != code
                 )
+
+                # Look-ahead: concatenar líneas de continuación sin código propio
+                j = i + 1
+                while j < len(sorted_ys):
+                    next_row = sorted(rows_dict[sorted_ys[j]], key=lambda w: w['x0'])
+                    has_code = any(
+                        re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80
+                        for w in next_row
+                    )
+                    if has_code:
+                        break
+                    continuation = ' '.join(
+                        w['text'] for w in next_row
+                        if 80 <= w['x0'] < STOCK_X0
+                    ).strip()
+                    if not continuation:
+                        break
+                    description = re.sub(r'  +', ' ', (description + ' ' + continuation).strip())
+                    j += 1
+
                 description = re.sub(r'  +', ' ', description).strip()
 
                 products[code] = {
@@ -309,6 +334,7 @@ def extract_situation(pdf_path):
                     'caducidad':   caducidad,
                     'description': description,
                 }
+                i = j
 
     return products
 
@@ -445,6 +471,11 @@ def compare_products(products1, products2,
             'parado2':      code in sit2,
             'caducidad1':   sit1.get(code, {}).get('caducidad', ''),
             'caducidad2':   sit2.get(code, {}).get('caducidad', ''),
+            # Datos mensuales para KPIs del Motor de Decisión
+            'months1_current': p1.get('months_current', [0]*12) if p1 else [0]*12,
+            'months1_prev':    p1.get('months_prev',    [0]*12) if p1 else [0]*12,
+            'months2_current': p2.get('months_current', [0]*12) if p2 else [0]*12,
+            'months2_prev':    p2.get('months_prev',    [0]*12) if p2 else [0]*12,
         })
 
     # Ordenar alfabéticamente por descripción

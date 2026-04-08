@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedido Inteligente · {{ lab }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --z: #c0392b; --b: #1a6fa8;
+      --border: #e2e8f0; --bg: #f4f6f9; --text: #1e293b; --muted: #64748b;
+      --radius: 8px;
+    }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .topbar {
+      background: #1e293b; color: white; padding: 0 1.5rem; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 1rem; }
+    .topbar-logo { font-size: 0.85rem; font-weight: 700; color: white; text-decoration: none; }
+    .topbar-sep  { color: rgba(255,255,255,0.25); }
+    .topbar-title{ font-size: 0.82rem; color: rgba(255,255,255,0.7); }
+    .topbar-right{ display: flex; gap: 0.75rem; align-items: center; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.45rem 1rem; border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; border: none; transition: background 0.15s; text-decoration: none;
+    }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-ghost   { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.15); }
+    .btn-ghost:hover { background: rgba(255,255,255,0.18); }
+    .btn-outline { background: white; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { background: var(--bg); }
+
+    .page-header {
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 1.25rem 1.5rem;
+    }
+    .page-title { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+    .page-sub   { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+
+    .controls-bar {
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem; display: flex; align-items: flex-end; gap: 1.25rem; flex-wrap: wrap;
+    }
+    .ctrl { display: flex; flex-direction: column; gap: 0.3rem; }
+    .ctrl label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    .ctrl input, .ctrl select {
+      padding: 0.45rem 0.65rem; border: 1.5px solid var(--border); border-radius: 7px;
+      font-family: 'Inter', sans-serif; font-size: 0.85rem; color: var(--text);
+      background: var(--bg); outline: none; min-width: 120px;
+    }
+    .ctrl input:focus, .ctrl select:focus { border-color: #3b82f6; background: white; }
+
+    .tabs-bar {
+      display: flex; background: white; border-bottom: 1px solid var(--border); padding: 0 1.5rem;
+    }
+    .tab {
+      padding: 0.65rem 1.1rem; font-size: 0.8rem; font-weight: 600;
+      color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all 0.15s; user-select: none;
+    }
+    .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+    .tab:hover  { color: var(--text); }
+
+    .main { padding: 1.25rem 1.5rem 3rem; }
+
+    /* Summary cards */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
+    .sum-card { background: white; border-radius: 10px; padding: 0.9rem 1rem; border: 1px solid var(--border); }
+    .sum-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    .sum-value { font-size: 1.5rem; font-weight: 800; color: var(--text); margin-top: 0.2rem; line-height: 1; }
+    .sum-sub   { font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* Table */
+    .table-card { background: white; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
+    .table-search-bar { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.75rem; align-items: center; }
+    .ts-input {
+      flex: 1; max-width: 300px; padding: 0.45rem 0.7rem;
+      border: 1.5px solid var(--border); border-radius: 7px;
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; outline: none;
+    }
+    .ts-input:focus { border-color: #3b82f6; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    thead th {
+      background: #1e293b; color: white; padding: 0.55rem 0.75rem;
+      text-align: left; font-weight: 600; font-size: 0.72rem;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      position: sticky; top: 56px; z-index: 5;
+    }
+    thead th:not(:first-child) { text-align: center; }
+
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover td { background: var(--bg); }
+    tbody tr.hidden-row { display: none; }
+
+    td { padding: 0.5rem 0.75rem; color: var(--text); vertical-align: middle; }
+    td:not(:first-child) { text-align: center; }
+    td.td-code { font-family: monospace; font-size: 0.73rem; color: var(--muted); font-weight: 700; width: 80px; }
+    td.td-desc { max-width: 300px; }
+    td.qty     { font-weight: 700; font-size: 0.9rem; }
+    td.qty-high { color: #dc2626; }
+    td.qty-med  { color: #ea580c; }
+    td.qty-low  { color: #16a34a; }
+    td.urg-alto { color: #dc2626; font-weight: 700; font-size: 0.72rem; }
+    td.urg-medio{ color: #ea580c; font-weight: 700; font-size: 0.72rem; }
+    td.urg-bajo { color: #16a34a; font-weight: 700; font-size: 0.72rem; }
+
+    .badge-trend {
+      display: inline-block; font-size: 0.65rem; font-weight: 600;
+      padding: 0.15rem 0.45rem; border-radius: 999px;
+    }
+    .trend-creciente  { background: #f0fdf4; color: #16a34a; }
+    .trend-decreciente{ background: #fef2f2; color: #dc2626; }
+    .trend-estable    { background: var(--bg); color: var(--muted); }
+
+    /* Print mode */
+    .print-notice {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+      padding: 0.65rem 1rem; margin-bottom: 1rem; font-size: 0.78rem; color: #92400e;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    @media print {
+      .topbar, .controls-bar, .tabs-bar, .table-search-bar, .print-notice, .btn, .topbar-right { display: none !important; }
+      body { background: white; }
+      .main { padding: 0; }
+      .sum-card, .table-card { border: 1px solid #ccc; box-shadow: none; }
+      thead th { background: #1e293b !important; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="/" class="topbar-logo">Comparativa de Farmacias</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title">Pedido Inteligente · {{ lab }}</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-primary" onclick="window.print()">🖨 Imprimir</button>
+    <button class="btn btn-outline" onclick="exportCSV()">⬇ CSV</button>
+    <a href="/resultado" class="btn btn-ghost">← Volver</a>
+  </div>
+</div>
+
+<div class="page-header">
+  <div class="page-title">Pedido Inteligente — {{ lab }}</div>
+  <div class="page-sub">
+    <strong>{{ name1 }}</strong> vs <strong>{{ name2 }}</strong> ·
+    Generado el <span id="fechaHoy"></span>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls-bar">
+  <div class="ctrl">
+    <label>Lead time (días)</label>
+    <input type="number" id="leadTime" value="15" min="1" max="60" oninput="rebuild()">
+  </div>
+  <div class="ctrl">
+    <label>Stock de seguridad</label>
+    <input type="number" id="safetyStock" value="0" min="0" oninput="rebuild()">
+  </div>
+  <div class="ctrl">
+    <label>Horizonte (meses)</label>
+    <input type="number" id="horizon" value="2" min="1" max="6" oninput="rebuild()">
+  </div>
+  <div class="ctrl">
+    <label>Mínimo pedido</label>
+    <input type="number" id="minQty" value="1" min="0" oninput="rebuild()">
+  </div>
+  <div class="ctrl">
+    <label>Farmacia</label>
+    <select id="farmFilter" onchange="rebuild()">
+      <option value="both">Ambas</option>
+      <option value="z">{{ name1 }}</option>
+      <option value="b">{{ name2 }}</option>
+    </select>
+  </div>
+  <button class="btn btn-outline" onclick="rebuild()" style="margin-bottom:0.1rem">↺ Recalcular</button>
+</div>
+
+<div class="tabs-bar">
+  <div class="tab active" onclick="setTab(this,'tab-pedido')">Pedido</div>
+  <div class="tab" onclick="setTab(this,'tab-export')">Solo para proveedor</div>
+</div>
+
+<div class="main">
+
+  <div class="print-notice">
+    ⚠ Este pedido es interno — incluye datos de stock y rotación. La pestaña "Solo para proveedor" muestra únicamente código, nombre y cantidad.
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-grid" id="summaryGrid"></div>
+
+  <!-- TAB: Pedido completo -->
+  <div id="tab-pedido">
+    <div class="table-card">
+      <div class="table-search-bar">
+        <input type="text" class="ts-input" placeholder="Buscar producto…" oninput="filterTable(this.value,'fullTable')">
+        <span id="fullCount" style="font-size:0.75rem;color:var(--muted)"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th style="text-align:left">Descripción</th>
+            <th>Stk</th>
+            <th>C.Mes</th>
+            <th>Tendencia</th>
+            <th>D.Cob.</th>
+            <th>Cantidad</th>
+            <th>Urgencia</th>
+          </tr>
+        </thead>
+        <tbody id="fullTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: Solo proveedor -->
+  <div id="tab-export" style="display:none">
+    <div class="print-notice" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">
+      ✅ Esta vista solo muestra código, nombre y cantidad — apta para compartir con el proveedor.
+    </div>
+    <div class="table-card">
+      <div class="table-search-bar">
+        <input type="text" class="ts-input" placeholder="Buscar producto…" oninput="filterTable(this.value,'exportTable')">
+        <span id="exportCount" style="font-size:0.75rem;color:var(--muted)"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th style="text-align:left">Descripción</th>
+            <th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody id="exportTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- DATA STORE -->
+<script>
+const PRODUCTS = {{ results | tojson }};
+const NAME1 = {{ name1 | tojson }};
+const NAME2 = {{ name2 | tojson }};
+
+document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
+
+function computeKPIs(months, stock, leadTime, safetyStock, horizon) {
+  const mc = (months || []).map(Number);
+  const last3 = mc.slice(-3);
+  const prev3 = mc.slice(-6, -3);
+  const sum3  = last3.reduce((a,b) => a+b, 0);
+  const sumP3 = prev3.reduce((a,b) => a+b, 0);
+  const validLast3 = last3.filter(v => v > 0);
+  const avgMonthly = validLast3.length ? sum3 / validLast3.length : (sum3 / 3);
+  const avgDaily = avgMonthly / 30;
+  let trend = 'estable';
+  if (sum3 > sumP3 * 1.15) trend = 'creciente';
+  else if (sum3 < sumP3 * 0.85 && sumP3 > 0) trend = 'decreciente';
+  const totalAnual = mc.reduce((a,b) => a+b, 0);
+  const diasCobertura = avgDaily > 0 ? Math.round(stock / avgDaily) : null;
+  const puntoPedido = Math.ceil(avgDaily * leadTime);
+  const stockOptimo = Math.ceil(avgDaily * (leadTime + horizon * 30)) + safetyStock;
+  let pedidoRec = totalAnual === 0 ? 0 : Math.max(0, stockOptimo - stock);
+  // Ajuste tendencia
+  if (trend === 'creciente' && pedidoRec > 0)  pedidoRec = Math.ceil(pedidoRec * 1.15);
+  if (trend === 'decreciente' && pedidoRec > 0) pedidoRec = Math.ceil(pedidoRec * 0.85);
+  let urgencia = 'bajo';
+  if (pedidoRec > 0 && stock <= puntoPedido && avgDaily > 0) urgencia = 'alto';
+  else if (pedidoRec > 0 && diasCobertura !== null && diasCobertura < leadTime * 3) urgencia = 'medio';
+  return { avgMonthly, totalAnual, trend, diasCobertura, pedidoRec, urgencia };
+}
+
+let currentFarm = 'both';
+let allRows = [];
+
+function rebuild() {
+  const lt  = parseInt(document.getElementById('leadTime').value)    || 15;
+  const ss  = parseInt(document.getElementById('safetyStock').value) || 0;
+  const hz  = parseInt(document.getElementById('horizon').value)     || 2;
+  const min = parseInt(document.getElementById('minQty').value)      || 1;
+  const farm= document.getElementById('farmFilter').value;
+  currentFarm = farm;
+
+  // Build rows
+  const rows = [];
+
+  PRODUCTS.forEach(p => {
+    // Farmacia 1
+    if (farm === 'both' || farm === 'z') {
+      if (p.status !== 'only2') {
+        const stock = parseInt(p.stock1) || 0;
+        const kpis  = computeKPIs(p.months1_current, stock, lt, ss, hz);
+        if (kpis.pedidoRec >= min) {
+          rows.push({
+            code: p.code, description: p.description,
+            farm: NAME1, farmKey: 'z',
+            stock, avgMonthly: kpis.avgMonthly, trend: kpis.trend,
+            diasCobertura: kpis.diasCobertura, qty: kpis.pedidoRec, urgencia: kpis.urgencia
+          });
+        }
+      }
+    }
+    // Farmacia 2
+    if (farm === 'both' || farm === 'b') {
+      if (p.status !== 'only1') {
+        const stock = parseInt(p.stock2) || 0;
+        const kpis  = computeKPIs(p.months2_current, stock, lt, ss, hz);
+        if (kpis.pedidoRec >= min) {
+          rows.push({
+            code: p.code, description: p.description,
+            farm: NAME2, farmKey: 'b',
+            stock, avgMonthly: kpis.avgMonthly, trend: kpis.trend,
+            diasCobertura: kpis.diasCobertura, qty: kpis.pedidoRec, urgencia: kpis.urgencia
+          });
+        }
+      }
+    }
+  });
+
+  // Sort urgencia: alto → medio → bajo
+  const ORD = { alto: 0, medio: 1, bajo: 2 };
+  rows.sort((a, b) => ORD[a.urgencia] - ORD[b.urgencia] || b.qty - a.qty);
+  allRows = rows;
+
+  renderTables(rows);
+  renderSummary(rows, lt, hz);
+}
+
+function renderSummary(rows, lt, hz) {
+  const total = rows.reduce((s, r) => s + r.qty, 0);
+  const altos = rows.filter(r => r.urgencia === 'alto').length;
+  const byFarm = {};
+  rows.forEach(r => { byFarm[r.farm] = (byFarm[r.farm] || 0) + r.qty; });
+  const farmLines = Object.entries(byFarm).map(([f, q]) => `${f}: ${q}`).join(' · ');
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="sum-card"><div class="sum-label">Productos a pedir</div><div class="sum-value">${rows.length}</div><div class="sum-sub">${farmLines}</div></div>
+    <div class="sum-card"><div class="sum-label">Unidades totales</div><div class="sum-value">${total}</div><div class="sum-sub">lead time ${lt}d · horizonte ${hz}m</div></div>
+    <div class="sum-card"><div class="sum-label">Urgencia alta</div><div class="sum-value" style="color:#dc2626">${altos}</div><div class="sum-sub">por debajo del punto de pedido</div></div>
+    <div class="sum-card"><div class="sum-label">Urgencia media</div><div class="sum-value" style="color:#ea580c">${rows.filter(r=>r.urgencia==='medio').length}</div><div class="sum-sub">cobertura ajustada</div></div>
+  `;
+}
+
+function renderTables(rows) {
+  // Full table
+  const fullHTML = rows.map((r, i) => {
+    const dcText = r.diasCobertura !== null ? r.diasCobertura + 'd' : '∞';
+    const qtyClass = r.urgencia === 'alto' ? 'qty qty-high' : r.urgencia === 'medio' ? 'qty qty-med' : 'qty qty-low';
+    const urgClass = `urg-${r.urgencia}`;
+    const urgLabel = r.urgencia === 'alto' ? '🔴 Alto' : r.urgencia === 'medio' ? '🟡 Medio' : '🟢 Bajo';
+    const farmColor = r.farmKey === 'z' ? 'var(--z)' : 'var(--b)';
+    return `<tr data-search="${r.code} ${r.description.toUpperCase()} ${r.farm.toUpperCase()}">
+      <td class="td-code">${r.code}</td>
+      <td class="td-desc">
+        ${r.description}
+        <span style="font-size:0.65rem;font-weight:600;color:${farmColor};margin-left:0.4rem">${r.farm}</span>
+      </td>
+      <td>${r.stock}</td>
+      <td>${r.avgMonthly > 0 ? r.avgMonthly.toFixed(1) : '—'}</td>
+      <td><span class="badge-trend trend-${r.trend}">${r.trend}</span></td>
+      <td>${dcText}</td>
+      <td class="${qtyClass}">${r.qty}</td>
+      <td class="${urgClass}">${urgLabel}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('fullTable').innerHTML = fullHTML;
+  document.getElementById('fullCount').textContent = `${rows.length} productos`;
+
+  // Export table (clean — no internal data)
+  // If "both" farms: combine same product from both farms
+  let exportRows = rows;
+  if (currentFarm === 'both') {
+    const combined = {};
+    rows.forEach(r => {
+      const key = r.code;
+      if (!combined[key]) combined[key] = { code: r.code, description: r.description, qty: 0, maxUrg: 2 };
+      combined[key].qty += r.qty;
+      const o = { alto: 0, medio: 1, bajo: 2 };
+      if ((o[r.urgencia] || 2) < combined[key].maxUrg) combined[key].maxUrg = o[r.urgencia] || 2;
+    });
+    exportRows = Object.values(combined).sort((a,b) => a.maxUrg - b.maxUrg || b.qty - a.qty);
+  }
+
+  const exportHTML = exportRows.map(r => `<tr data-search="${r.code} ${r.description.toUpperCase()}">
+    <td class="td-code">${r.code}</td>
+    <td class="td-desc">${r.description}</td>
+    <td class="qty">${r.qty}</td>
+  </tr>`).join('');
+  document.getElementById('exportTable').innerHTML = exportHTML;
+  document.getElementById('exportCount').textContent = `${exportRows.length} productos`;
+}
+
+function filterTable(q, tableId) {
+  const term = q.trim().toUpperCase();
+  document.querySelectorAll(`#${tableId} tr`).forEach(tr => {
+    const search = (tr.dataset.search || '').toUpperCase();
+    tr.classList.toggle('hidden-row', term !== '' && !search.includes(term));
+  });
+}
+
+function setTab(el, tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-pedido').style.display  = tabId === 'tab-pedido'  ? 'block' : 'none';
+  document.getElementById('tab-export').style.display  = tabId === 'tab-export'  ? 'block' : 'none';
+}
+
+function exportCSV() {
+  const rows = allRows;
+  const header = currentFarm === 'both'
+    ? 'Código,Descripción,Cantidad\n'
+    : 'Código,Descripción,Farmacia,Cantidad\n';
+
+  let body;
+  if (currentFarm === 'both') {
+    const combined = {};
+    rows.forEach(r => {
+      if (!combined[r.code]) combined[r.code] = { code: r.code, description: r.description, qty: 0 };
+      combined[r.code].qty += r.qty;
+    });
+    body = Object.values(combined).map(r => `${r.code},"${r.description}",${r.qty}`).join('\n');
+  } else {
+    body = rows.map(r => `${r.code},"${r.description}","${r.farm}",${r.qty}`).join('\n');
+  }
+
+  const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'pedido_{{ lab }}.csv';
+  a.click();
+}
+
+// Init
+rebuild();
+</script>
+</body>
+</html>

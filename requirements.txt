@@ -4,3 +4,4 @@ flask
 pdfplumber
 reportlab
 gunicorn
+anthropic

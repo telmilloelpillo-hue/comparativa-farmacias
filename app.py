@@ -1,7 +1,13 @@
-from flask import Flask, request, render_template, send_file, session, redirect, url_for
+from flask import Flask, request, render_template, send_file, session, redirect, url_for, jsonify
 import os, tempfile, uuid, json
 from datetime import datetime
 from pdf_parser import extract_products, compare_products, detect_lab, extract_situation
+
+try:
+    import anthropic as _anthropic
+    _AI_AVAILABLE = bool(os.environ.get('ANTHROPIC_API_KEY'))
+except ImportError:
+    _AI_AVAILABLE = False
 
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
@@ -201,6 +207,71 @@ def descargar():
     return send_file(pdf_path, as_attachment=True,
                      download_name=f'comparativa_{lab_slug}.pdf',
                      mimetype='application/pdf')
+
+
+@app.route('/pedido')
+def pedido():
+    token = session.get('comp_token')
+    if not token:
+        return redirect(url_for('index'))
+    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+    if not os.path.exists(json_path):
+        return redirect(url_for('index'))
+    with open(json_path, encoding='utf-8') as f:
+        data = json.load(f)
+    return render_template('pedido.html', **data)
+
+
+@app.route('/pregunta', methods=['POST'])
+def pregunta():
+    if not session.get('authenticated'):
+        return jsonify({'error': 'no auth'}), 401
+
+    if not _AI_AVAILABLE:
+        return jsonify({'answer': 'IA no configurada. Añade ANTHROPIC_API_KEY como variable de entorno.'})
+
+    body = request.get_json(silent=True) or {}
+    question = body.get('question', '').strip()
+    if not question:
+        return jsonify({'error': 'pregunta vacía'}), 400
+
+    p = body.get('product', {})
+    name1 = body.get('name1', 'Farmacia 1')
+    name2 = body.get('name2', 'Farmacia 2')
+
+    ctx = f"""Producto: {p.get('code')} — {p.get('description')}
+
+{name1}:
+  Stock actual: {p.get('stock1')}  |  Stock mínimo: {p.get('smin1')}
+  Ventas {p.get('year_current')}: {p.get('total1')}  |  Ventas {p.get('year_prev')}: {p.get('total1_prev')}
+  Consumo medio mensual (últ. 3 meses): {p.get('avgMonthly1', '—')} uds
+  Tendencia: {p.get('trend1', '—')}  |  Días de cobertura: {p.get('diasCobertura1', '—')}
+  Stock parado 365d: {p.get('s365_1')}
+
+{name2}:
+  Stock actual: {p.get('stock2')}  |  Stock mínimo: {p.get('smin2')}
+  Ventas {p.get('year_current')}: {p.get('total2')}  |  Ventas {p.get('year_prev')}: {p.get('total2_prev')}
+  Consumo medio mensual (últ. 3 meses): {p.get('avgMonthly2', '—')} uds
+  Tendencia: {p.get('trend2', '—')}  |  Días de cobertura: {p.get('diasCobertura2', '—')}
+  Stock parado 365d: {p.get('s365_2')}"""
+
+    prompt = (
+        "Eres un experto en gestión de stock de farmacia. Responde de forma concisa y directa "
+        "(máximo 4 frases) basándote únicamente en los datos facilitados.\n\n"
+        f"Datos del producto:\n{ctx}\n\n"
+        f"Pregunta: {question}"
+    )
+
+    try:
+        client = _anthropic.Anthropic()
+        msg = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=350,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        return jsonify({'answer': msg.content[0].text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.errorhandler(413)
