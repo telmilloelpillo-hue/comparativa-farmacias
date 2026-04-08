@@ -4,132 +4,135 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Error · Comparativa de Farmacias</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #f0f2f5;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #f4f6f9;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 2rem;
     }
 
-    .header-bar {
+    .topbar {
       position: fixed;
       top: 0; left: 0; right: 0;
-      background: #2c3e50;
-      padding: 16px 32px;
+      background: #1e293b;
+      height: 56px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      padding: 0 2rem;
+      gap: 0.6rem;
     }
-    .header-bar .dot-z { width: 10px; height: 10px; border-radius: 50%; background: #c0392b; }
-    .header-bar .dot-b { width: 10px; height: 10px; border-radius: 50%; background: #1a6fa8; }
-    .header-bar span {
+    .topbar-icon {
+      width: 26px; height: 26px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+    .topbar-name {
       color: white;
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      font-size: 0.85rem;
+      font-weight: 700;
     }
 
     .card {
       background: white;
-      border-radius: 16px;
-      padding: 48px 40px;
-      max-width: 480px;
+      border-radius: 14px;
+      padding: 2.5rem 2rem;
+      max-width: 460px;
       width: 100%;
       box-shadow: 0 4px 24px rgba(0,0,0,0.08);
       text-align: center;
+      margin-top: 2rem;
     }
 
-    .icon {
-      width: 64px;
-      height: 64px;
-      background: #fdecea;
+    .icon-wrap {
+      width: 60px; height: 60px;
+      background: #fef2f2;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 24px;
-      font-size: 28px;
+      margin: 0 auto 1.5rem;
+      font-size: 1.6rem;
     }
 
     h2 {
-      font-size: 20px;
-      color: #2c3e50;
+      font-size: 1.1rem;
       font-weight: 700;
-      margin-bottom: 12px;
+      color: #1e293b;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
     }
 
     .labs {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      margin: 20px 0;
+      gap: 0.75rem;
+      margin: 1.25rem 0;
     }
-
-    .lab-badge {
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 13px;
+    .lab-pill {
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
       font-weight: 600;
     }
-    .lab-badge.one { background: #fdecea; color: #c0392b; }
-    .lab-badge.two { background: #e8f3fb; color: #1a6fa8; }
-
-    .vs {
-      font-size: 11px;
-      font-weight: 700;
-      color: #aaa;
-      letter-spacing: 1px;
-    }
+    .lab-pill-1 { background: #fdecea; color: #c0392b; border: 1px solid #f5b7b1; }
+    .lab-pill-2 { background: #e8f3fb; color: #1a6fa8; border: 1px solid #aed6f1; }
+    .vs { font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.1em; }
 
     p {
-      color: #666;
-      font-size: 14px;
-      line-height: 1.6;
-      margin-bottom: 28px;
+      color: #64748b;
+      font-size: 0.85rem;
+      line-height: 1.65;
+      margin-bottom: 1.75rem;
     }
 
     a {
-      display: inline-block;
-      background: #2c3e50;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #1e293b;
       color: white;
-      padding: 12px 28px;
+      padding: 0.65rem 1.5rem;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 0.85rem;
       font-weight: 600;
       text-decoration: none;
-      transition: background 0.2s;
+      transition: background 0.15s;
     }
-    a:hover { background: #1a2332; }
+    a:hover { background: #334155; }
   </style>
 </head>
 <body>
 
-  <div class="header-bar">
-    <div class="dot-z"></div>
-    <div class="dot-b"></div>
-    <span>Comparativa de Farmacias</span>
+  <div class="topbar">
+    <div class="topbar-icon">💊</div>
+    <span class="topbar-name">Comparativa de Farmacias</span>
   </div>
 
   <div class="card">
-    <div class="icon">⚠️</div>
+    <div class="icon-wrap">⚠️</div>
     <h2>PDFs de laboratorios distintos</h2>
 
     <div class="labs">
-      <span class="lab-badge one">{{ lab1 }}</span>
+      <span class="lab-pill lab-pill-1">{{ lab1 }}</span>
       <span class="vs">VS</span>
-      <span class="lab-badge two">{{ lab2 }}</span>
+      <span class="lab-pill lab-pill-2">{{ lab2 }}</span>
     </div>
 
     <p>Los dos archivos pertenecen a laboratorios diferentes.<br>
-    Para generar una comparativa, sube dos PDFs del <strong>mismo laboratorio</strong>.</p>
+    Para generar la comparativa, sube dos PDFs del <strong>mismo laboratorio</strong>.</p>
 
     <a href="/">← Volver e intentarlo de nuevo</a>
   </div>

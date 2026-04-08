@@ -4,27 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Comparativa de Farmacias</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --zarzuelo: #c0392b;
-      --zarzuelo-light: #fdecea;
-      --barris: #1a6fa8;
-      --barris-light: #e8f3fb;
-      --parado: #ff8c00;
-      --parado-light: #fff3e0;
-      --bg: #f7f5f0;
+      --z:       #c0392b;
+      --z-light: #fdecea;
+      --b:       #1a6fa8;
+      --b-light: #e8f3fb;
+      --parado:  #f59e0b;
+      --bg:      #f4f6f9;
       --surface: #ffffff;
-      --border: #e0ddd7;
-      --text: #1c1a17;
-      --muted: #7a7670;
-      --accent: #2c3e50;
+      --border:  #e2e8f0;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --accent:  #1e293b;
+      --radius:  10px;
     }
 
     body {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -32,559 +32,530 @@
       flex-direction: column;
     }
 
-    /* HEADER */
-    header {
+    /* ── TOP BAR ── */
+    .topbar {
       background: var(--accent);
       color: white;
-      padding: 2.5rem 3rem 2rem;
-      position: relative;
-      overflow: hidden;
-    }
-    header::before {
-      content: '';
-      position: absolute;
-      right: -60px; top: -60px;
-      width: 300px; height: 300px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.04);
-      pointer-events: none;
-    }
-    header::after {
-      content: '';
-      position: absolute;
-      right: 80px; bottom: -100px;
-      width: 200px; height: 200px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.03);
-      pointer-events: none;
-    }
-    .header-eyebrow {
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.5);
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-    }
-    header h1 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 2rem;
-      font-weight: 400;
-      letter-spacing: -0.01em;
-      line-height: 1.2;
-    }
-    header h1 em {
-      font-style: italic;
-      color: rgba(255,255,255,0.6);
-    }
-    .header-badges {
+      padding: 0 2rem;
+      height: 56px;
       display: flex;
-      gap: 0.75rem;
-      margin-top: 1.2rem;
-    }
-    .badge {
-      display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      font-size: 0.72rem;
-      font-weight: 500;
-      padding: 0.3rem 0.75rem;
-      border-radius: 999px;
-      letter-spacing: 0.02em;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
-    .badge-zarzuelo {
-      background: rgba(192, 57, 43, 0.25);
-      color: #f1948a;
-      border: 1px solid rgba(192, 57, 43, 0.3);
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: white;
     }
-    .badge-barris {
-      background: rgba(26, 111, 168, 0.25);
-      color: #7fb3d3;
-      border: 1px solid rgba(26, 111, 168, 0.3);
+    .topbar-brand-icon {
+      width: 28px; height: 28px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
     }
-    .badge-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: currentColor;
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
+    .nav-link {
+      color: rgba(255,255,255,0.65);
+      font-size: 0.78rem;
+      text-decoration: none;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
 
-    /* MAIN */
+    /* ── MAIN ── */
     main {
       flex: 1;
-      padding: 2.5rem 3rem;
-      max-width: 960px;
-      width: 100%;
-      margin: 0 auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2.5rem 1.5rem;
     }
 
+    .page-wrap {
+      width: 100%;
+      max-width: 860px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .page-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.03em;
+    }
+    .page-header p {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: 0.4rem;
+    }
+
+    /* ── CARD ── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: var(--radius);
       padding: 2rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .card-title {
-      font-family: 'DM Serif Display', serif;
-      font-size: 1.1rem;
-      color: var(--accent);
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
     }
 
-    /* FORM GRID */
+    /* ── FORM GRID ── */
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+      gap: 0;
     }
 
     .pharmacy-col {
+      padding: 0 1.5rem 0 0;
       display: flex;
       flex-direction: column;
       gap: 1rem;
+    }
+    .pharmacy-col:last-child {
+      padding: 0 0 0 1.5rem;
+      border-left: 1px solid var(--border);
+    }
+
+    .col-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+    .col-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-z { background: var(--z); }
+    .dot-b { background: var(--b); }
+    .col-header-text {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
 
     label {
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 600;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       color: var(--muted);
       display: flex;
       align-items: center;
-      gap: 0.35rem;
+      gap: 0.4rem;
     }
-
-    .label-badge-optional {
+    .lbl-optional {
       font-size: 0.62rem;
       font-weight: 600;
-      padding: 0.15rem 0.45rem;
+      padding: 0.1rem 0.45rem;
       border-radius: 999px;
-      background: var(--parado-light);
+      background: #fffbeb;
       color: var(--parado);
-      border: 1px solid rgba(255,140,0,0.3);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      border: 1px solid #fde68a;
       margin-left: auto;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
-
-    .label-dot {
-      display: inline-block;
-      width: 7px; height: 7px;
-      border-radius: 50%;
-    }
-    .dot-z { background: var(--zarzuelo); }
-    .dot-b { background: var(--barris); }
 
     input[type="text"] {
-      padding: 0.65rem 0.9rem;
+      padding: 0.6rem 0.85rem;
       border: 1.5px solid var(--border);
       border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
       color: var(--text);
       background: var(--bg);
-      transition: border-color 0.2s, box-shadow 0.2s;
       outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
     input[type="text"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(44,62,80,0.08);
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+      background: white;
     }
 
-    /* SECTION DIVIDER */
-    .section-label {
-      font-size: 0.7rem;
+    .section-sep {
+      font-size: 0.65rem;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--muted);
+      color: #cbd5e1;
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      margin-top: 0.25rem;
     }
-    .section-label::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
+    .section-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-    /* FILE DROP — Ventas (required) */
+    /* FILE DROP — ventas */
     .file-drop {
       border: 2px dashed var(--border);
-      border-radius: 10px;
-      padding: 1.25rem;
+      border-radius: 8px;
+      padding: 1.1rem 1rem;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
       background: var(--bg);
     }
-    .file-drop:hover, .file-drop.dragover {
-      border-color: var(--accent);
-      background: rgba(44,62,80,0.03);
-    }
-    .file-drop.has-file-z {
-      border-color: var(--zarzuelo);
-      background: var(--zarzuelo-light);
-    }
-    .file-drop.has-file-b {
-      border-color: var(--barris);
-      background: var(--barris-light);
-    }
+    .file-drop:hover, .file-drop.dragover { border-color: #3b82f6; background: #eff6ff; }
+    .file-drop.has-z  { border-color: var(--z);  background: var(--z-light); }
+    .file-drop.has-b  { border-color: var(--b);  background: var(--b-light); }
     .file-drop input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      width: 100%;
-      height: 100%;
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
     }
-    .drop-icon { font-size: 1.6rem; margin-bottom: 0.35rem; display: block; }
-    .drop-text { font-size: 0.82rem; color: var(--muted); font-weight: 400; }
-    .drop-text strong { color: var(--text); font-weight: 600; }
+    .drop-icon { font-size: 1.4rem; display: block; margin-bottom: 0.3rem; }
+    .drop-label { font-size: 0.8rem; color: var(--muted); }
+    .drop-label strong { color: var(--text); }
     .drop-filename {
-      margin-top: 0.35rem;
-      font-size: 0.78rem;
+      margin-top: 0.3rem;
+      font-size: 0.75rem;
       font-weight: 600;
       display: none;
     }
-    .has-file-z .drop-filename { color: var(--zarzuelo); display: block; }
-    .has-file-b .drop-filename { color: var(--barris); display: block; }
+    .has-z .drop-filename { color: var(--z); display: block; }
+    .has-b .drop-filename { color: var(--b); display: block; }
 
-    /* FILE DROP — Situación (optional) — más compacto */
+    /* FILE DROP — situación (compacto) */
     .file-drop-sm {
       border: 1.5px dashed var(--border);
       border-radius: 8px;
-      padding: 0.75rem 1rem;
-      text-align: center;
+      padding: 0.65rem 0.9rem;
       cursor: pointer;
       transition: all 0.2s;
       position: relative;
       background: var(--bg);
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.65rem;
     }
-    .file-drop-sm:hover, .file-drop-sm.dragover {
-      border-color: var(--parado);
-      background: var(--parado-light);
-    }
-    .file-drop-sm.has-file-sit {
-      border-color: var(--parado);
-      background: var(--parado-light);
-    }
+    .file-drop-sm:hover, .file-drop-sm.dragover { border-color: var(--parado); background: #fffbeb; }
+    .file-drop-sm.has-sit { border-color: var(--parado); background: #fffbeb; }
     .file-drop-sm input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      width: 100%;
-      height: 100%;
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
     }
-    .drop-sm-icon { font-size: 1.2rem; flex-shrink: 0; }
-    .drop-sm-text { text-align: left; }
-    .drop-sm-text span {
-      font-size: 0.8rem;
-      color: var(--muted);
-      display: block;
-    }
-    .drop-sm-text strong { color: var(--text); font-weight: 600; font-size: 0.8rem; }
-    .drop-sm-filename {
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--parado);
-      display: none;
-    }
-    .has-file-sit .drop-sm-filename { display: block; }
-    .has-file-sit .drop-sm-hint     { display: none; }
+    .drop-sm-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .drop-sm-body { text-align: left; }
+    .drop-sm-body strong { font-size: 0.78rem; color: var(--text); display: block; }
+    .drop-sm-body span { font-size: 0.72rem; color: var(--muted); }
+    .drop-sm-filename { font-size: 0.72rem; font-weight: 600; color: var(--parado); display: none; }
+    .has-sit .drop-sm-filename { display: block; }
+    .has-sit .drop-sm-hint { display: none; }
 
-    /* SUBMIT */
+    /* ── FOOTER ── */
     .form-footer {
       margin-top: 1.75rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-top: 1.25rem;
-      border-top: 1px solid var(--border);
     }
     .form-hint { font-size: 0.78rem; color: var(--muted); }
 
-    button[type="submit"] {
+    .btn-submit {
       background: var(--accent);
       color: white;
       border: none;
-      padding: 0.75rem 2rem;
+      padding: 0.7rem 1.75rem;
       border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      transition: background 0.2s, transform 0.1s;
+      gap: 0.45rem;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
-    button[type="submit"]:hover { background: #3d5166; }
-    button[type="submit"]:active { transform: scale(0.98); }
-    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-submit:hover { background: #334155; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
     /* LOADING */
-    .loading-state { display: none; text-align: center; padding: 2.5rem; }
+    .loading-state { display: none; text-align: center; padding: 2.5rem 1rem; }
     .spinner {
-      width: 36px; height: 36px;
+      width: 34px; height: 34px;
       border: 3px solid var(--border);
-      border-top-color: var(--accent);
+      border-top-color: #3b82f6;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.7s linear infinite;
       margin: 0 auto 1rem;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-state p { color: var(--muted); font-size: 0.9rem; }
+    .loading-state p { color: var(--muted); font-size: 0.88rem; }
+    .loading-state .loading-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 0.4rem; }
 
     /* ERROR */
     .error-box {
       display: none;
-      background: #fdecea;
-      border: 1px solid #f5c6c2;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-left: 3px solid var(--z);
       border-radius: 8px;
-      padding: 1rem 1.25rem;
+      padding: 0.85rem 1rem;
       margin-top: 1rem;
-      font-size: 0.85rem;
-      color: var(--zarzuelo);
+      font-size: 0.83rem;
+      color: #991b1b;
     }
 
     /* LEGEND */
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.25rem;
-      margin-top: 1.5rem;
-      padding: 1rem 1.25rem;
-      background: var(--bg);
-      border-radius: 8px;
+    .legend-card {
+      background: var(--surface);
       border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .legend-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-right: 0.5rem;
     }
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      font-size: 0.78rem;
+      gap: 0.4rem;
+      font-size: 0.75rem;
       color: var(--muted);
     }
     .legend-swatch {
-      width: 24px; height: 10px;
+      width: 20px; height: 10px;
       border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.1);
     }
-    .sw-z    { background: var(--zarzuelo-light); border: 1px solid var(--zarzuelo); }
-    .sw-b    { background: var(--barris-light);   border: 1px solid var(--barris); }
-    .sw-both { background: white;                 border: 1px solid var(--border); }
-    .sw-par  { background: #ffe0b2;               border: 1px solid var(--parado); }
 
     footer {
       text-align: center;
-      padding: 1.5rem;
-      font-size: 0.75rem;
-      color: var(--muted);
+      padding: 1.25rem;
+      font-size: 0.72rem;
+      color: #94a3b8;
       border-top: 1px solid var(--border);
     }
   </style>
 </head>
 <body>
 
-<header>
-  <p class="header-eyebrow">Sistema de análisis · Stock &amp; Ventas</p>
-  <h1>Comparativa <em>de farmacias</em></h1>
-  <div class="header-badges">
-    <span class="badge badge-zarzuelo"><span class="badge-dot"></span>Farmacia Zarzuelo</span>
-    <span class="badge badge-barris"><span class="badge-dot"></span>Farmacia Barris</span>
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-brand-icon">💊</div>
+    Comparativa de Farmacias
   </div>
-</header>
+  <nav class="topbar-nav">
+    <a href="/logout" class="nav-link">Cerrar sesión</a>
+  </nav>
+</div>
 
 <main>
-  <div class="card">
-    <p class="card-title">Subir PDFs para comparar</p>
+  <div class="page-wrap">
 
-    <form id="mainForm" action="/comparar" method="POST" enctype="multipart/form-data">
-      <div class="form-grid">
-
-        <!-- ── Farmacia 1 ── -->
-        <div class="pharmacy-col">
-          <div class="form-group">
-            <label><span class="label-dot dot-z"></span>Nombre Farmacia 1</label>
-            <input type="text" name="name1" value="Zarzuelo" required>
-          </div>
-
-          <p class="section-label">Estadísticas de ventas</p>
-
-          <div class="form-group">
-            <label><span class="label-dot dot-z"></span>PDF Ventas · Farmacia 1</label>
-            <div class="file-drop" id="drop1">
-              <input type="file" name="pdf1" accept=".pdf" required id="file1">
-              <span class="drop-icon">📊</span>
-              <p class="drop-text"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF de ventas</p>
-              <p class="drop-filename" id="name1-file"></p>
-            </div>
-          </div>
-
-          <p class="section-label">Stock parado</p>
-
-          <div class="form-group">
-            <label>
-              <span class="label-dot dot-z"></span>Informe de situación · Farmacia 1
-              <span class="label-badge-optional">Opcional</span>
-            </label>
-            <div class="file-drop-sm" id="drop-sit1">
-              <input type="file" name="sit1" accept=".pdf" id="file-sit1">
-              <span class="drop-sm-icon">📋</span>
-              <div class="drop-sm-text">
-                <strong class="drop-sm-hint">Arrastra o haz clic</strong>
-                <span class="drop-sm-hint">Stock parado · Sin ventas en +365 días</span>
-                <span class="drop-sm-filename" id="name-sit1-file"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── Farmacia 2 ── -->
-        <div class="pharmacy-col">
-          <div class="form-group">
-            <label><span class="label-dot dot-b"></span>Nombre Farmacia 2</label>
-            <input type="text" name="name2" value="Barris" required>
-          </div>
-
-          <p class="section-label">Estadísticas de ventas</p>
-
-          <div class="form-group">
-            <label><span class="label-dot dot-b"></span>PDF Ventas · Farmacia 2</label>
-            <div class="file-drop" id="drop2">
-              <input type="file" name="pdf2" accept=".pdf" required id="file2">
-              <span class="drop-icon">📊</span>
-              <p class="drop-text"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF de ventas</p>
-              <p class="drop-filename" id="name2-file"></p>
-            </div>
-          </div>
-
-          <p class="section-label">Stock parado</p>
-
-          <div class="form-group">
-            <label>
-              <span class="label-dot dot-b"></span>Informe de situación · Farmacia 2
-              <span class="label-badge-optional">Opcional</span>
-            </label>
-            <div class="file-drop-sm" id="drop-sit2">
-              <input type="file" name="sit2" accept=".pdf" id="file-sit2">
-              <span class="drop-sm-icon">📋</span>
-              <div class="drop-sm-text">
-                <strong class="drop-sm-hint">Arrastra o haz clic</strong>
-                <span class="drop-sm-hint">Stock parado · Sin ventas en +365 días</span>
-                <span class="drop-sm-filename" id="name-sit2-file"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /form-grid -->
-
-      <div class="error-box" id="errorBox"></div>
-
-      <div class="form-footer">
-        <span class="form-hint">Genera un PDF comparativo descargable</span>
-        <button type="submit" id="submitBtn">
-          <span>⚡</span> Generar comparativa
-        </button>
-      </div>
-    </form>
-
-    <div class="loading-state" id="loadingState">
-      <div class="spinner"></div>
-      <p>Procesando PDFs… esto puede tardar unos segundos</p>
+    <div class="page-header">
+      <h1>Nueva comparativa</h1>
+      <p>Sube los PDFs de estadísticas de ventas y genera el análisis comparativo</p>
     </div>
-  </div><!-- /card -->
 
-  <div class="legend">
-    <div class="legend-item"><div class="legend-swatch sw-z"></div>Solo en Farmacia 1 (rojo)</div>
-    <div class="legend-item"><div class="legend-swatch sw-b"></div>Solo en Farmacia 2 (azul)</div>
-    <div class="legend-item"><div class="legend-swatch sw-both"></div>En ambas farmacias</div>
-    <div class="legend-item"><div class="legend-swatch sw-par"></div>Celda naranja = stock parado (+365 días sin venta)</div>
+    <div class="card">
+      <form id="mainForm" action="/comparar" method="POST" enctype="multipart/form-data">
+        <div class="form-grid">
+
+          <!-- ── Farmacia 1 ── -->
+          <div class="pharmacy-col">
+            <div class="col-header">
+              <span class="col-dot dot-z"></span>
+              <span class="col-header-text">Farmacia 1</span>
+            </div>
+
+            <div class="form-group">
+              <label>Nombre</label>
+              <input type="text" name="name1" value="Zarzuelo" required>
+            </div>
+
+            <p class="section-sep">Ventas</p>
+
+            <div class="form-group">
+              <label>PDF estadísticas de ventas</label>
+              <div class="file-drop" id="drop1">
+                <input type="file" name="pdf1" accept=".pdf" required id="file1">
+                <span class="drop-icon">📊</span>
+                <p class="drop-label"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF</p>
+                <p class="drop-filename" id="fname1"></p>
+              </div>
+            </div>
+
+            <p class="section-sep">Situación</p>
+
+            <div class="form-group">
+              <label>Informe de situación <span class="lbl-optional">Opcional</span></label>
+              <div class="file-drop-sm" id="drop-sit1">
+                <input type="file" name="sit1" accept=".pdf" id="file-sit1">
+                <span class="drop-sm-icon">📋</span>
+                <div class="drop-sm-body">
+                  <strong class="drop-sm-hint">Seleccionar informe</strong>
+                  <span class="drop-sm-hint">Stock parado · +365 días sin venta</span>
+                  <span class="drop-sm-filename" id="fname-sit1"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Farmacia 2 ── -->
+          <div class="pharmacy-col">
+            <div class="col-header">
+              <span class="col-dot dot-b"></span>
+              <span class="col-header-text">Farmacia 2</span>
+            </div>
+
+            <div class="form-group">
+              <label>Nombre</label>
+              <input type="text" name="name2" value="Barris" required>
+            </div>
+
+            <p class="section-sep">Ventas</p>
+
+            <div class="form-group">
+              <label>PDF estadísticas de ventas</label>
+              <div class="file-drop" id="drop2">
+                <input type="file" name="pdf2" accept=".pdf" required id="file2">
+                <span class="drop-icon">📊</span>
+                <p class="drop-label"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF</p>
+                <p class="drop-filename" id="fname2"></p>
+              </div>
+            </div>
+
+            <p class="section-sep">Situación</p>
+
+            <div class="form-group">
+              <label>Informe de situación <span class="lbl-optional">Opcional</span></label>
+              <div class="file-drop-sm" id="drop-sit2">
+                <input type="file" name="sit2" accept=".pdf" id="file-sit2">
+                <span class="drop-sm-icon">📋</span>
+                <div class="drop-sm-body">
+                  <strong class="drop-sm-hint">Seleccionar informe</strong>
+                  <span class="drop-sm-hint">Stock parado · +365 días sin venta</span>
+                  <span class="drop-sm-filename" id="fname-sit2"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /form-grid -->
+
+        <div class="error-box" id="errorBox"></div>
+
+        <div class="form-footer">
+          <span class="form-hint">Genera un PDF descargable y una vista previa interactiva</span>
+          <button type="submit" class="btn-submit" id="submitBtn">
+            ⚡ Generar comparativa
+          </button>
+        </div>
+      </form>
+
+      <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <p>Procesando los PDFs…</p>
+        <p class="loading-sub">Esto puede tardar unos segundos</p>
+      </div>
+    </div>
+
+    <div class="legend-card">
+      <span class="legend-label">Leyenda</span>
+      <div class="legend-item"><div class="legend-swatch" style="background:#fdecea;border-color:#c0392b"></div>Solo Farmacia 1</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#e8f3fb;border-color:#1a6fa8"></div>Solo Farmacia 2</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#fff3cd;border-color:#d97706"></div>Revisar datos</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#ffe0b2;border-color:#e65100"></div>Stock parado</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#d4edda;border-color:#2e7d32"></div>Pedido sugerido</div>
+    </div>
+
   </div>
 </main>
 
-<footer>
-  Comparativa de Stock · Farmacia Zarzuelo &amp; Farmacia Barris
-</footer>
+<footer>Comparativa de Stock · Farmacias Barris &amp; Zarzuelo</footer>
 
 <script>
-  // ── Drop zones para PDFs de ventas ─────────────────────────────────────────
-  function setupFileDrop(inputId, dropId, filenameId, colorClass) {
+  function setupDrop(inputId, dropId, fnameId, hasClass) {
     const input = document.getElementById(inputId);
     const drop  = document.getElementById(dropId);
-    const fname = document.getElementById(filenameId);
+    const fname = document.getElementById(fnameId);
 
-    input.addEventListener('change', () => {
-      if (input.files.length) {
-        drop.className = 'file-drop ' + colorClass;
-        fname.textContent = '✓ ' + input.files[0].name;
-      }
-    });
+    function apply(file) {
+      drop.classList.add(hasClass);
+      fname.textContent = '✓ ' + file.name;
+    }
+
+    input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
     drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
     drop.addEventListener('drop', e => {
       e.preventDefault();
       drop.classList.remove('dragover');
-      if (e.dataTransfer.files[0]) {
-        const dt = new DataTransfer();
-        dt.items.add(e.dataTransfer.files[0]);
-        input.files = dt.files;
-        drop.className = 'file-drop ' + colorClass;
-        fname.textContent = '✓ ' + e.dataTransfer.files[0].name;
+      const f = e.dataTransfer.files[0];
+      if (f) {
+        const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+        apply(f);
       }
     });
   }
 
-  // ── Drop zones para informes de situación ──────────────────────────────────
-  function setupSituationDrop(inputId, dropId, filenameId) {
+  function setupDropSm(inputId, dropId, fnameId) {
     const input = document.getElementById(inputId);
     const drop  = document.getElementById(dropId);
-    const fname = document.getElementById(filenameId);
+    const fname = document.getElementById(fnameId);
 
-    input.addEventListener('change', () => {
-      if (input.files.length) {
-        drop.classList.add('has-file-sit');
-        fname.textContent = '✓ ' + input.files[0].name;
-      }
-    });
+    function apply(file) {
+      drop.classList.add('has-sit');
+      fname.textContent = '✓ ' + file.name;
+    }
+
+    input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
     drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
     drop.addEventListener('drop', e => {
-      e.preventDefault();
-      drop.classList.remove('dragover');
-      if (e.dataTransfer.files[0]) {
-        const dt = new DataTransfer();
-        dt.items.add(e.dataTransfer.files[0]);
-        input.files = dt.files;
-        drop.classList.add('has-file-sit');
-        fname.textContent = '✓ ' + e.dataTransfer.files[0].name;
+      e.preventDefault(); drop.classList.remove('dragover');
+      const f = e.dataTransfer.files[0];
+      if (f) {
+        const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+        apply(f);
       }
     });
   }
 
-  setupFileDrop('file1', 'drop1', 'name1-file', 'has-file-z');
-  setupFileDrop('file2', 'drop2', 'name2-file', 'has-file-b');
-  setupSituationDrop('file-sit1', 'drop-sit1', 'name-sit1-file');
-  setupSituationDrop('file-sit2', 'drop-sit2', 'name-sit2-file');
+  setupDrop('file1', 'drop1', 'fname1', 'has-z');
+  setupDrop('file2', 'drop2', 'fname2', 'has-b');
+  setupDropSm('file-sit1', 'drop-sit1', 'fname-sit1');
+  setupDropSm('file-sit2', 'drop-sit2', 'fname-sit2');
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
   document.getElementById('mainForm').addEventListener('submit', function(e) {
     const f1  = document.getElementById('file1').files.length;
     const f2  = document.getElementById('file2').files.length;
@@ -593,13 +564,12 @@
     if (!f1 || !f2) {
       e.preventDefault();
       err.style.display = 'block';
-      err.textContent = 'Por favor selecciona los dos PDFs de ventas antes de continuar.';
+      err.textContent = 'Selecciona los dos PDFs de estadísticas de ventas antes de continuar.';
       return;
     }
-
     err.style.display = 'none';
     document.getElementById('submitBtn').disabled = true;
-    document.querySelector('.card form').style.display = 'none';
+    document.getElementById('mainForm').style.display = 'none';
     document.getElementById('loadingState').style.display = 'block';
   });
 </script>

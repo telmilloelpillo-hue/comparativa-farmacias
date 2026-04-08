@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template, send_file, session, redirect, url_for
-import os, tempfile
+import os, tempfile, uuid, json
 from datetime import datetime
 from pdf_parser import extract_products, compare_products, detect_lab, extract_situation
 
@@ -124,23 +124,84 @@ def comparar():
         lab_slug = (lab1.replace(' ', '_').replace('-', '_')
                        .replace("'", '').replace('é','e')
                        .replace('à','a').replace('ó','o'))
-        download_name = f'comparativa_{lab_slug}.pdf'
 
-        output = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+        # Limpiar token anterior si existe
+        old_token = session.get('comp_token')
+        if old_token:
+            for ext in ['json', 'pdf']:
+                p = os.path.join(tempfile.gettempdir(), f'comp_{old_token}.{ext}')
+                if os.path.exists(p):
+                    try: os.unlink(p)
+                    except OSError: pass
+
+        token = str(uuid.uuid4())
+        pdf_path  = os.path.join(tempfile.gettempdir(), f'comp_{token}.pdf')
+        json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+
         generate_pdf(
-            results, output.name, name1, name2,
+            results, pdf_path, name1, name2,
             len(products1), len(products2), lab1,
             has_situation1=has_sit1, has_situation2=has_sit2
         )
 
-        return send_file(output.name, as_attachment=True,
-                         download_name=download_name,
-                         mimetype='application/pdf')
+        # Serializar results (convertir valores no-JSON-seguros)
+        def _jsonable(v):
+            if v is None or v == '—' or v == '⚠️':
+                return str(v)
+            return v
+
+        safe_results = []
+        for r in results:
+            safe_results.append({k: _jsonable(v) for k, v in r.items()})
+
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump({
+                'results':   safe_results,
+                'name1':     name1,
+                'name2':     name2,
+                'lab':       lab1,
+                'lab_slug':  lab_slug,
+                'count1':    len(products1),
+                'count2':    len(products2),
+                'has_sit1':  has_sit1,
+                'has_sit2':  has_sit2,
+            }, f, ensure_ascii=False)
+
+        session['comp_token'] = token
+        session['lab_slug']   = lab_slug
+        return redirect(url_for('resultado'))
     finally:
         os.unlink(tmp1.name)
         os.unlink(tmp2.name)
         if tmp_sit1: os.unlink(tmp_sit1.name)
         if tmp_sit2: os.unlink(tmp_sit2.name)
+
+@app.route('/resultado')
+def resultado():
+    token = session.get('comp_token')
+    if not token:
+        return redirect(url_for('index'))
+    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+    if not os.path.exists(json_path):
+        return redirect(url_for('index'))
+    with open(json_path, encoding='utf-8') as f:
+        data = json.load(f)
+    return render_template('comparativa.html', **data)
+
+
+@app.route('/descargar')
+def descargar():
+    token = session.get('comp_token')
+    if not token:
+        return redirect(url_for('index'))
+    pdf_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.pdf')
+    if not os.path.exists(pdf_path):
+        return redirect(url_for('resultado'))
+    lab_slug = session.get('lab_slug', 'comparativa')
+    return send_file(pdf_path, as_attachment=True,
+                     download_name=f'comparativa_{lab_slug}.pdf',
+                     mimetype='application/pdf')
+
 
 @app.errorhandler(413)
 def too_large(e):
