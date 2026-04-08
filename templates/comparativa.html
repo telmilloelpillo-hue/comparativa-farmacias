@@ -31,7 +31,7 @@
       font-family: 'Inter', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -200,7 +200,7 @@
       background: white; display: flex; flex-direction: column;
       transition: width 0.22s ease; flex-shrink: 0;
     }
-    .decision-panel.open { width: var(--panel-w); overflow: visible; }
+    .decision-panel.open { width: var(--panel-w); }
     .panel-inner { width: var(--panel-w); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
     .panel-header {
@@ -230,7 +230,7 @@
 
     /* CRITICAL: panel body scrolls */
     .panel-body {
-      flex: 1; min-height: 0; height: 0; overflow-y: scroll;
+      flex: 1; min-height: 0; overflow-y: auto;
       padding: 0.9rem;
       scrollbar-width: thin;
       scrollbar-color: #cbd5e1 transparent;
