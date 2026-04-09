@@ -143,7 +143,6 @@
     thead tr:nth-child(2) th {
       font-size: 0.66rem; font-weight: 500; color: rgba(255,255,255,0.82);
       padding: 0.3rem 0.5rem 0.42rem; letter-spacing: 0.04em;
-      top: 34px;
     }
 
     th.th-z   { background: var(--z); }
@@ -1078,6 +1077,15 @@ function exportCSV() {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
+// Fix sticky second header row: mide altura real del primer tr y la aplica
+(function() {
+  const rows = document.querySelectorAll('#mainTable thead tr');
+  if (rows.length >= 2) {
+    const h = rows[0].getBoundingClientRect().height;
+    rows[1].querySelectorAll('th').forEach(th => th.style.top = h + 'px');
+  }
+})();
+
 applySearch();
 </script>
 </body>
