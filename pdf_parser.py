@@ -150,11 +150,20 @@ def extract_products(pdf_path):
                                          (description + ' ' + continuation).strip())
                     j += 1
 
-                if not description and i > 0:
+                # Si la descripción está vacía O empieza por dígito (ej. "1 TUBO 25 G", "100 ML"),
+                # la primera línea del nombre está en la fila anterior sin código propio.
+                needs_prev = (not description) or bool(re.match(r'^\d', description.strip()))
+                if needs_prev and i > 0:
                     prev_row = rows[sorted_ys[i - 1]]
-                    prev_min_x = min((c['x0'] for c in prev_row), default=999)
-                    if 60 <= prev_min_x < 100:
-                        description = _extract_description(prev_row)
+                    prev_code_chars = [c for c in prev_row if 20 <= c['x0'] < 60]
+                    prev_code = ''.join(
+                        c['text'] for c in sorted(prev_code_chars, key=lambda c: c['x0'])
+                    ).strip()
+                    if not re.match(r'^[0-9A-Z]{6}$', prev_code):
+                        prev_desc = _extract_description(prev_row)
+                        if prev_desc:
+                            description = re.sub(r'  +', ' ',
+                                                 (prev_desc + ' ' + description).strip())
 
                 stock = _digits_at(row, STOCK_X)
                 smin  = _digits_at(row, SMIN_X)
