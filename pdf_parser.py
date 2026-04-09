@@ -96,7 +96,7 @@ def _extract_description(row_chars):
 
 # ─── Extracción principal ──────────────────────────────────────────────────────
 
-def extract_products(pdf_path):
+def extract_products(pdf_path, on_page=None):
     products = {}
 
     with pdfplumber.open(pdf_path) as pdf:
@@ -112,8 +112,11 @@ def extract_products(pdf_path):
             all_rows.extend(rows.values())
 
         year_current, year_prev = _detect_years_global(all_rows)
+        total_pages = len(pages_rows)
 
         for page_idx, rows in enumerate(pages_rows):
+            if on_page:
+                on_page(page_idx + 1, total_pages)
             sorted_ys = sorted(rows.keys())
 
             for i, y in enumerate(sorted_ys):

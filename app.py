@@ -1,5 +1,5 @@
 from flask import Flask, request, render_template, send_file, session, redirect, url_for, jsonify
-import os, tempfile, uuid, json
+import os, tempfile, uuid, json, threading
 from datetime import datetime
 from pdf_parser import extract_products, compare_products, detect_lab, extract_situation
 
@@ -17,6 +17,9 @@ from reportlab.lib.units import cm
 
 app = Flask(__name__)
 app.secret_key = 'farmacias_barris_zarzuelo_2026'
+
+# Progreso de trabajos en curso: { job_token: {pct, step, done, error_msg, comp_token, lab_slug} }
+_progress_store = {}
 
 # ── Configuración ──────────────────────────────────────────────────────────────
 PASSWORD             = "farmacias2026"
@@ -67,22 +70,20 @@ def index():
 def comparar():
     file1 = request.files.get('pdf1')
     file2 = request.files.get('pdf2')
-    sit1  = request.files.get('sit1')   # opcional
-    sit2  = request.files.get('sit2')   # opcional
+    sit1  = request.files.get('sit1')
+    sit2  = request.files.get('sit2')
     name1 = request.form.get('name1', 'Farmacia 1').strip()
     name2 = request.form.get('name2', 'Farmacia 2').strip()
 
     if not file1 or not file2:
-        return 'Debes subir los dos PDFs de ventas', 400
+        return jsonify({'error': 'Debes subir los dos PDFs de ventas'}), 400
 
-    # Verificar que los PDFs obligatorios son reales
     for f, nombre in [(file1, name1), (file2, name2)]:
         header = f.read(4)
         f.seek(0)
         if header != b'%PDF':
-            return f'El archivo de {nombre} no es un PDF válido', 400
+            return jsonify({'error': f'El archivo de {nombre} no es un PDF válido'}), 400
 
-    # Verificar PDFs opcionales si se subieron (y no están vacíos)
     def _is_valid_pdf(f):
         if not f or f.filename == '':
             return False
@@ -93,9 +94,8 @@ def comparar():
     has_sit1 = _is_valid_pdf(sit1)
     has_sit2 = _is_valid_pdf(sit2)
 
-    # Guardar archivos temporales
-    tmp1  = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
-    tmp2  = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    tmp1 = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    tmp2 = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
     file1.save(tmp1.name)
     file2.save(tmp2.name)
 
@@ -107,80 +107,166 @@ def comparar():
         tmp_sit2 = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
         sit2.save(tmp_sit2.name)
 
+    # Limpiar trabajo anterior de la sesión
+    old_token = session.get('comp_token')
+    if old_token:
+        for ext in ['json', 'pdf']:
+            p = os.path.join(tempfile.gettempdir(), f'comp_{old_token}.{ext}')
+            if os.path.exists(p):
+                try: os.unlink(p)
+                except OSError: pass
+
+    job_token = str(uuid.uuid4())
+    _progress_store[job_token] = {
+        'pct': 0, 'step': 'Iniciando análisis…',
+        'done': False, 'error_msg': None,
+        'comp_token': None, 'lab_slug': None,
+    }
+
+    t = threading.Thread(
+        target=_run_comparison,
+        args=(job_token, tmp1.name, tmp2.name,
+              tmp_sit1.name if tmp_sit1 else None,
+              tmp_sit2.name if tmp_sit2 else None,
+              name1, name2, has_sit1, has_sit2),
+        daemon=True,
+    )
+    t.start()
+
+    return jsonify({'job': job_token})
+
+
+def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
+                    name1, name2, has_sit1, has_sit2):
+    store = _progress_store[job_token]
+
+    def upd(pct, step):
+        store['pct']  = min(int(pct), 99)
+        store['step'] = step
+
     try:
-        # Detectar laboratorio de los PDFs de ventas
-        lab1 = detect_lab(tmp1.name)
-        lab2 = detect_lab(tmp2.name)
+        with app.app_context():
+            # Rangos dinámicos según si hay situación
+            n_extra = (1 if has_sit1 else 0) + (1 if has_sit2 else 0)
+            pct_pdf1_end  = 42 if n_extra == 0 else (35 if n_extra == 1 else 28)
+            pct_pdf2_end  = 72 if n_extra == 0 else (58 if n_extra == 1 else 52)
 
-        if lab1 != lab2:
-            return render_template('error.html', lab1=lab1, lab2=lab2), 400
+            upd(2, 'Detectando laboratorio…')
+            lab1 = detect_lab(path1)
+            lab2 = detect_lab(path2)
 
-        products1 = extract_products(tmp1.name)
-        products2 = extract_products(tmp2.name)
+            if lab1 != lab2:
+                store['done']      = True
+                store['error_msg'] = (f'Los PDFs pertenecen a laboratorios distintos: '
+                                      f'{lab1} y {lab2}. Sube PDFs del mismo laboratorio.')
+                return
 
-        # Parsear informes de situación si se han subido
-        situation1 = extract_situation(tmp_sit1.name) if has_sit1 else None
-        situation2 = extract_situation(tmp_sit2.name) if has_sit2 else None
+            # PDF 1
+            upd(5, f'Leyendo ventas — {name1} (página 1…)')
+            def cb1(pg, total):
+                upd(5 + (pct_pdf1_end - 5) * pg / total,
+                    f'Leyendo ventas — {name1} ({pg}/{total} páginas)')
+            products1 = extract_products(path1, on_page=cb1)
 
-        results = compare_products(
-            products1, products2, name1, name2,
-            situation1=situation1, situation2=situation2
-        )
+            # PDF 2
+            upd(pct_pdf1_end + 1, f'Leyendo ventas — {name2} (página 1…)')
+            def cb2(pg, total):
+                upd(pct_pdf1_end + (pct_pdf2_end - pct_pdf1_end) * pg / total,
+                    f'Leyendo ventas — {name2} ({pg}/{total} páginas)')
+            products2 = extract_products(path2, on_page=cb2)
 
-        lab_slug = (lab1.replace(' ', '_').replace('-', '_')
-                       .replace("'", '').replace('é','e')
-                       .replace('à','a').replace('ó','o'))
+            # Situaciones (opcionales)
+            situation1 = situation2 = None
+            pct_now = pct_pdf2_end
+            if has_sit1:
+                upd(pct_now + 1, f'Leyendo situación — {name1}…')
+                situation1 = extract_situation(path_sit1)
+                pct_now += 10
+            if has_sit2:
+                upd(pct_now + 1, f'Leyendo situación — {name2}…')
+                situation2 = extract_situation(path_sit2)
+                pct_now += 10
 
-        # Limpiar token anterior si existe
-        old_token = session.get('comp_token')
-        if old_token:
-            for ext in ['json', 'pdf']:
-                p = os.path.join(tempfile.gettempdir(), f'comp_{old_token}.{ext}')
-                if os.path.exists(p):
-                    try: os.unlink(p)
-                    except OSError: pass
+            upd(pct_now + 2, 'Comparando productos…')
+            results = compare_products(
+                products1, products2, name1, name2,
+                situation1=situation1, situation2=situation2,
+            )
 
-        token = str(uuid.uuid4())
-        pdf_path  = os.path.join(tempfile.gettempdir(), f'comp_{token}.pdf')
-        json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+            upd(82, 'Generando informe PDF…')
+            comp_token = str(uuid.uuid4())
+            pdf_path   = os.path.join(tempfile.gettempdir(), f'comp_{comp_token}.pdf')
+            json_path  = os.path.join(tempfile.gettempdir(), f'comp_{comp_token}.json')
 
-        generate_pdf(
-            results, pdf_path, name1, name2,
-            len(products1), len(products2), lab1,
-            has_situation1=has_sit1, has_situation2=has_sit2
-        )
+            generate_pdf(
+                results, pdf_path, name1, name2,
+                len(products1), len(products2), lab1,
+                has_situation1=has_sit1, has_situation2=has_sit2,
+            )
 
-        # Serializar results (convertir valores no-JSON-seguros)
-        def _jsonable(v):
-            if v is None or v == '—' or v == '⚠️':
-                return str(v)
-            return v
+            upd(93, 'Guardando datos…')
 
-        safe_results = []
-        for r in results:
-            safe_results.append({k: _jsonable(v) for k, v in r.items()})
+            def _jsonable(v):
+                if v is None or v == '—' or v == '⚠️':
+                    return str(v)
+                return v
 
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump({
-                'results':   safe_results,
-                'name1':     name1,
-                'name2':     name2,
-                'lab':       lab1,
-                'lab_slug':  lab_slug,
-                'count1':    len(products1),
-                'count2':    len(products2),
-                'has_sit1':  has_sit1,
-                'has_sit2':  has_sit2,
-            }, f, ensure_ascii=False)
+            safe_results = [{k: _jsonable(v) for k, v in r.items()} for r in results]
+            lab_slug = (lab1.replace(' ', '_').replace('-', '_')
+                            .replace("'", '').replace('é', 'e')
+                            .replace('à', 'a').replace('ó', 'o'))
 
-        session['comp_token'] = token
-        session['lab_slug']   = lab_slug
-        return redirect(url_for('resultado'))
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump({
+                    'results':  safe_results,
+                    'name1':    name1,
+                    'name2':    name2,
+                    'lab':      lab1,
+                    'lab_slug': lab_slug,
+                    'count1':   len(products1),
+                    'count2':   len(products2),
+                    'has_sit1': has_sit1,
+                    'has_sit2': has_sit2,
+                }, f, ensure_ascii=False)
+
+            store['comp_token'] = comp_token
+            store['lab_slug']   = lab_slug
+            store['pct']        = 100
+            store['step']       = '¡Análisis completado!'
+            store['done']       = True
+
+    except Exception as e:
+        store['done']      = True
+        store['error_msg'] = f'Error durante el análisis: {e}'
+
     finally:
-        os.unlink(tmp1.name)
-        os.unlink(tmp2.name)
-        if tmp_sit1: os.unlink(tmp_sit1.name)
-        if tmp_sit2: os.unlink(tmp_sit2.name)
+        for p in [path1, path2, path_sit1, path_sit2]:
+            if p and os.path.exists(p):
+                try: os.unlink(p)
+                except OSError: pass
+
+
+@app.route('/progress/<job_token>')
+def progress(job_token):
+    store = _progress_store.get(job_token)
+    if not store:
+        return jsonify({'error': 'not_found'}), 404
+    return jsonify({
+        'pct':       store['pct'],
+        'step':      store['step'],
+        'done':      store['done'],
+        'error_msg': store.get('error_msg'),
+    })
+
+
+@app.route('/finalizar/<job_token>')
+def finalizar(job_token):
+    store = _progress_store.pop(job_token, None)
+    if not store or not store.get('done') or store.get('error_msg'):
+        return redirect(url_for('index'))
+    session['comp_token'] = store['comp_token']
+    session['lab_slug']   = store['lab_slug']
+    return redirect(url_for('resultado'))
 
 @app.route('/resultado')
 def resultado():

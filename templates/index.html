@@ -297,19 +297,109 @@
     .btn-submit:active { transform: scale(0.98); }
     .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    /* LOADING */
-    .loading-state { display: none; text-align: center; padding: 2.5rem 1rem; }
-    .spinner {
-      width: 34px; height: 34px;
-      border: 3px solid var(--border);
-      border-top-color: #3b82f6;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin: 0 auto 1rem;
+    /* ── LOADING OVERLAY ── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(240, 253, 244, 0.88);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-state p { color: var(--muted); font-size: 0.88rem; }
-    .loading-state .loading-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 0.4rem; }
+    .loading-overlay.active { display: flex; }
+
+    .loading-card {
+      background: white;
+      border-radius: 18px;
+      padding: 44px 52px;
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.04),
+        0 8px 24px rgba(0,0,0,0.08),
+        0 32px 64px rgba(0,0,0,0.10);
+      width: 440px;
+      max-width: 92vw;
+      text-align: center;
+      border: 1px solid #d1fae5;
+    }
+
+    .loading-icon {
+      font-size: 2.4rem;
+      margin-bottom: 14px;
+      display: block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1);   opacity: 1; }
+      50%       { transform: scale(1.08); opacity: 0.85; }
+    }
+
+    .loading-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #14532d;
+      margin-bottom: 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .loading-step {
+      font-size: 0.8rem;
+      color: #4b7c5e;
+      margin-bottom: 28px;
+      min-height: 18px;
+      transition: opacity 0.25s;
+    }
+
+    .progress-track {
+      background: #f0fdf4;
+      border: 1px solid #d1fae5;
+      border-radius: 99px;
+      height: 9px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, #166534 0%, #16a34a 60%, #4ade80 100%);
+      background-size: 200% 100%;
+      height: 100%;
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: shimmer 2s linear infinite;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    .progress-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .progress-pct {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #166534;
+    }
+    .progress-hint {
+      font-size: 0.72rem;
+      color: #a7c4b5;
+    }
+
+    .loading-error {
+      display: none;
+      margin-top: 18px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: #991b1b;
+      text-align: left;
+    }
 
     /* ERROR */
     .error-box {
@@ -482,14 +572,31 @@
         </div>
       </form>
 
-      <div class="loading-state" id="loadingState">
-        <div class="spinner"></div>
-        <p>Procesando los PDFs…</p>
-        <p class="loading-sub">Esto puede tardar unos segundos</p>
-      </div>
     </div>
 
-    <div class="legend-card">
+  </div>
+</main>
+
+<!-- ── LOADING OVERLAY ── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-card">
+    <span class="loading-icon">💊</span>
+    <div class="loading-title">Analizando farmacias</div>
+    <div class="loading-step" id="loadingStep">Iniciando análisis…</div>
+
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-footer">
+      <span class="progress-pct" id="progressPct">0%</span>
+      <span class="progress-hint">Procesando PDFs…</span>
+    </div>
+
+    <div class="loading-error" id="loadingError"></div>
+  </div>
+</div>
+
+<div class="legend-card">
       <span class="legend-label">Leyenda</span>
       <div class="legend-item"><div class="legend-swatch" style="background:#fdecea;border-color:#c0392b"></div>Solo Farmacia 1</div>
       <div class="legend-item"><div class="legend-swatch" style="background:#e8f3fb;border-color:#1a6fa8"></div>Solo Farmacia 2</div>
@@ -504,73 +611,117 @@
 <footer>Comparativa de Stock · Farmacias Barris &amp; Zarzuelo</footer>
 
 <script>
+  // ── Drag & drop ──────────────────────────────────────────────────────────────
   function setupDrop(inputId, dropId, fnameId, hasClass) {
     const input = document.getElementById(inputId);
     const drop  = document.getElementById(dropId);
     const fname = document.getElementById(fnameId);
-
-    function apply(file) {
-      drop.classList.add(hasClass);
-      fname.textContent = '✓ ' + file.name;
-    }
-
-    input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
-    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
-    drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-    drop.addEventListener('drop', e => {
-      e.preventDefault();
-      drop.classList.remove('dragover');
-      const f = e.dataTransfer.files[0];
-      if (f) {
-        const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
-        apply(f);
-      }
-    });
-  }
-
-  function setupDropSm(inputId, dropId, fnameId) {
-    const input = document.getElementById(inputId);
-    const drop  = document.getElementById(dropId);
-    const fname = document.getElementById(fnameId);
-
-    function apply(file) {
-      drop.classList.add('has-sit');
-      fname.textContent = '✓ ' + file.name;
-    }
-
+    function apply(file) { drop.classList.add(hasClass); fname.textContent = '✓ ' + file.name; }
     input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
     drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
     drop.addEventListener('drop', e => {
       e.preventDefault(); drop.classList.remove('dragover');
       const f = e.dataTransfer.files[0];
-      if (f) {
-        const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
-        apply(f);
-      }
+      if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; apply(f); }
     });
   }
-
+  function setupDropSm(inputId, dropId, fnameId) {
+    const input = document.getElementById(inputId);
+    const drop  = document.getElementById(dropId);
+    const fname = document.getElementById(fnameId);
+    function apply(file) { drop.classList.add('has-sit'); fname.textContent = '✓ ' + file.name; }
+    input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault(); drop.classList.remove('dragover');
+      const f = e.dataTransfer.files[0];
+      if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; apply(f); }
+    });
+  }
   setupDrop('file1', 'drop1', 'fname1', 'has-z');
   setupDrop('file2', 'drop2', 'fname2', 'has-b');
   setupDropSm('file-sit1', 'drop-sit1', 'fname-sit1');
   setupDropSm('file-sit2', 'drop-sit2', 'fname-sit2');
 
-  document.getElementById('mainForm').addEventListener('submit', function(e) {
+  // ── Progress overlay ─────────────────────────────────────────────────────────
+  let _pollId = null;
+
+  function _setProgress(pct, step) {
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressPct').textContent  = pct + '%';
+    if (step) document.getElementById('loadingStep').textContent = step;
+  }
+
+  function _showOverlayError(msg) {
+    const el = document.getElementById('loadingError');
+    el.textContent = msg;
+    el.style.display = 'block';
+    document.getElementById('loadingStep').textContent = 'Error durante el análisis';
+  }
+
+  function _startPolling(jobToken) {
+    _pollId = setInterval(async () => {
+      try {
+        const res  = await fetch('/progress/' + jobToken);
+        const data = await res.json();
+
+        if (data.error) { clearInterval(_pollId); _showOverlayError('Error al consultar el progreso.'); return; }
+
+        _setProgress(data.pct, data.step);
+
+        if (data.done) {
+          clearInterval(_pollId);
+          if (data.error_msg) {
+            _showOverlayError(data.error_msg);
+          } else {
+            // Animar a 100% y luego redirigir
+            _setProgress(100, '¡Análisis completado!');
+            setTimeout(() => { window.location.href = '/finalizar/' + jobToken; }, 600);
+          }
+        }
+      } catch (_) { /* error de red — seguir esperando */ }
+    }, 600);
+  }
+
+  // ── Form submit ───────────────────────────────────────────────────────────────
+  document.getElementById('mainForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
     const f1  = document.getElementById('file1').files.length;
     const f2  = document.getElementById('file2').files.length;
     const err = document.getElementById('errorBox');
 
     if (!f1 || !f2) {
-      e.preventDefault();
       err.style.display = 'block';
       err.textContent = 'Selecciona los dos PDFs de estadísticas de ventas antes de continuar.';
       return;
     }
     err.style.display = 'none';
-    document.getElementById('submitBtn').disabled = true;
-    document.getElementById('mainForm').style.display = 'none';
-    document.getElementById('loadingState').style.display = 'block';
+
+    // Mostrar overlay
+    document.getElementById('loadingOverlay').classList.add('active');
+    _setProgress(0, 'Subiendo archivos…');
+
+    try {
+      const res  = await fetch('/comparar', { method: 'POST', body: new FormData(this) });
+      const data = await res.json();
+
+      if (data.error) {
+        document.getElementById('loadingOverlay').classList.remove('active');
+        err.style.display  = 'block';
+        err.textContent    = data.error;
+        return;
+      }
+
+      _startPolling(data.job);
+
+    } catch (_) {
+      document.getElementById('loadingOverlay').classList.remove('active');
+      err.style.display = 'block';
+      err.textContent   = 'Error al enviar los archivos. Comprueba la conexión e inténtalo de nuevo.';
+    }
   });
 </script>
 
