@@ -133,18 +133,9 @@ def extract_products(pdf_path):
 
                 description = _extract_description(row)
 
-                # Patrón: texto que es continuación de descripción (unidades/envase),
-                # no un nombre de producto nuevo.
-                _CONT_RE = re.compile(
-                    r'^(\d|TUBO\b|FRASCO\b|ENVASE\b|SOBRES?\b|COMPRIMIDOS?\b|CAPSULAS?\b'
-                    r'|TOALLITAS?\b|PARCHES?\b|APOSITOS?\b|ML\b|MG\b|\dG\b)',
-                    re.IGNORECASE
-                )
-
-                # Continuar descripción en filas siguientes si no tienen código propio
-                # Solo se añaden filas que parecen continuación (unidades/envase), no
-                # nombres de producto nuevos, para evitar que el producto anterior
-                # absorba la primera línea del nombre del producto siguiente.
+                # Forward: añadir filas de continuación hasta llegar a una fila con
+                # datos de año. Se para en la primera fila que tenga año detectado
+                # (independientemente del contenido textual de la continuación).
                 j = i + 1
                 while j < len(sorted_ys):
                     next_row = rows[sorted_ys[j]]
@@ -154,31 +145,40 @@ def extract_products(pdf_path):
                     ).strip()
                     if re.match(r'^[0-9A-Z]{6}$', next_code):
                         break
+                    next_yr = _year_from_row(next_row)
+                    if next_yr is not None:
+                        # Primera fila de datos: puede tener texto de descripción
+                        # en la misma línea (p.ej. "0,12% 250 ML" + "2026 1 0...")
+                        tail = _extract_description(next_row)
+                        if tail and not re.search(r'[a-z]', tail):
+                            description = re.sub(r'  +', ' ',
+                                                 (description + ' ' + tail).strip())
+                        break
                     continuation = _extract_description(next_row)
                     if not continuation:
-                        break
-                    # Solo concatenar si parece continuación de descripción
-                    if not _CONT_RE.match(continuation) and description:
                         break
                     description = re.sub(r'  +', ' ',
                                          (description + ' ' + continuation).strip())
                     j += 1
 
-                # Si la descripción está vacía O parece una línea de continuación
-                # (empieza por dígito, TUBO, ENVASE, FRASCO, etc.), la primera línea
-                # del nombre está en la fila anterior sin código propio.
-                needs_prev = (not description) or bool(_CONT_RE.match(description.strip()))
-                if needs_prev and i > 0:
+                # Backward: si la fila anterior al código no tiene código propio
+                # ni datos de año y contiene texto en MAYÚSCULAS, es la primera
+                # línea del nombre (el código del PDF se alinea a la última línea
+                # cuando la descripción ocupa varias filas).
+                if i > 0:
                     prev_row = rows[sorted_ys[i - 1]]
                     prev_code_chars = [c for c in prev_row if 20 <= c['x0'] < 60]
                     prev_code = ''.join(
                         c['text'] for c in sorted(prev_code_chars, key=lambda c: c['x0'])
                     ).strip()
                     if not re.match(r'^[0-9A-Z]{6}$', prev_code):
-                        prev_desc = _extract_description(prev_row)
-                        if prev_desc:
-                            description = re.sub(r'  +', ' ',
-                                                 (prev_desc + ' ' + description).strip())
+                        if _year_from_row(prev_row) is None:
+                            prev_desc = _extract_description(prev_row)
+                            # Solo aceptar texto en mayúsculas (excluye cabeceras
+                            # de página/columna que tienen minúsculas)
+                            if prev_desc and not re.search(r'[a-z]', prev_desc):
+                                description = re.sub(r'  +', ' ',
+                                                     (prev_desc + ' ' + description).strip())
 
                 stock = _digits_at(row, STOCK_X)
                 smin  = _digits_at(row, SMIN_X)
