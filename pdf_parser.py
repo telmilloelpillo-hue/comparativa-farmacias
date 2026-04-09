@@ -133,7 +133,18 @@ def extract_products(pdf_path):
 
                 description = _extract_description(row)
 
+                # Patrón: texto que es continuación de descripción (unidades/envase),
+                # no un nombre de producto nuevo.
+                _CONT_RE = re.compile(
+                    r'^(\d|TUBO\b|FRASCO\b|ENVASE\b|SOBRES?\b|COMPRIMIDOS?\b|CAPSULAS?\b'
+                    r'|TOALLITAS?\b|PARCHES?\b|APOSITOS?\b|ML\b|MG\b|\dG\b)',
+                    re.IGNORECASE
+                )
+
                 # Continuar descripción en filas siguientes si no tienen código propio
+                # Solo se añaden filas que parecen continuación (unidades/envase), no
+                # nombres de producto nuevos, para evitar que el producto anterior
+                # absorba la primera línea del nombre del producto siguiente.
                 j = i + 1
                 while j < len(sorted_ys):
                     next_row = rows[sorted_ys[j]]
@@ -146,13 +157,17 @@ def extract_products(pdf_path):
                     continuation = _extract_description(next_row)
                     if not continuation:
                         break
+                    # Solo concatenar si parece continuación de descripción
+                    if not _CONT_RE.match(continuation) and description:
+                        break
                     description = re.sub(r'  +', ' ',
                                          (description + ' ' + continuation).strip())
                     j += 1
 
-                # Si la descripción está vacía O empieza por dígito (ej. "1 TUBO 25 G", "100 ML"),
-                # la primera línea del nombre está en la fila anterior sin código propio.
-                needs_prev = (not description) or bool(re.match(r'^\d', description.strip()))
+                # Si la descripción está vacía O parece una línea de continuación
+                # (empieza por dígito, TUBO, ENVASE, FRASCO, etc.), la primera línea
+                # del nombre está en la fila anterior sin código propio.
+                needs_prev = (not description) or bool(_CONT_RE.match(description.strip()))
                 if needs_prev and i > 0:
                     prev_row = rows[sorted_ys[i - 1]]
                     prev_code_chars = [c for c in prev_row if 20 <= c['x0'] < 60]
