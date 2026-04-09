@@ -222,6 +222,28 @@ def pedido():
     return render_template('pedido.html', **data)
 
 
+@app.route('/pedido_pdf', methods=['POST'])
+def pedido_pdf():
+    if not session.get('authenticated'):
+        return jsonify({'error': 'no auth'}), 401
+    data  = request.get_json(force=True)
+    lab   = data.get('lab',   'Farmacia')
+    name1 = data.get('name1', 'Farmacia 1')
+    name2 = data.get('name2', 'Farmacia 2')
+    rows  = data.get('rows',  [])
+
+    tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    tmp.close()
+    _generate_pedido_pdf(rows, tmp.name, lab, name1, name2)
+
+    from datetime import date as _date
+    slug  = ''.join(c if c.isalnum() else '_' for c in lab.lower())
+    fecha = _date.today().strftime('%Y%m%d')
+    return send_file(tmp.name, as_attachment=True,
+                     download_name=f'pedido_{slug}_{fecha}.pdf',
+                     mimetype='application/pdf')
+
+
 @app.route('/pregunta', methods=['POST'])
 def pregunta():
     if not session.get('authenticated'):
@@ -731,6 +753,111 @@ def _build_logistics_table(results, name1, name2,
         elements.append(t)
 
     return elements
+
+
+def _generate_pedido_pdf(rows, output_path, lab, name1, name2):
+    """Genera un PDF limpio con el resumen del pedido manual."""
+    from datetime import date as _date
+
+    MESES = ['enero','febrero','marzo','abril','mayo','junio',
+             'julio','agosto','septiembre','octubre','noviembre','diciembre']
+    hoy = _date.today()
+    fecha_str = f'{hoy.day} de {MESES[hoy.month-1]} de {hoy.year}'
+
+    C_GREEN_DARK  = colors.HexColor('#14532d')
+    C_GREEN_LIGHT = colors.HexColor('#f0fdf4')
+    C_BORDER      = colors.HexColor('#d1fae5')
+    C_MUTED       = colors.HexColor('#4b7c5e')
+
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=1.5*cm, bottomMargin=1.5*cm,
+    )
+    styles = getSampleStyleSheet()
+
+    title_st = ParagraphStyle('pt', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=14,
+        textColor=C_GREEN_DARK, spaceAfter=2)
+    sub_st = ParagraphStyle('ps', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=9,
+        textColor=C_MUTED, spaceAfter=14)
+    desc_st = ParagraphStyle('pd', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=8, leading=10)
+    hdr_st = ParagraphStyle('ph', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7,
+        textColor=colors.white, alignment=1)
+    hdr_left_st = ParagraphStyle('phl', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7,
+        textColor=colors.white)
+    tot_st = ParagraphStyle('ptot', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=8)
+
+    story = [
+        Paragraph(f'PEDIDO — {lab.upper()}', title_st),
+        Paragraph(f'Generado el {fecha_str}', sub_st),
+    ]
+
+    # Cabecera tabla
+    col_widths = [2.0*cm, 9.5*cm, 2.2*cm, 2.2*cm, 2.1*cm]
+    table_data = [[
+        Paragraph('Código',  hdr_left_st),
+        Paragraph('Descripción', hdr_left_st),
+        Paragraph(name1, hdr_st),
+        Paragraph(name2, hdr_st),
+        Paragraph('Total',  hdr_st),
+    ]]
+
+    for r in rows:
+        qz  = r.get('qz', 0) or 0
+        qb  = r.get('qb', 0) or 0
+        tot = r.get('tot', 0) or 0
+        table_data.append([
+            r.get('code', ''),
+            Paragraph(r.get('desc', ''), desc_st),
+            str(qz) if qz > 0 else '—',
+            str(qb) if qb > 0 else '—',
+            str(tot),
+        ])
+
+    total_uds = sum(r.get('tot', 0) or 0 for r in rows)
+    table_data.append([
+        '', Paragraph('TOTAL', tot_st), '', '', str(total_uds),
+    ])
+
+    n = len(table_data)  # total rows incl. header
+    ts = TableStyle([
+        # Header row
+        ('BACKGROUND',     (0, 0), (-1, 0),  C_GREEN_DARK),
+        ('TEXTCOLOR',      (0, 0), (-1, 0),  colors.white),
+        # Alternating body rows
+        ('ROWBACKGROUNDS', (0, 1), (-1, n-2), [colors.white, C_GREEN_LIGHT]),
+        # Total row
+        ('BACKGROUND',     (0, n-1), (-1, n-1), C_GREEN_LIGHT),
+        ('LINEABOVE',      (0, n-1), (-1, n-1), 1, C_BORDER),
+        ('FONTNAME',       (0, n-1), (-1, n-1), 'Helvetica-Bold'),
+        # Grid
+        ('GRID',           (0, 0), (-1, -1), 0.4, C_BORDER),
+        # Alignment
+        ('ALIGN',          (2, 0), (-1, -1), 'CENTER'),
+        ('VALIGN',         (0, 0), (-1, -1), 'MIDDLE'),
+        # Padding
+        ('TOPPADDING',     (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING',  (0, 0), (-1, -1), 4),
+        ('LEFTPADDING',    (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING',   (0, 0), (-1, -1), 6),
+        # Code column monospace
+        ('FONTNAME',       (0, 1), (0, n-1), 'Courier'),
+        ('FONTSIZE',       (0, 1), (0, n-1), 7),
+        ('TEXTCOLOR',      (0, 1), (0, n-1), C_MUTED),
+    ])
+
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(ts)
+    story.append(table)
+
+    doc.build(story)
 
 
 if __name__ == '__main__':

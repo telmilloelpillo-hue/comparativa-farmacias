@@ -629,7 +629,8 @@
       <button class="modal-close" onclick="closeModal()">&#10005;</button>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick="window.print()">Imprimir / Guardar PDF</button>
+      <button class="btn btn-primary" id="btnDescargaPedido" onclick="downloadPedidoPDF()">⬇ Guardar PDF</button>
+      <button class="btn" onclick="window.print()" style="background:white;color:#6b7280;border:1px solid #e5e7eb;font-size:0.8rem">Imprimir</button>
     </div>
     <div class="modal-body">
       <table class="pedido-table" id="pedidoTable">
@@ -663,8 +664,9 @@ const NAME2      = {{ name2 | tojson }};
 const LAB        = {{ lab   | tojson }};
 const HAS_SIT    = {{ 'true' if (has_sit1 or has_sit2) else 'false' }};
 
-// pedido manual: { "CODE_z": qty, "CODE_b": qty }
+/// pedido manual: { "CODE_z": qty, "CODE_b": qty }
 const manualPedidos = {};
+let currentPedidoRows = [];
 let selectedIdx  = null;
 let activeFilter = 'all';
 let sortState    = { col: null, asc: true };
@@ -1032,11 +1034,41 @@ function openModal() {
     </tr>`
   ).join('');
 
+  currentPedidoRows = rows;
   document.getElementById('modalOverlay').classList.add('open');
 }
 
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function downloadPedidoPDF() {
+  if (!currentPedidoRows.length) return;
+  const btn = document.getElementById('btnDescargaPedido');
+  btn.textContent = 'Generando…';
+  btn.disabled = true;
+  fetch('/pedido_pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lab: LAB, name1: NAME1, name2: NAME2, rows: currentPedidoRows })
+  })
+  .then(r => {
+    if (!r.ok) throw new Error('Error del servidor');
+    return r.blob();
+  })
+  .then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pedido_${LAB.replace(/\s+/g,'_')}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  })
+  .catch(() => alert('Error al generar el PDF. Inténtalo de nuevo.'))
+  .finally(() => {
+    btn.textContent = '⬇ Guardar PDF';
+    btn.disabled = false;
+  });
 }
 
 // ─── CSV EXPORT ───────────────────────────────────────────────────────────────
