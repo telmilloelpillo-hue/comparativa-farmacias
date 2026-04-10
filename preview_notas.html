@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview — Notas por producto</title>
+<style>
+:root {
+  --z:       #dc2626;
+  --z-light: #fef2f2;
+  --z-mid:   #fca5a5;
+  --b:       #1d4ed8;
+  --b-light: #eff6ff;
+  --b-mid:   #93c5fd;
+  --bg:      #f0fdf4;
+  --border:  #d1fae5;
+  --text:    #14532d;
+  --muted:   #4b7c5e;
+  --accent:  #166534;
+  --radius:  8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.preview-wrapper {
+  display: flex;
+  gap: 0;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  width: 860px;
+  height: 680px;
+}
+
+/* ── Mini tabla izquierda ── */
+.mini-table {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+
+.mini-table-header {
+  background: #14532d;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 10px 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.mini-table-subheader {
+  display: grid;
+  grid-template-columns: 1fr 54px 54px;
+  background: #1a6641;
+  padding: 5px 12px;
+  gap: 4px;
+}
+.mini-table-subheader span {
+  font-size: 10px;
+  color: rgba(255,255,255,.7);
+  font-weight: 500;
+}
+.mini-table-subheader span:not(:first-child) {
+  text-align: center;
+}
+
+.mini-rows {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.mini-row {
+  display: grid;
+  grid-template-columns: 1fr 54px 54px;
+  padding: 9px 12px;
+  gap: 4px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  align-items: center;
+  transition: background .12s;
+  position: relative;
+}
+.mini-row:hover { background: #dcfce7; }
+.mini-row.selected {
+  background: rgba(22,101,52,0.08);
+  border-left: 3px solid #166534;
+}
+.mini-row .prod-name {
+  font-size: 11.5px;
+  color: #1a1a1a;
+  font-weight: 500;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.nota-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #166534;
+  flex-shrink: 0;
+  display: inline-block;
+}
+.nota-dot.hidden { display: none; }
+.mini-row .stock-cell {
+  font-size: 11px;
+  text-align: center;
+  color: #374151;
+}
+.mini-row .stock-cell.red { color: #dc2626; font-weight: 600; }
+.mini-row .stock-cell.ok  { color: #166534; }
+
+/* ── Panel lateral ── */
+.panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  overflow: hidden;
+}
+
+.panel-header {
+  background: #f0fdf4;
+  border-bottom: 1px solid #d1fae5;
+  padding: 14px 16px 12px;
+}
+.panel-prod-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #14532d;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.panel-lab {
+  font-size: 11px;
+  color: #4b7c5e;
+  margin-bottom: 8px;
+}
+.farm-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.farm-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+.farm-badge-z { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+.farm-badge-b { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
+
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid #d1fae5;
+  background: #f0fdf4;
+}
+.panel-tab {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b7c5e;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  text-align: center;
+  transition: color .15s, border-color .15s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  user-select: none;
+}
+.panel-tab.active {
+  color: #166534;
+  border-bottom-color: #166534;
+}
+.panel-tab:hover:not(.active) { color: #14532d; }
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: #d1fae5 transparent;
+}
+
+.tab-content { display: none; flex-direction: column; gap: 14px; }
+.tab-content.active { display: flex; }
+
+/* Section titles */
+.section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: #4b7c5e;
+  border-bottom: 1px solid #d1fae5;
+  padding-bottom: 5px;
+  margin-bottom: 2px;
+}
+
+/* Recomendación card */
+.rec-card {
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rec-card.pedir  { background: #dcfce7; border: 1px solid #86efac; }
+.rec-card.mantener { background: #fef9c3; border: 1px solid #fde047; }
+.rec-card.revisar  { background: #fef2f2; border: 1px solid #fca5a5; }
+
+.rec-icon { font-size: 22px; line-height: 1; }
+.rec-body { flex: 1; }
+.rec-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #14532d;
+}
+.rec-sub {
+  font-size: 11px;
+  color: #4b7c5e;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+/* Alert badges */
+.alert-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.ab {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+.ab-red    { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+.ab-orange { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
+.ab-gray   { background: #f0fdf4; color: #4b7c5e; border-color: #d1fae5; }
+
+/* Base cards */
+.base-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.base-card {
+  background: #f0fdf4;
+  border: 1px solid #d1fae5;
+  border-radius: 6px;
+  padding: 9px 10px;
+  transition: border-color .15s;
+}
+.base-card:hover { border-color: #86efac; }
+.base-card-label { font-size: 10px; color: #4b7c5e; font-weight: 500; margin-bottom: 3px; }
+.base-value { font-size: 16px; font-weight: 700; }
+.base-value.red  { color: #dc2626; }
+.base-value.blue { color: #1d4ed8; }
+.base-value.green { color: #166534; }
+.base-unit { font-size: 10px; color: #4b7c5e; margin-top: 1px; }
+
+/* ── NOTA SECTION ── */
+.nota-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nota-categories {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.nota-cat {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 20px;
+  border: 1.5px solid #d1fae5;
+  background: white;
+  color: #4b7c5e;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.nota-cat:hover { border-color: #86efac; color: #166534; }
+.nota-cat.active {
+  background: #166534;
+  border-color: #166534;
+  color: white;
+}
+
+.nota-textarea {
+  width: 100%;
+  min-height: 110px;
+  border: 1.5px solid #d1fae5;
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #14532d;
+  background: #fafffe;
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color .15s, box-shadow .15s;
+  /* Apple Pencil friendly — no user-select restriction */
+  touch-action: auto;
+}
+.nota-textarea::placeholder { color: #a7c4b5; }
+.nota-textarea:focus {
+  outline: none;
+  border-color: #166534;
+  box-shadow: 0 0 0 3px rgba(22,101,52,0.08);
+}
+
+.nota-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.nota-chars {
+  font-size: 10px;
+  color: #a7c4b5;
+}
+.nota-save-btn {
+  background: #166534;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+  min-height: 36px;
+}
+.nota-save-btn:hover { background: #14532d; }
+.nota-save-btn:active { transform: scale(.97); }
+
+.nota-saved-msg {
+  font-size: 11px;
+  color: #166634;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity .3s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nota-saved-msg.visible { opacity: 1; }
+
+/* Bases tab placeholder */
+.bases-placeholder {
+  color: #4b7c5e;
+  font-size: 12px;
+  text-align: center;
+  padding: 24px 0;
+  opacity: .6;
+}
+
+/* Label en panel cuerpo */
+.nota-hint {
+  font-size: 11px;
+  color: #a7c4b5;
+  line-height: 1.4;
+}
+
+/* Indicador de nota en panel header */
+.nota-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 600;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.nota-indicator.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="preview-wrapper">
+
+  <!-- Mini tabla izquierda -->
+  <div class="mini-table">
+    <div class="mini-table-header">Comparativa productos</div>
+    <div class="mini-table-subheader">
+      <span>Producto</span>
+      <span style="color:#fca5a5">F1</span>
+      <span style="color:#93c5fd">F2</span>
+    </div>
+    <div class="mini-rows" id="miniRows">
+      <!-- filas generadas por JS -->
+    </div>
+  </div>
+
+  <!-- Panel lateral -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-prod-name" id="panelName">OMEPRAZOL 20 MG 28 CAPS</div>
+      <div class="panel-lab" id="panelLab">Laboratorio Ratiopharm · CN 123456</div>
+      <div class="farm-badges">
+        <span class="farm-badge farm-badge-z">F1: 3,42 €</span>
+        <span class="farm-badge farm-badge-b">F2: 3,18 €</span>
+      </div>
+      <div class="nota-indicator" id="notaIndicator">✎ Nota guardada</div>
+    </div>
+
+    <div class="panel-tabs">
+      <button class="panel-tab" onclick="switchTab('bases')">Bases</button>
+      <button class="panel-tab active" onclick="switchTab('motor')">Motor de Decisión</button>
+    </div>
+
+    <div class="panel-body">
+
+      <!-- Tab Bases -->
+      <div class="tab-content" id="tab-bases">
+        <div class="section-title">Precios base</div>
+        <div class="base-grid">
+          <div class="base-card">
+            <div class="base-card-label">PVP F1</div>
+            <div class="base-value red">3,42 €</div>
+            <div class="base-unit">Precio venta público</div>
+          </div>
+          <div class="base-card">
+            <div class="base-card-label">PVP F2</div>
+            <div class="base-value blue">3,18 €</div>
+            <div class="base-unit">Precio venta público</div>
+          </div>
+          <div class="base-card">
+            <div class="base-card-label">Stock F1</div>
+            <div class="base-value red">2</div>
+            <div class="base-unit">unidades</div>
+          </div>
+          <div class="base-card">
+            <div class="base-card-label">Stock F2</div>
+            <div class="base-value blue">18</div>
+            <div class="base-unit">unidades</div>
+          </div>
+        </div>
+        <div class="bases-placeholder">↕ Más datos en la comparativa</div>
+      </div>
+
+      <!-- Tab Motor de Decisión -->
+      <div class="tab-content active" id="tab-motor">
+
+        <!-- Recomendación -->
+        <div>
+          <div class="section-title">Recomendación</div>
+          <div class="rec-card pedir" id="recCard">
+            <div class="rec-icon">📦</div>
+            <div class="rec-body">
+              <div class="rec-label" id="recLabel">PEDIR — Farmacia 1</div>
+              <div class="rec-sub" id="recSub">Stock bajo (2 ud). F2 tiene excedente. Considerar traslado o reposición.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alertas -->
+        <div>
+          <div class="section-title">Alertas</div>
+          <div class="alert-badges" id="alertBadges">
+            <span class="ab ab-red">Stock bajo F1</span>
+            <span class="ab ab-orange">Dif. precio +7,5%</span>
+            <span class="ab ab-gray">Sin pedido activo</span>
+          </div>
+        </div>
+
+        <!-- ── NOTA SECCIÓN NUEVA ── -->
+        <div class="nota-section">
+          <div class="section-title">Nota de gestión</div>
+          <div class="nota-hint">Escribe observaciones de logística, calidad o precio. Se guarda por producto.</div>
+
+          <div class="nota-categories" id="notaCategories">
+            <button class="nota-cat active" data-cat="logistica" onclick="selectCat(this)">📦 Logística</button>
+            <button class="nota-cat" data-cat="alerta"    onclick="selectCat(this)">⚠️ Alerta</button>
+            <button class="nota-cat" data-cat="precio"    onclick="selectCat(this)">💶 Precio</button>
+            <button class="nota-cat" data-cat="general"   onclick="selectCat(this)">💬 General</button>
+          </div>
+
+          <textarea
+            class="nota-textarea"
+            id="notaTextarea"
+            placeholder="Escribe aquí tu nota… (compatible con Apple Pencil)"
+            maxlength="500"
+            oninput="updateChars()"
+          ></textarea>
+
+          <div class="nota-footer">
+            <span class="nota-chars" id="notaChars">0 / 500</span>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="nota-saved-msg" id="savedMsg">✓ Guardado</span>
+              <button class="nota-save-btn" onclick="saveNota()">Guardar nota</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /tab-motor -->
+    </div><!-- /panel-body -->
+  </div><!-- /panel -->
+</div><!-- /preview-wrapper -->
+
+<script>
+// Productos demo
+const productos = [
+  { id:'p1', name:'OMEPRAZOL 20MG 28C',    lab:'Ratiopharm',  cn:'123456', s1:2,  s2:18, p1:3.42, p2:3.18,
+    rec:'pedir', recLabel:'PEDIR — Farmacia 1', recSub:'Stock bajo (2 ud). F2 tiene excedente.',
+    alerts:[{t:'ab-red','l':'Stock bajo F1'},{t:'ab-orange',l:'Dif. precio +7,5%'},{t:'ab-gray',l:'Sin pedido activo'}] },
+  { id:'p2', name:'AMOXICILINA 500MG 24C', lab:'Kern Pharma',  cn:'234567', s1:12, s2:5,  p1:4.20, p2:4.55,
+    rec:'mantener', recLabel:'MANTENER — equilibrado', recSub:'Stocks correctos. Revisar en 30 días.',
+    alerts:[{t:'ab-gray',l:'Stocks OK'},{t:'ab-gray',l:'Precio similar'}] },
+  { id:'p3', name:'LORATADINA 10MG 20C',   lab:'Bayer',        cn:'345678', s1:0,  s2:3,  p1:2.80, p2:2.95,
+    rec:'pedir', recLabel:'PEDIR urgente — F1 sin stock', recSub:'Stock cero en F1. Necesita reposición inmediata.',
+    alerts:[{t:'ab-red',l:'Sin stock F1'},{t:'ab-orange',l:'Solo 3 ud en F2'}] },
+  { id:'p4', name:'IBUPROFENO 400MG 40C',  lab:'Cinfa',        cn:'456789', s1:24, s2:31, p1:3.10, p2:3.10,
+    rec:'mantener', recLabel:'MANTENER — sin acción', recSub:'Stock abundante en ambas. Sin alertas.',
+    alerts:[{t:'ab-gray',l:'Stock alto F1'},{t:'ab-gray',l:'Stock alto F2'}] },
+  { id:'p5', name:'PARACETAMOL 1G 20C',    lab:'Normon',       cn:'567890', s1:8,  s2:6,  p1:2.15, p2:2.10,
+    rec:'mantener', recLabel:'MANTENER — precio muy similar', recSub:'Stocks aceptables. Diferencia mínima.',
+    alerts:[{t:'ab-gray',l:'Precio equiv.'},{t:'ab-gray',l:'Stocks medios'}] },
+];
+
+let currentProd = productos[0];
+let currentCat  = 'logistica';
+
+function getNotaKey(prod, cat) {
+  return `nota_preview_${prod.id}_${cat}`;
+}
+
+function hasAnyNota(prod) {
+  return ['logistica','alerta','precio','general'].some(c =>
+    localStorage.getItem(getNotaKey(prod, c))
+  );
+}
+
+function renderMiniRows() {
+  const container = document.getElementById('miniRows');
+  container.innerHTML = '';
+  productos.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'mini-row' + (p.id === currentProd.id ? ' selected' : '');
+    row.onclick = () => selectProd(p);
+
+    const lowStock = p.s1 < 3;
+    const dotClass = hasAnyNota(p) ? '' : ' hidden';
+
+    row.innerHTML = `
+      <div class="prod-name">
+        <span class="nota-dot${dotClass}" title="Tiene nota"></span>
+        ${p.name}
+      </div>
+      <div class="stock-cell ${p.s1 === 0 ? 'red' : p.s1 < 3 ? 'red' : 'ok'}">${p.s1}</div>
+      <div class="stock-cell ${p.s2 < 3 ? 'red' : 'ok'}">${p.s2}</div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function selectProd(prod) {
+  currentProd = prod;
+  renderMiniRows();
+  loadProdPanel();
+}
+
+function loadProdPanel() {
+  const p = currentProd;
+
+  // Header
+  document.getElementById('panelName').textContent = p.name;
+  document.getElementById('panelLab').textContent = `${p.lab} · CN ${p.cn}`;
+
+  // Recomendación
+  const recCard = document.getElementById('recCard');
+  recCard.className = 'rec-card ' + p.rec;
+  const icons = { pedir:'📦', mantener:'✅', revisar:'⚠️' };
+  recCard.querySelector('.rec-icon').textContent = icons[p.rec] || '📦';
+  document.getElementById('recLabel').textContent = p.recLabel;
+  document.getElementById('recSub').textContent   = p.recSub;
+
+  // Alertas
+  const ab = document.getElementById('alertBadges');
+  ab.innerHTML = p.alerts.map(a => `<span class="ab ${a.t}">${a.l}</span>`).join('');
+
+  // Nota
+  loadNotaForCat();
+
+  // Indicador "nota guardada"
+  updateNotaIndicator();
+}
+
+function loadNotaForCat() {
+  const key  = getNotaKey(currentProd, currentCat);
+  const val  = localStorage.getItem(key) || '';
+  document.getElementById('notaTextarea').value = val;
+  updateChars();
+  hideSavedMsg();
+}
+
+function selectCat(btn) {
+  document.querySelectorAll('.nota-cat').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCat = btn.dataset.cat;
+  loadNotaForCat();
+}
+
+function updateChars() {
+  const len = document.getElementById('notaTextarea').value.length;
+  document.getElementById('notaChars').textContent = `${len} / 500`;
+}
+
+function saveNota() {
+  const val = document.getElementById('notaTextarea').value.trim();
+  const key = getNotaKey(currentProd, currentCat);
+  if (val) {
+    localStorage.setItem(key, val);
+  } else {
+    localStorage.removeItem(key);
+  }
+
+  // Feedback
+  const msg = document.getElementById('savedMsg');
+  const now = new Date();
+  const hm  = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+  msg.textContent = `✓ Guardado ${hm}`;
+  msg.classList.add('visible');
+  setTimeout(() => msg.classList.remove('visible'), 3000);
+
+  // Actualizar indicador y puntos en tabla
+  updateNotaIndicator();
+  renderMiniRows();
+}
+
+function hideSavedMsg() {
+  document.getElementById('savedMsg').classList.remove('visible');
+}
+
+function updateNotaIndicator() {
+  const ind = document.getElementById('notaIndicator');
+  ind.classList.toggle('visible', hasAnyNota(currentProd));
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// Init
+renderMiniRows();
+loadProdPanel();
+</script>
+</body>
+</html>

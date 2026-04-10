@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview — Visual pedidos calculado vs manual</title>
+<style>
+:root {
+  --z:       #dc2626;
+  --z-light: #fef2f2;
+  --b:       #1d4ed8;
+  --b-light: #eff6ff;
+  --bg:      #f0fdf4;
+  --border:  #d1fae5;
+  --text:    #14532d;
+  --muted:   #4b7c5e;
+  --accent:  #166534;
+
+  /* Estados de pedido */
+  --calc-bg:     #dcfce7;
+  --calc-text:   #14532d;
+  --calc-border: #86efac;
+
+  --edit-bg:     #fef3c7;
+  --edit-text:   #92400e;
+  --edit-border: #fde68a;
+
+  --new-bg:      #eff6ff;
+  --new-text:    #1d4ed8;
+  --new-border:  #bfdbfe;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  gap: 20px;
+}
+
+h2 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* ── Leyenda ── */
+.leyenda {
+  display: flex;
+  gap: 12px;
+  background: white;
+  border-radius: 10px;
+  padding: 12px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.leyenda-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #374151;
+  font-weight: 500;
+}
+.chip-demo {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border-radius: 5px;
+  border: 1px solid;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.chip-calc { background: var(--calc-bg); color: var(--calc-text); border-color: var(--calc-border); }
+.chip-edit { background: var(--edit-bg); color: var(--edit-text); border-color: var(--edit-border); }
+.chip-new  { background: var(--new-bg);  color: var(--new-text);  border-color: var(--new-border);  }
+.chip-none { background: #f9fafb; color: #9ca3af; border-color: #e5e7eb; }
+
+/* ── Wrapper ── */
+.preview-wrapper {
+  display: flex;
+  gap: 0;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  width: 900px;
+}
+
+/* ── Tabla ── */
+.tabla-wrap {
+  flex: 1;
+  overflow: auto;
+  border-right: 1px solid #e5e7eb;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+thead tr:first-child th {
+  background: #14532d;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
+}
+thead tr:first-child th.th-z { background: #dc2626; }
+thead tr:first-child th.th-b { background: #1d4ed8; }
+thead tr:first-child th.th-b.col-div { border-left: 2px solid #14532d; }
+
+tbody tr { cursor: pointer; transition: background .1s; }
+tbody tr:nth-child(even) td { background: #f0fdf4; }
+tbody tr:hover:not(.selected) td { background: #dcfce7 !important; }
+tbody tr.selected td { background: rgba(22,101,52,0.08) !important; }
+tbody tr.selected td:first-child { border-left: 3px solid #166534; }
+
+td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #1a1a1a;
+  white-space: nowrap;
+}
+td.td-code { font-family: monospace; font-size: 11px; color: #6b7280; font-weight: 700; }
+td.td-desc { white-space: normal; max-width: 180px; font-size: 11.5px; line-height: 1.3; }
+td.td-num  { text-align: center; }
+td.td-muted { text-align: center; color: #d1d5db; font-size: 11px; }
+td.col-div { border-left: 2px solid #166534; }
+
+/* ── Celdas de pedido ── */
+td.td-pedido {
+  text-align: center;
+  padding: 5px 8px;
+}
+.pedido-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border-radius: 5px;
+  border: 1px solid;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 38px;
+  justify-content: center;
+  transition: all .2s;
+}
+.pedido-chip.calc { background: var(--calc-bg); color: var(--calc-text); border-color: var(--calc-border); }
+.pedido-chip.edit { background: var(--edit-bg); color: var(--edit-text); border-color: var(--edit-border); }
+.pedido-chip.new  { background: var(--new-bg);  color: var(--new-text);  border-color: var(--new-border);  }
+.pedido-chip.none { background: #f9fafb; color: #d1d5db; border-color: #f3f4f6; font-weight: 400; }
+
+.chip-icon { font-size: 10px; opacity: .85; }
+.chip-orig {
+  display: block;
+  font-size: 9px;
+  font-weight: 400;
+  color: #a16207;
+  margin-top: 1px;
+  text-decoration: line-through;
+  opacity: .7;
+}
+
+/* ── Panel ── */
+.panel {
+  width: 310px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+}
+
+.panel-header {
+  background: #f0fdf4;
+  border-bottom: 1px solid #d1fae5;
+  padding: 12px 14px;
+}
+.panel-prod { font-size: 13px; font-weight: 700; color: #14532d; line-height: 1.2; margin-bottom: 3px; }
+.panel-lab  { font-size: 10.5px; color: #4b7c5e; }
+
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid #d1fae5;
+  background: #f0fdf4;
+}
+.panel-tab {
+  flex: 1; padding: 9px; font-size: 11.5px; font-weight: 600;
+  color: #4b7c5e; cursor: pointer; text-align: center;
+  border-bottom: 2px solid transparent;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.panel-tab.active { color: #166534; border-bottom-color: #166534; }
+
+.panel-body {
+  flex: 1; overflow-y: auto; padding: 14px;
+  display: flex; flex-direction: column; gap: 12px;
+  scrollbar-width: thin; scrollbar-color: #d1fae5 transparent;
+}
+
+.section-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: #4b7c5e;
+  border-bottom: 1px solid #d1fae5; padding-bottom: 5px; margin-bottom: 4px;
+}
+
+/* ── Pedido en panel ── */
+.pedido-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1.5px solid #d1fae5;
+  padding: 11px 12px;
+  background: #fafffe;
+  transition: border-color .2s;
+}
+.pedido-block.state-edit { border-color: var(--edit-border); background: #fffdf0; }
+.pedido-block.state-new  { border-color: var(--new-border);  background: #f0f6ff; }
+.pedido-block.state-calc { border-color: var(--calc-border); background: #f0fdf4; }
+
+.pedido-farm-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: #4b7c5e;
+}
+.pedido-farm-label.z { color: #dc2626; }
+.pedido-farm-label.b { color: #1d4ed8; }
+
+/* Sugerido row */
+.pedido-sugerido {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #4b7c5e;
+}
+.pedido-sugerido-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--calc-bg);
+  color: var(--calc-text);
+  border: 1px solid var(--calc-border);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Input row */
+.pedido-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.pedido-input {
+  width: 80px; padding: 7px 10px;
+  border: 2px solid #d1fae5; border-radius: 7px;
+  font-size: 16px; font-weight: 700;
+  color: #14532d; text-align: center;
+  font-family: inherit; outline: none;
+  transition: border-color .15s;
+  background: white;
+}
+.pedido-input:focus { border-color: #166534; }
+.pedido-input.dirty { border-color: var(--edit-border); color: var(--edit-text); }
+.pedido-input.new   { border-color: var(--new-border);  color: var(--new-text);  }
+
+.pedido-save-btn {
+  padding: 7px 14px; background: #166534; color: white;
+  border: none; border-radius: 7px; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: background .15s;
+}
+.pedido-save-btn:hover { background: #14532d; }
+.pedido-clear-btn {
+  padding: 7px 10px; background: none; color: #dc2626;
+  border: 1px solid #fecaca; border-radius: 7px; font-size: 12px;
+  font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.pedido-clear-btn:hover { background: #fef2f2; }
+
+/* Estado pill */
+.pedido-estado {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 0;
+  transition: all .2s;
+}
+.pedido-estado.calc { color: #166534; }
+.pedido-estado.edit { color: #92400e; }
+.pedido-estado.new  { color: #1d4ed8; }
+.pedido-estado.none { color: #9ca3af; }
+.pedido-estado-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.pedido-estado.calc .pedido-estado-dot { background: #16a34a; }
+.pedido-estado.edit .pedido-estado-dot { background: #d97706; }
+.pedido-estado.new  .pedido-estado-dot { background: #1d4ed8; }
+.pedido-estado.none .pedido-estado-dot { background: #d1d5db; }
+
+/* Indicador de original al editar */
+.edit-hint {
+  font-size: 10px;
+  color: #a16207;
+  display: none;
+}
+.edit-hint.visible { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Leyenda -->
+<div class="leyenda">
+  <span style="font-size:12px;font-weight:700;color:#374151;margin-right:4px">Estados del pedido:</span>
+  <div class="leyenda-item">
+    <span class="chip-demo chip-calc">5</span>
+    Calculado por sistema
+  </div>
+  <div class="leyenda-item">
+    <span class="chip-demo chip-edit">✏ 8</span>
+    Editado manualmente <span style="font-size:10px;color:#9ca3af">(había calc.)</span>
+  </div>
+  <div class="leyenda-item">
+    <span class="chip-demo chip-new">✏ 3</span>
+    Añadido sin cálculo previo
+  </div>
+  <div class="leyenda-item">
+    <span class="chip-demo chip-none">—</span>
+    Sin pedido
+  </div>
+</div>
+
+<div class="preview-wrapper">
+
+  <!-- Tabla -->
+  <div class="tabla-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="1">Código</th>
+          <th rowspan="1">Descripción</th>
+          <th class="th-z">Stock</th>
+          <th class="th-z">Pedido</th>
+          <th class="th-b col-div">Stock</th>
+          <th class="th-b">Pedido</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <!-- generado por JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-prod" id="panelNombre">Selecciona un producto</div>
+      <div class="panel-lab"  id="panelLab">—</div>
+    </div>
+    <div class="panel-tabs">
+      <button class="panel-tab">Bases</button>
+      <button class="panel-tab active">Motor de Decisión</button>
+    </div>
+    <div class="panel-body">
+
+      <div>
+        <div class="section-title">Pedido manual</div>
+
+        <!-- Farmacia 1 -->
+        <div class="pedido-block" id="blockZ">
+          <div class="pedido-farm-label z" id="labelZ">Farmacia 1</div>
+          <div class="pedido-sugerido" id="sugeridoZ">
+            Sugerido por sistema:
+            <span class="pedido-sugerido-val" id="calcValZ">—</span>
+          </div>
+          <div class="pedido-input-row">
+            <input type="number" class="pedido-input" id="inputZ" min="0" placeholder="0"
+                   oninput="onInputChange('z')"
+                   onkeydown="if(event.key==='Enter')guardarPedido('z')">
+            <button class="pedido-save-btn" onclick="guardarPedido('z')">Guardar</button>
+            <button class="pedido-clear-btn" onclick="limpiarPedido('z')">×</button>
+          </div>
+          <div class="edit-hint" id="hintZ"></div>
+          <div class="pedido-estado none" id="estadoZ">
+            <span class="pedido-estado-dot"></span>
+            <span id="estadoZText">Sin pedido registrado</span>
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <!-- Farmacia 2 -->
+        <div class="pedido-block" id="blockB">
+          <div class="pedido-farm-label b" id="labelB">Farmacia 2</div>
+          <div class="pedido-sugerido" id="sugeridoB">
+            Sugerido por sistema:
+            <span class="pedido-sugerido-val" id="calcValB">—</span>
+          </div>
+          <div class="pedido-input-row">
+            <input type="number" class="pedido-input" id="inputB" min="0" placeholder="0"
+                   oninput="onInputChange('b')"
+                   onkeydown="if(event.key==='Enter')guardarPedido('b')">
+            <button class="pedido-save-btn" onclick="guardarPedido('b')">Guardar</button>
+            <button class="pedido-clear-btn" onclick="limpiarPedido('b')">×</button>
+          </div>
+          <div class="edit-hint" id="hintB"></div>
+          <div class="pedido-estado none" id="estadoB">
+            <span class="pedido-estado-dot"></span>
+            <span id="estadoBText">Sin pedido registrado</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// Datos demo
+const productos = [
+  { code:'8470001234',  desc:'OMEPRAZOL 20MG 28 CAPS',         s1:2,  s2:18, calc1:5, calc2:0  },
+  { code:'8470005678',  desc:'AMOXICILINA 500MG 24 CAPS',      s1:12, s2:5,  calc1:0, calc2:3  },
+  { code:'8470009012',  desc:'LORATADINA 10MG 20 COMP',        s1:0,  s2:3,  calc1:8, calc2:2  },
+  { code:'8470003456',  desc:'IBUPROFENO 400MG 40 COMP',       s1:24, s2:31, calc1:0, calc2:0  },
+  { code:'8470007890',  desc:'PARACETAMOL 1G 20 COMP',         s1:8,  s2:6,  calc1:4, calc2:4  },
+  { code:'8470002222',  desc:'METFORMINA 850MG 60 COMP',       s1:3,  s2:0,  calc1:6, calc2:0  },
+  { code:'8470006666',  desc:'ATORVASTATINA 20MG 28 COMP',     s1:15, s2:10, calc1:0, calc2:0  },
+];
+
+// Estado manual: { "CODE_z": qty, "CODE_b": qty }
+const manual = {};
+let selIdx = null;
+
+function getState(code, suffix) {
+  const prod    = productos.find(p => p.code === code);
+  const calcVal = suffix === 'z' ? prod.calc1 : prod.calc2;
+  const manVal  = manual[code + '_' + suffix];
+
+  if (manVal != null && manVal > 0) {
+    return calcVal > 0 ? 'edit' : 'new';   // override vs new
+  }
+  if (calcVal > 0) return 'calc';
+  return 'none';
+}
+
+function getDisplayVal(code, suffix) {
+  const prod    = productos.find(p => p.code === code);
+  const calcVal = suffix === 'z' ? prod.calc1 : prod.calc2;
+  const manVal  = manual[code + '_' + suffix];
+  if (manVal != null && manVal > 0) return manVal;
+  if (calcVal > 0) return calcVal;
+  return 0;
+}
+
+function renderTabla() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  productos.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    if (i === selIdx) tr.classList.add('selected');
+    tr.onclick = () => selectProd(i);
+
+    tr.innerHTML = `
+      <td class="td-code">${p.code}</td>
+      <td class="td-desc">${p.desc}</td>
+      <td class="td-num ${p.s1 < 3 ? 'style="color:#dc2626;font-weight:700"' : ''}">${p.s1}</td>
+      <td class="td-pedido" id="cell-z-${p.code}">${renderChip(p.code,'z')}</td>
+      <td class="td-num col-div">${p.s2}</td>
+      <td class="td-pedido" id="cell-b-${p.code}">${renderChip(p.code,'b')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderChip(code, suffix) {
+  const prod    = productos.find(p => p.code === code);
+  const calcVal = suffix === 'z' ? prod.calc1 : prod.calc2;
+  const state   = getState(code, suffix);
+  const dispVal = getDisplayVal(code, suffix);
+
+  if (state === 'none') {
+    return `<span class="pedido-chip none">—</span>`;
+  }
+  if (state === 'calc') {
+    return `<span class="pedido-chip calc">${dispVal}</span>`;
+  }
+  if (state === 'edit') {
+    // Manual override — show new value + strikethrough calc below
+    return `<span class="pedido-chip edit">
+      <span class="chip-icon">✏</span>${dispVal}
+      <span class="chip-orig">${calcVal}</span>
+    </span>`;
+  }
+  if (state === 'new') {
+    return `<span class="pedido-chip new"><span class="chip-icon">✏</span>${dispVal}</span>`;
+  }
+}
+
+function updateCell(code, suffix) {
+  const cell = document.getElementById(`cell-${suffix}-${code}`);
+  if (cell) cell.innerHTML = renderChip(code, suffix);
+}
+
+function selectProd(i) {
+  selIdx = i;
+  const p = productos[i];
+
+  document.getElementById('panelNombre').textContent = p.desc;
+  document.getElementById('panelLab').textContent    = `CN ${p.code}`;
+
+  // Farmacia Z
+  const calcZ = p.calc1;
+  document.getElementById('calcValZ').textContent = calcZ > 0 ? `${calcZ} ud` : 'Sin sugerencia';
+  document.getElementById('calcValZ').style.background = calcZ > 0 ? '' : '#f9fafb';
+  document.getElementById('calcValZ').style.color      = calcZ > 0 ? '' : '#9ca3af';
+  document.getElementById('calcValZ').style.borderColor= calcZ > 0 ? '' : '#e5e7eb';
+
+  const manZ = manual[p.code + '_z'];
+  document.getElementById('inputZ').value = manZ && manZ > 0 ? manZ : '';
+
+  // Farmacia B
+  const calcB = p.calc2;
+  document.getElementById('calcValB').textContent = calcB > 0 ? `${calcB} ud` : 'Sin sugerencia';
+  document.getElementById('calcValB').style.background = calcB > 0 ? '' : '#f9fafb';
+  document.getElementById('calcValB').style.color      = calcB > 0 ? '' : '#9ca3af';
+  document.getElementById('calcValB').style.borderColor= calcB > 0 ? '' : '#e5e7eb';
+
+  const manB = manual[p.code + '_b'];
+  document.getElementById('inputB').value = manB && manB > 0 ? manB : '';
+
+  refreshPanelState('z');
+  refreshPanelState('b');
+  renderTabla();
+}
+
+function onInputChange(suffix) {
+  if (selIdx === null) return;
+  refreshPanelState(suffix, true); // preview while typing
+}
+
+function refreshPanelState(suffix, preview = false) {
+  if (selIdx === null) return;
+  const p       = productos[selIdx];
+  const calcVal = suffix === 'z' ? p.calc1 : p.calc2;
+  const inputEl = document.getElementById('input' + suffix.toUpperCase());
+  const typedVal = parseInt(inputEl.value) || 0;
+  const savedVal = manual[p.code + '_' + suffix] || 0;
+  const displayVal = preview ? typedVal : savedVal;
+
+  const block   = document.getElementById('block' + suffix.toUpperCase());
+  const estado  = document.getElementById('estado' + suffix.toUpperCase());
+  const estadoTxt = document.getElementById('estado' + suffix.toUpperCase() + 'Text');
+  const hint    = document.getElementById('hint' + suffix.toUpperCase());
+
+  // Determine state
+  let state;
+  if (displayVal > 0) {
+    state = calcVal > 0 ? 'edit' : 'new';
+  } else if (savedVal > 0) {
+    state = calcVal > 0 ? 'edit' : 'new';
+  } else if (calcVal > 0) {
+    state = 'calc';
+  } else {
+    state = 'none';
+  }
+
+  // Update input style
+  inputEl.className = 'pedido-input';
+  if (state === 'edit' && displayVal !== calcVal) inputEl.classList.add('dirty');
+  if (state === 'new') inputEl.classList.add('new');
+
+  // Block border
+  block.className = 'pedido-block state-' + state;
+
+  // Estado pill
+  estado.className = 'pedido-estado ' + state;
+
+  // Edit hint (show original if override)
+  if (state === 'edit' && displayVal > 0 && displayVal !== calcVal) {
+    hint.classList.add('visible');
+    hint.textContent = `⚡ El sistema calculó ${calcVal} ud — estás usando ${displayVal} ud`;
+  } else {
+    hint.classList.remove('visible');
+  }
+
+  // Estado text
+  if (state === 'calc') {
+    estadoTxt.textContent = `Calculado por sistema (${calcVal} ud)`;
+  } else if (state === 'edit') {
+    estadoTxt.textContent = displayVal === calcVal
+      ? `Editado — igual al calculado (${calcVal} ud)`
+      : `Editado manualmente (calc: ${calcVal} ud)`;
+  } else if (state === 'new') {
+    estadoTxt.textContent = `Añadido manualmente — sin sugerencia del sistema`;
+  } else {
+    estadoTxt.textContent = `Sin pedido registrado`;
+  }
+}
+
+function guardarPedido(suffix) {
+  if (selIdx === null) return;
+  const p   = productos[selIdx];
+  const val = parseInt(document.getElementById('input' + suffix.toUpperCase()).value) || 0;
+  const key = p.code + '_' + suffix;
+
+  if (val > 0) manual[key] = val;
+  else delete manual[key];
+
+  refreshPanelState(suffix);
+  updateCell(p.code, suffix);
+}
+
+function limpiarPedido(suffix) {
+  if (selIdx === null) return;
+  document.getElementById('input' + suffix.toUpperCase()).value = '';
+  guardarPedido(suffix);
+}
+
+// Init
+renderTabla();
+// Auto-select first row
+selectProd(0);
+</script>
+</body>
+</html>

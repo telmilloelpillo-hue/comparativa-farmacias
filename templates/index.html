@@ -2,25 +2,28 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comparativa de Farmacias</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Farmacias · Panel de control</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --z:       #c0392b;
-      --z-light: #fdecea;
-      --b:       #1a6fa8;
-      --b-light: #e8f3fb;
-      --parado:  #f59e0b;
-      --bg:      #f4f6f9;
-      --surface: #ffffff;
-      --border:  #e2e8f0;
-      --text:    #1e293b;
-      --muted:   #64748b;
-      --accent:  #1e293b;
-      --radius:  10px;
+      --z:      #dc2626;
+      --z-lt:   #fef2f2;
+      --z-mid:  #fca5a5;
+      --b:      #1d4ed8;
+      --b-lt:   #eff6ff;
+      --b-mid:  #93c5fd;
+      --warn:   #f59e0b;
+      --bg:     #f7f8fa;
+      --surface:#ffffff;
+      --border: #e5e7eb;
+      --text:   #111827;
+      --muted:  #6b7280;
+      --accent: #166534;
+      --accent2:#14532d;
+      --radius: 8px;
     }
 
     body {
@@ -32,89 +35,145 @@
       flex-direction: column;
     }
 
-    /* ── TOP BAR ── */
+    /* ══ TOPBAR ══════════════════════════════════════════════════════════════ */
     .topbar {
-      background: var(--accent);
-      color: white;
-      padding: 0 2rem;
-      height: 56px;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      height: 52px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      gap: 2rem;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 200;
     }
+
     .topbar-brand {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .topbar-brand span { color: var(--accent); }
+
+    .topbar-tabs {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: white;
+      gap: 0;
+      height: 100%;
     }
-    .topbar-brand-icon {
-      width: 28px; height: 28px;
-      background: rgba(255,255,255,0.12);
-      border-radius: 6px;
+    .tab-link {
       display: flex;
+      align-items: center;
+      height: 100%;
+      padding: 0 1rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .tab-link:hover { color: var(--text); }
+    .tab-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-badge {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.9rem;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 99px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      margin-left: 0.4rem;
     }
-    .topbar-nav {
+    .tab-badge.badge-pending  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .tab-badge.badge-green    { background: #f0fdf4; color: var(--accent); border: 1px solid #d1fae5; }
+
+    .topbar-right {
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      margin-left: auto;
     }
-    .nav-link {
-      color: rgba(255,255,255,0.65);
-      font-size: 0.78rem;
-      text-decoration: none;
-      padding: 0.35rem 0.75rem;
-      border-radius: 6px;
-      transition: all 0.15s;
-    }
-    .nav-link:hover { background: rgba(255,255,255,0.1); color: white; }
-
-    /* ── MAIN ── */
-    main {
-      flex: 1;
+    .topbar-search {
       display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2.5rem 1.5rem;
-    }
-
-    .page-wrap {
-      width: 100%;
-      max-width: 860px;
-    }
-
-    .page-header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    .page-header h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.03em;
-    }
-    .page-header p {
-      color: var(--muted);
-      font-size: 0.88rem;
-      margin-top: 0.4rem;
-    }
-
-    /* ── CARD ── */
-    .card {
-      background: var(--surface);
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 2rem;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.04);
+      padding: 0.35rem 0.75rem;
+      width: 240px;
+      transition: border-color 0.15s;
+    }
+    .topbar-search:focus-within { border-color: var(--accent); background: white; }
+    .topbar-search input {
+      background: none; border: none; outline: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem; color: var(--text); width: 100%;
+    }
+    .topbar-search input::placeholder { color: var(--muted); }
+    .search-icon { color: var(--muted); font-size: 0.82rem; flex-shrink: 0; }
+
+    .topbar-logout {
+      font-size: 0.78rem; font-weight: 600; color: var(--muted);
+      text-decoration: none; padding: 0.35rem 0.7rem;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .topbar-logout:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ══ MAIN LAYOUT ═════════════════════════════════════════════════════════ */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 0;
+      align-items: start;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.75rem 1.5rem 3rem;
     }
 
-    /* ── FORM GRID ── */
+    /* ══ LEFT PANEL ══════════════════════════════════════════════════════════ */
+    .left-panel {
+      padding-right: 1.75rem;
+      border-right: 1px solid var(--border);
+      min-width: 0;
+    }
+
+    .panel-heading {
+      margin-bottom: 1.25rem;
+    }
+    .panel-heading h2 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .panel-heading p {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    /* ── Upload card ── */
+    .upload-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -122,395 +181,321 @@
     }
 
     .pharmacy-col {
-      padding: 0 1.5rem 0 0;
+      padding: 0 1.25rem 0 0;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.85rem;
     }
     .pharmacy-col:last-child {
-      padding: 0 0 0 1.5rem;
+      padding: 0 0 0 1.25rem;
       border-left: 1px solid var(--border);
     }
 
     .col-header {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.25rem;
+      gap: 0.45rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
     }
-    .col-dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
+    .col-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .dot-z { background: var(--z); }
     .dot-b { background: var(--b); }
     .col-header-text {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted);
     }
 
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
+    .form-group { display: flex; flex-direction: column; gap: 0.3rem; }
 
     label {
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--muted);
+      display: flex; align-items: center; gap: 0.4rem;
     }
     .lbl-optional {
-      font-size: 0.62rem;
-      font-weight: 600;
-      padding: 0.1rem 0.45rem;
-      border-radius: 999px;
-      background: #fffbeb;
-      color: var(--parado);
-      border: 1px solid #fde68a;
-      margin-left: auto;
-      text-transform: uppercase;
+      font-size: 0.58rem; font-weight: 600; padding: 0.08rem 0.4rem;
+      border-radius: 999px; background: #fffbeb; color: #92400e;
+      border: 1px solid #fde68a; margin-left: auto; text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
     input[type="text"] {
-      padding: 0.6rem 0.85rem;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.88rem;
-      color: var(--text);
-      background: var(--bg);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; color: var(--text);
+      background: var(--bg); outline: none; transition: border-color 0.15s;
     }
-    input[type="text"]:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
-      background: white;
-    }
+    input[type="text"]:focus { border-color: var(--accent); background: white; }
 
     .section-sep {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #cbd5e1;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #d1d5db;
+      display: flex; align-items: center; gap: 0.4rem;
     }
     .section-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-    /* FILE DROP — ventas */
+    /* File drops */
     .file-drop {
-      border: 2px dashed var(--border);
-      border-radius: 8px;
-      padding: 1.1rem 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-      background: var(--bg);
+      border: 1.5px dashed var(--border); border-radius: var(--radius);
+      padding: 1rem 0.9rem; text-align: center; cursor: pointer;
+      transition: all 0.18s; position: relative; background: var(--bg);
     }
     .file-drop:hover, .file-drop.dragover { border-color: #3b82f6; background: #eff6ff; }
-    .file-drop.has-z  { border-color: var(--z);  background: var(--z-light); }
-    .file-drop.has-b  { border-color: var(--b);  background: var(--b-light); }
+    .file-drop.has-z { border-color: var(--z); background: var(--z-lt); border-style: solid; }
+    .file-drop.has-b { border-color: var(--b); background: var(--b-lt); border-style: solid; }
     .file-drop input[type="file"] {
       position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
     }
-    .drop-icon { font-size: 1.4rem; display: block; margin-bottom: 0.3rem; }
-    .drop-label { font-size: 0.8rem; color: var(--muted); }
-    .drop-label strong { color: var(--text); }
-    .drop-filename {
-      margin-top: 0.3rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      display: none;
-    }
+    .drop-label { font-size: 0.76rem; color: var(--muted); line-height: 1.4; }
+    .drop-label strong { color: var(--text); display: block; }
+    .drop-filename { margin-top: 0.25rem; font-size: 0.72rem; font-weight: 600; display: none; }
     .has-z .drop-filename { color: var(--z); display: block; }
     .has-b .drop-filename { color: var(--b); display: block; }
 
-    /* FILE DROP — situación (compacto) */
     .file-drop-sm {
-      border: 1.5px dashed var(--border);
-      border-radius: 8px;
-      padding: 0.65rem 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-      background: var(--bg);
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
+      border: 1px dashed var(--border); border-radius: var(--radius);
+      padding: 0.55rem 0.8rem; cursor: pointer; transition: all 0.18s;
+      position: relative; background: var(--bg);
+      display: flex; align-items: center; gap: 0.55rem;
     }
-    .file-drop-sm:hover, .file-drop-sm.dragover { border-color: var(--parado); background: #fffbeb; }
-    .file-drop-sm.has-sit { border-color: var(--parado); background: #fffbeb; }
+    .file-drop-sm:hover { border-color: var(--warn); background: #fffbeb; }
+    .file-drop-sm.has-sit { border-color: var(--warn); background: #fffbeb; border-style: solid; }
     .file-drop-sm input[type="file"] {
       position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
     }
-    .drop-sm-icon { font-size: 1.1rem; flex-shrink: 0; }
     .drop-sm-body { text-align: left; }
-    .drop-sm-body strong { font-size: 0.78rem; color: var(--text); display: block; }
-    .drop-sm-body span { font-size: 0.72rem; color: var(--muted); }
-    .drop-sm-filename { font-size: 0.72rem; font-weight: 600; color: var(--parado); display: none; }
+    .drop-sm-body strong { font-size: 0.76rem; color: var(--text); display: block; }
+    .drop-sm-body span { font-size: 0.68rem; color: var(--muted); }
+    .drop-sm-filename { font-size: 0.68rem; font-weight: 600; color: #92400e; display: none; }
     .has-sit .drop-sm-filename { display: block; }
     .has-sit .drop-sm-hint { display: none; }
 
-    /* ── FOOTER ── */
+    /* Footer */
     .form-footer {
-      margin-top: 1.75rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
     }
-    .form-hint { font-size: 0.78rem; color: var(--muted); }
+    .form-hint { font-size: 0.75rem; color: var(--muted); }
 
     .btn-submit {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 0.7rem 1.75rem;
-      border-radius: 8px;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      background: var(--accent); color: white; border: none;
+      padding: 0.6rem 1.5rem; border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+      transition: background 0.15s; letter-spacing: 0.01em;
     }
-    .btn-submit:hover { background: #334155; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-    .btn-submit:active { transform: scale(0.98); }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-submit:hover    { background: var(--accent2); }
+    .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
-    /* ── LOADING OVERLAY ── */
+    .error-box {
+      display: none; background: #fef2f2; border: 1px solid #fecaca;
+      border-left: 3px solid var(--z); border-radius: var(--radius);
+      padding: 0.75rem 0.9rem; margin-top: 0.9rem;
+      font-size: 0.8rem; color: #991b1b;
+    }
+
+    /* ══ RIGHT PANEL ═════════════════════════════════════════════════════════ */
+    .right-panel {
+      padding-left: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      position: sticky;
+      top: 70px;    /* below topbar */
+    }
+
+    .rp-section { display: flex; flex-direction: column; gap: 0.6rem; }
+    .rp-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted);
+    }
+
+    /* Encargo rows */
+    .encargo-item {
+      background: white; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.75rem 0.9rem; cursor: pointer; text-decoration: none;
+      display: flex; flex-direction: column; gap: 0.3rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .encargo-item:hover {
+      border-color: #d1fae5;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .encargo-item-top {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    }
+    .encargo-id {
+      font-family: monospace; font-size: 0.72rem; font-weight: 700; color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+    .encargo-date { font-size: 0.72rem; color: var(--muted); margin-top: 0.05rem; }
+    .encargo-prods { font-size: 0.72rem; color: var(--muted); }
+    .encargo-prods strong { color: var(--text); font-weight: 600; }
+
+    /* Status badges */
+    .s-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.55rem;
+      border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+    }
+    .s-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .s-pendiente  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .s-pendiente  .s-dot { background: #f59e0b; }
+    .s-parcial    { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+    .s-parcial    .s-dot { background: #f97316; }
+    .s-completado { background: #f0fdf4; color: var(--accent); border: 1px solid #d1fae5; }
+    .s-completado .s-dot { background: #16a34a; }
+
+    .rp-empty {
+      background: white; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.25rem 0.9rem; text-align: center;
+      font-size: 0.78rem; color: var(--muted); line-height: 1.6;
+    }
+    .rp-empty strong { display: block; font-size: 0.82rem; color: var(--text); margin-bottom: 0.25rem; }
+
+    .rp-link {
+      display: flex; align-items: center; justify-content: center;
+      padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.78rem; font-weight: 600; color: var(--accent);
+      text-decoration: none; background: white; transition: all 0.15s;
+    }
+    .rp-link:hover { background: #f0fdf4; border-color: #d1fae5; }
+
+    /* ── Divider ── */
+    .rp-divider { height: 1px; background: var(--border); }
+
+    /* ── Quick stats ── */
+    .stats-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+    }
+    .stat-card {
+      background: white; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.75rem 0.9rem;
+    }
+    .stat-num { font-size: 1.3rem; font-weight: 700; color: var(--text); line-height: 1; }
+    .stat-label { font-size: 0.65rem; color: var(--muted); margin-top: 0.25rem; }
+    .stat-num.green { color: var(--accent); }
+    .stat-num.amber { color: #92400e; }
+
+    /* ══ LOADING OVERLAY ════════════════════════════════════════════════════ */
     .loading-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(240, 253, 244, 0.88);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 999;
-      align-items: center;
-      justify-content: center;
+      display: none; position: fixed; inset: 0;
+      background: rgba(247, 248, 250, 0.9);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      z-index: 999; align-items: center; justify-content: center;
     }
     .loading-overlay.active { display: flex; }
 
     .loading-card {
-      background: white;
-      border-radius: 18px;
-      padding: 44px 52px;
-      box-shadow:
-        0 2px 4px rgba(0,0,0,0.04),
-        0 8px 24px rgba(0,0,0,0.08),
-        0 32px 64px rgba(0,0,0,0.10);
-      width: 440px;
-      max-width: 92vw;
-      text-align: center;
-      border: 1px solid #d1fae5;
+      background: white; border-radius: 14px;
+      padding: 36px 44px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      width: 400px; max-width: 92vw; text-align: center;
+      border: 1px solid var(--border);
     }
-
-    .loading-icon {
-      font-size: 2.4rem;
-      margin-bottom: 14px;
-      display: block;
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1);   opacity: 1; }
-      50%       { transform: scale(1.08); opacity: 0.85; }
-    }
-
     .loading-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #14532d;
-      margin-bottom: 4px;
-      letter-spacing: -0.02em;
+      font-size: 1rem; font-weight: 700; color: var(--text);
+      margin-bottom: 4px; letter-spacing: -0.02em;
     }
-
     .loading-step {
-      font-size: 0.8rem;
-      color: #4b7c5e;
-      margin-bottom: 28px;
-      min-height: 18px;
-      transition: opacity 0.25s;
+      font-size: 0.78rem; color: var(--muted);
+      margin-bottom: 22px; min-height: 18px;
     }
-
     .progress-track {
-      background: #f0fdf4;
-      border: 1px solid #d1fae5;
-      border-radius: 99px;
-      height: 9px;
-      overflow: hidden;
-      margin-bottom: 10px;
+      background: #f0fdf4; border: 1px solid #d1fae5; border-radius: 99px;
+      height: 8px; overflow: hidden; margin-bottom: 8px;
     }
     .progress-fill {
       background: linear-gradient(90deg, #166534 0%, #16a34a 60%, #4ade80 100%);
-      background-size: 200% 100%;
-      height: 100%;
-      border-radius: 99px;
-      width: 0%;
-      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      background-size: 200% 100%; height: 100%; border-radius: 99px; width: 0%;
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
       animation: shimmer 2s linear infinite;
     }
-    @keyframes shimmer {
-      0%   { background-position: 200% center; }
-      100% { background-position: -200% center; }
-    }
-
+    @keyframes shimmer { 0% { background-position:200% center; } 100% { background-position:-200% center; } }
     .progress-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
     }
-    .progress-pct {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #166534;
-    }
-    .progress-hint {
-      font-size: 0.72rem;
-      color: #a7c4b5;
-    }
-
+    .progress-pct { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+    .progress-hint { font-size: 0.68rem; color: #a7c4b5; }
     .loading-error {
-      display: none;
-      margin-top: 18px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 0.8rem;
-      color: #991b1b;
-      text-align: left;
+      display: none; margin-top: 14px; background: #fef2f2; border: 1px solid #fecaca;
+      border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; color: #991b1b; text-align: left;
     }
 
-    /* ERROR */
-    .error-box {
-      display: none;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-left: 3px solid var(--z);
-      border-radius: 8px;
-      padding: 0.85rem 1rem;
-      margin-top: 1rem;
-      font-size: 0.83rem;
-      color: #991b1b;
+    /* ══ RESPONSIVE ══════════════════════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; padding: 1.25rem 1rem 3rem; }
+      .left-panel { padding-right: 0; border-right: none; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+      .right-panel { padding-left: 0; position: static; }
+      .topbar-search { display: none; }
     }
-
-    /* LEGEND */
-    .legend-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.5rem;
-      margin-top: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .legend-label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-right: 0.5rem;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-    .legend-swatch {
-      width: 20px; height: 10px;
-      border-radius: 3px;
-      border: 1px solid rgba(0,0,0,0.1);
-    }
-
-    footer {
-      text-align: center;
-      padding: 1.25rem;
-      font-size: 0.72rem;
-      color: #94a3b8;
-      border-top: 1px solid var(--border);
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .pharmacy-col { padding: 0; }
+      .pharmacy-col:last-child { padding: 0; border-left: none; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .topbar { padding: 0 0.9rem; gap: 1rem; }
+      .topbar-logout { display: none; }
     }
   </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="topbar-brand-icon">💊</div>
-    Comparativa de Farmacias
-  </div>
-  <nav class="topbar-nav">
-    <a href="/logout" class="nav-link">Cerrar sesión</a>
+<!-- ══ TOPBAR ══ -->
+<header class="topbar">
+  <a class="topbar-brand" href="/">Farmacias <span>·</span> Panel</a>
+
+  <nav class="topbar-tabs">
+    <a href="/" class="tab-link active">Comparativa</a>
+    <a href="/encargos" class="tab-link" id="tabEncargos">Encargos</a>
   </nav>
-</div>
 
+  <div class="topbar-right">
+    <div class="topbar-search">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="globalSearch" placeholder="Buscar en encargos…" oninput="filterEncargos(this.value)">
+    </div>
+    <a href="/logout" class="topbar-logout">Cerrar sesión</a>
+  </div>
+</header>
+
+<!-- ══ MAIN ══ -->
 <main>
-  <div class="page-wrap">
 
-    <div class="page-header">
-      <h1>Nueva comparativa</h1>
-      <p>Sube los PDFs de estadísticas de ventas y genera el análisis comparativo</p>
+  <!-- ── LEFT: Upload form ── -->
+  <section class="left-panel">
+    <div class="panel-heading">
+      <h2>Nueva comparativa</h2>
+      <p>Sube los PDFs de estadísticas para generar el análisis</p>
     </div>
 
-    <div class="card">
+    <div class="upload-card">
       <form id="mainForm" action="/comparar" method="POST" enctype="multipart/form-data">
         <div class="form-grid">
 
-          <!-- ── Farmacia 1 ── -->
+          <!-- Farmacia 1 -->
           <div class="pharmacy-col">
             <div class="col-header">
               <span class="col-dot dot-z"></span>
               <span class="col-header-text">Farmacia 1</span>
             </div>
-
             <div class="form-group">
               <label>Nombre</label>
               <input type="text" name="name1" value="Zarzuelo" required>
             </div>
-
             <p class="section-sep">Ventas</p>
-
             <div class="form-group">
-              <label>PDF estadísticas de ventas</label>
+              <label>PDF de estadísticas</label>
               <div class="file-drop" id="drop1">
                 <input type="file" name="pdf1" accept=".pdf" required id="file1">
-                <span class="drop-icon">📊</span>
-                <p class="drop-label"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF</p>
+                <p class="drop-label"><strong>Arrastra o haz clic</strong>para subir el PDF</p>
                 <p class="drop-filename" id="fname1"></p>
               </div>
             </div>
-
             <p class="section-sep">Situación</p>
-
             <div class="form-group">
               <label>Informe de situación <span class="lbl-optional">Opcional</span></label>
               <div class="file-drop-sm" id="drop-sit1">
                 <input type="file" name="sit1" accept=".pdf" id="file-sit1">
-                <span class="drop-sm-icon">📋</span>
                 <div class="drop-sm-body">
                   <strong class="drop-sm-hint">Seleccionar informe</strong>
                   <span class="drop-sm-hint">Stock parado · +365 días sin venta</span>
@@ -520,37 +505,30 @@
             </div>
           </div>
 
-          <!-- ── Farmacia 2 ── -->
+          <!-- Farmacia 2 -->
           <div class="pharmacy-col">
             <div class="col-header">
               <span class="col-dot dot-b"></span>
               <span class="col-header-text">Farmacia 2</span>
             </div>
-
             <div class="form-group">
               <label>Nombre</label>
               <input type="text" name="name2" value="Barris" required>
             </div>
-
             <p class="section-sep">Ventas</p>
-
             <div class="form-group">
-              <label>PDF estadísticas de ventas</label>
+              <label>PDF de estadísticas</label>
               <div class="file-drop" id="drop2">
                 <input type="file" name="pdf2" accept=".pdf" required id="file2">
-                <span class="drop-icon">📊</span>
-                <p class="drop-label"><strong>Arrastra o haz clic</strong><br>para seleccionar el PDF</p>
+                <p class="drop-label"><strong>Arrastra o haz clic</strong>para subir el PDF</p>
                 <p class="drop-filename" id="fname2"></p>
               </div>
             </div>
-
             <p class="section-sep">Situación</p>
-
             <div class="form-group">
               <label>Informe de situación <span class="lbl-optional">Opcional</span></label>
               <div class="file-drop-sm" id="drop-sit2">
                 <input type="file" name="sit2" accept=".pdf" id="file-sit2">
-                <span class="drop-sm-icon">📋</span>
                 <div class="drop-sm-body">
                   <strong class="drop-sm-hint">Seleccionar informe</strong>
                   <span class="drop-sm-hint">Stock parado · +365 días sin venta</span>
@@ -565,25 +543,52 @@
         <div class="error-box" id="errorBox"></div>
 
         <div class="form-footer">
-          <span class="form-hint">Genera un PDF descargable y una vista previa interactiva</span>
+          <span class="form-hint">Genera un análisis interactivo y descargable</span>
           <button type="submit" class="btn-submit" id="submitBtn">
-            ⚡ Generar comparativa
+            Generar comparativa
           </button>
         </div>
       </form>
+    </div>
+  </section>
 
+  <!-- ── RIGHT: Encargos panel ── -->
+  <aside class="right-panel">
+
+    <!-- Stats -->
+    <div class="rp-section">
+      <div class="rp-title">Resumen</div>
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-num" id="statTotal">—</div>
+          <div class="stat-label">Encargos totales</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num amber" id="statPending">—</div>
+          <div class="stat-label">Pendientes</div>
+        </div>
+      </div>
     </div>
 
-  </div>
+    <div class="rp-divider"></div>
+
+    <!-- Encargos list -->
+    <div class="rp-section">
+      <div class="rp-title">Encargos activos</div>
+      <div id="encargosList"></div>
+      <a href="/encargos" class="rp-link" id="rpLinkAll" style="display:none">
+        Ver todos los encargos →
+      </a>
+    </div>
+
+  </aside>
 </main>
 
-<!-- ── LOADING OVERLAY ── -->
+<!-- ══ LOADING OVERLAY ══ -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-card">
-    <span class="loading-icon">💊</span>
-    <div class="loading-title">Analizando farmacias</div>
+    <div class="loading-title">Analizando comparativa</div>
     <div class="loading-step" id="loadingStep">Iniciando análisis…</div>
-
     <div class="progress-track">
       <div class="progress-fill" id="progressFill"></div>
     </div>
@@ -591,138 +596,194 @@
       <span class="progress-pct" id="progressPct">0%</span>
       <span class="progress-hint">Procesando PDFs…</span>
     </div>
-
     <div class="loading-error" id="loadingError"></div>
   </div>
 </div>
 
-<div class="legend-card">
-      <span class="legend-label">Leyenda</span>
-      <div class="legend-item"><div class="legend-swatch" style="background:#fdecea;border-color:#c0392b"></div>Solo Farmacia 1</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#e8f3fb;border-color:#1a6fa8"></div>Solo Farmacia 2</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#fff3cd;border-color:#d97706"></div>Revisar datos</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#ffe0b2;border-color:#e65100"></div>Stock parado</div>
-      <div class="legend-item"><div class="legend-swatch" style="background:#d4edda;border-color:#2e7d32"></div>Pedido sugerido</div>
-    </div>
-
-  </div>
-</main>
-
-<footer>Comparativa de Stock · Farmacias Barris &amp; Zarzuelo</footer>
-
 <script>
-  // ── Drag & drop ──────────────────────────────────────────────────────────────
-  function setupDrop(inputId, dropId, fnameId, hasClass) {
-    const input = document.getElementById(inputId);
-    const drop  = document.getElementById(dropId);
-    const fname = document.getElementById(fnameId);
-    function apply(file) { drop.classList.add(hasClass); fname.textContent = '✓ ' + file.name; }
-    input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
-    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
-    drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-    drop.addEventListener('drop', e => {
-      e.preventDefault(); drop.classList.remove('dragover');
-      const f = e.dataTransfer.files[0];
-      if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; apply(f); }
-    });
-  }
-  function setupDropSm(inputId, dropId, fnameId) {
-    const input = document.getElementById(inputId);
-    const drop  = document.getElementById(dropId);
-    const fname = document.getElementById(fnameId);
-    function apply(file) { drop.classList.add('has-sit'); fname.textContent = '✓ ' + file.name; }
-    input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
-    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
-    drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-    drop.addEventListener('drop', e => {
-      e.preventDefault(); drop.classList.remove('dragover');
-      const f = e.dataTransfer.files[0];
-      if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; apply(f); }
-    });
-  }
-  setupDrop('file1', 'drop1', 'fname1', 'has-z');
-  setupDrop('file2', 'drop2', 'fname2', 'has-b');
-  setupDropSm('file-sit1', 'drop-sit1', 'fname-sit1');
-  setupDropSm('file-sit2', 'drop-sit2', 'fname-sit2');
-
-  // ── Progress overlay ─────────────────────────────────────────────────────────
-  let _pollId = null;
-
-  function _setProgress(pct, step) {
-    document.getElementById('progressFill').style.width = pct + '%';
-    document.getElementById('progressPct').textContent  = pct + '%';
-    if (step) document.getElementById('loadingStep').textContent = step;
-  }
-
-  function _showOverlayError(msg) {
-    const el = document.getElementById('loadingError');
-    el.textContent = msg;
-    el.style.display = 'block';
-    document.getElementById('loadingStep').textContent = 'Error durante el análisis';
-  }
-
-  function _startPolling(jobToken) {
-    _pollId = setInterval(async () => {
-      try {
-        const res  = await fetch('/progress/' + jobToken);
-        const data = await res.json();
-
-        if (data.error) { clearInterval(_pollId); _showOverlayError('Error al consultar el progreso.'); return; }
-
-        _setProgress(data.pct, data.step);
-
-        if (data.done) {
-          clearInterval(_pollId);
-          if (data.error_msg) {
-            _showOverlayError(data.error_msg);
-          } else {
-            // Animar a 100% y luego redirigir
-            _setProgress(100, '¡Análisis completado!');
-            setTimeout(() => { window.location.href = '/finalizar/' + jobToken; }, 600);
-          }
-        }
-      } catch (_) { /* error de red — seguir esperando */ }
-    }, 600);
-  }
-
-  // ── Form submit ───────────────────────────────────────────────────────────────
-  document.getElementById('mainForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const f1  = document.getElementById('file1').files.length;
-    const f2  = document.getElementById('file2').files.length;
-    const err = document.getElementById('errorBox');
-
-    if (!f1 || !f2) {
-      err.style.display = 'block';
-      err.textContent = 'Selecciona los dos PDFs de estadísticas de ventas antes de continuar.';
-      return;
-    }
-    err.style.display = 'none';
-
-    // Mostrar overlay
-    document.getElementById('loadingOverlay').classList.add('active');
-    _setProgress(0, 'Subiendo archivos…');
-
-    try {
-      const res  = await fetch('/comparar', { method: 'POST', body: new FormData(this) });
-      const data = await res.json();
-
-      if (data.error) {
-        document.getElementById('loadingOverlay').classList.remove('active');
-        err.style.display  = 'block';
-        err.textContent    = data.error;
-        return;
-      }
-
-      _startPolling(data.job);
-
-    } catch (_) {
-      document.getElementById('loadingOverlay').classList.remove('active');
-      err.style.display = 'block';
-      err.textContent   = 'Error al enviar los archivos. Comprueba la conexión e inténtalo de nuevo.';
-    }
+// ── Drag & drop ───────────────────────────────────────────────────────────────
+function setupDrop(inputId, dropId, fnameId, hasClass) {
+  const input = document.getElementById(inputId);
+  const drop  = document.getElementById(dropId);
+  const fname = document.getElementById(fnameId);
+  function apply(file) { drop.classList.add(hasClass); fname.textContent = file.name; }
+  input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
+  drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('dragover'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; apply(f); }
   });
+}
+function setupDropSm(inputId, dropId, fnameId) {
+  const input = document.getElementById(inputId);
+  const drop  = document.getElementById(dropId);
+  const fname = document.getElementById(fnameId);
+  function apply(file) { drop.classList.add('has-sit'); fname.textContent = file.name; }
+  input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
+  drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('dragover'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; apply(f); }
+  });
+}
+setupDrop('file1', 'drop1', 'fname1', 'has-z');
+setupDrop('file2', 'drop2', 'fname2', 'has-b');
+setupDropSm('file-sit1', 'drop-sit1', 'fname-sit1');
+setupDropSm('file-sit2', 'drop-sit2', 'fname-sit2');
+
+// ── Loading & polling ─────────────────────────────────────────────────────────
+let _pollId = null;
+
+function _setProgress(pct, step) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent  = pct + '%';
+  if (step) document.getElementById('loadingStep').textContent = step;
+}
+function _showOverlayError(msg) {
+  const el = document.getElementById('loadingError');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('loadingStep').textContent = 'Error durante el análisis';
+}
+function _startPolling(jobToken) {
+  _pollId = setInterval(async () => {
+    try {
+      const res  = await fetch('/progress/' + jobToken);
+      const data = await res.json();
+      if (data.error) { clearInterval(_pollId); _showOverlayError('Error al consultar el progreso.'); return; }
+      _setProgress(data.pct, data.step);
+      if (data.done) {
+        clearInterval(_pollId);
+        if (data.error_msg) { _showOverlayError(data.error_msg); }
+        else { _setProgress(100, 'Análisis completado'); setTimeout(() => { window.location.href = '/finalizar/' + jobToken; }, 600); }
+      }
+    } catch (_) {}
+  }, 600);
+}
+
+document.getElementById('mainForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const f1  = document.getElementById('file1').files.length;
+  const f2  = document.getElementById('file2').files.length;
+  const err = document.getElementById('errorBox');
+  if (!f1 || !f2) {
+    err.style.display = 'block';
+    err.textContent = 'Selecciona los dos PDFs de estadísticas de ventas antes de continuar.';
+    return;
+  }
+  err.style.display = 'none';
+  document.getElementById('loadingOverlay').classList.add('active');
+  _setProgress(0, 'Subiendo archivos…');
+  try {
+    const res  = await fetch('/comparar', { method: 'POST', body: new FormData(this) });
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('loadingOverlay').classList.remove('active');
+      err.style.display = 'block'; err.textContent = data.error; return;
+    }
+    _startPolling(data.job);
+  } catch (_) {
+    document.getElementById('loadingOverlay').classList.remove('active');
+    err.style.display = 'block';
+    err.textContent = 'Error al enviar los archivos. Comprueba la conexión e inténtalo de nuevo.';
+  }
+});
+
+// ── Encargos panel ────────────────────────────────────────────────────────────
+let _allEncargos = [];
+
+function calcStatus(enc) {
+  let expected = 0, received = 0;
+  (enc.products || []).forEach(p => {
+    if ((p.pedido_zarzuelo || 0) > 0) { expected++; if (p.recibido_zarzuelo) received++; }
+    if ((p.pedido_barris   || 0) > 0) { expected++; if (p.recibido_barris)   received++; }
+  });
+  if (expected === 0 || received === 0) return 'pendiente';
+  if (received >= expected) return 'completado';
+  return 'parcial';
+}
+
+function statusBadge(status) {
+  const labels = { pendiente: 'Pendiente', parcial: 'Parcial', completado: 'Completado' };
+  return `<span class="s-badge s-${status}">
+    <span class="s-dot"></span>${labels[status] || status}
+  </span>`;
+}
+
+function renderEncargos(list) {
+  const container = document.getElementById('encargosList');
+  const link      = document.getElementById('rpLinkAll');
+
+  if (list.length === 0) {
+    container.innerHTML = `<div class="rp-empty">
+      <strong>Sin encargos activos</strong>
+      Confirma un pedido desde la comparativa para verlo aquí.
+    </div>`;
+    link.style.display = 'none';
+    return;
+  }
+
+  // Show up to 5, newest first
+  const show   = list.slice().reverse().slice(0, 5);
+  link.style.display = list.length > 0 ? '' : 'none';
+
+  container.innerHTML = show.map(enc => {
+    const status = calcStatus(enc);
+    const nProds = (enc.products || []).length;
+    const pending = (enc.products || []).filter(p =>
+      ((p.pedido_zarzuelo || 0) > 0 && !p.recibido_zarzuelo) ||
+      ((p.pedido_barris   || 0) > 0 && !p.recibido_barris)
+    ).length;
+    return `
+      <a href="/encargos" class="encargo-item" style="display:flex;flex-direction:column;gap:0.3rem">
+        <div class="encargo-item-top">
+          <span class="encargo-id">${enc.order_id}</span>
+          ${statusBadge(status)}
+        </div>
+        <div class="encargo-date">${enc.date}${enc.lab ? ' · ' + enc.lab : ''}</div>
+        <div class="encargo-prods">${nProds} producto${nProds !== 1 ? 's' : ''}${pending > 0 ? ' · <strong>' + pending + ' pendiente' + (pending !== 1 ? 's' : '') + '</strong>' : ''}</div>
+      </a>`;
+  }).join('');
+}
+
+function filterEncargos(term) {
+  if (!term.trim()) { renderEncargos(_allEncargos); return; }
+  const t = term.trim().toUpperCase();
+  const filtered = _allEncargos.filter(enc =>
+    enc.order_id.toUpperCase().includes(t) ||
+    (enc.lab || '').toUpperCase().includes(t) ||
+    (enc.products || []).some(p =>
+      (p.codigo || '').includes(t) || (p.descripcion || '').toUpperCase().includes(t)
+    )
+  );
+  renderEncargos(filtered);
+}
+
+function updateStats(list) {
+  const pending = list.filter(e => calcStatus(e) !== 'completado').length;
+  document.getElementById('statTotal').textContent   = list.length;
+  document.getElementById('statPending').textContent = pending;
+
+  // Update tab badge
+  const tab = document.getElementById('tabEncargos');
+  if (pending > 0) {
+    tab.innerHTML = 'Encargos <span class="tab-badge badge-pending">' + pending + '</span>';
+  } else if (list.length > 0) {
+    tab.innerHTML = 'Encargos <span class="tab-badge badge-green">' + list.length + '</span>';
+  }
+}
+
+// Init
+try {
+  const saved = localStorage.getItem('encargos');
+  if (saved) _allEncargos = JSON.parse(saved);
+} catch(e) {}
+
+updateStats(_allEncargos);
+renderEncargos(_allEncargos);
 </script>
 
 </body>
