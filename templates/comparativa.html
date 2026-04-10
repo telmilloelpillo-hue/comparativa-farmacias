@@ -134,30 +134,51 @@
     .content-area { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
     /* ── TABLE ── */
-    .table-section { flex: 1; overflow-x: auto; overflow-y: auto; min-width: 0; padding: 0.75rem 1rem 2rem; }
+    /*
+     * KEY FIX: padding-top:0 so sticky top:0 aligns with scroll container edge.
+     * Side/bottom padding kept. overflow-x on a wrapper div handles horizontal
+     * scroll without breaking vertical sticky (overflow:auto on the same axis
+     * as sticky breaks it in some browsers).
+     */
+    .table-section {
+      flex: 1; min-width: 0;
+      overflow-x: auto;
+      overflow-y: auto;
+      padding: 0 0 2rem 0;   /* NO top/side padding — avoids sticky offset bugs */
+    }
 
     table { width: 100%; border-collapse: collapse; font-size: 0.77rem; min-width: 900px; }
 
-    thead tr th {
+    /* Row 1 of thead: top=0 */
+    thead tr:first-child th {
+      position: sticky; top: 0; z-index: 30;
       background: var(--accent); color: white; font-weight: 600;
       padding: 0.5rem 0.5rem; text-align: center; white-space: nowrap;
-      position: sticky; top: 0; z-index: 10;
+      height: 36px; font-size: 0.75rem;
       border-right: 1px solid rgba(255,255,255,0.08);
       letter-spacing: 0.02em;
+      /* Solid background prevents row bleed-through */
+      isolation: isolate;
     }
-    thead tr:first-child th { font-size: 0.75rem; height: 36px; }
+
+    /* Row 2 of thead: top=36px (height of row 1) */
     thead tr:nth-child(2) th {
-      font-size: 0.66rem; font-weight: 500; color: rgba(255,255,255,0.82);
+      position: sticky; top: 36px; z-index: 30;
+      background: var(--accent); color: rgba(255,255,255,0.82);
+      font-size: 0.66rem; font-weight: 500;
       padding: 0.3rem 0.5rem 0.42rem; letter-spacing: 0.04em;
-      top: 36px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+      white-space: nowrap;
     }
 
-    th.th-z   { background: var(--z); }
-    th.th-b   { background: var(--b); }
-    th.th-meta{ background: #14532d; }
+    /* Color overrides — must come AFTER position rules so background isn't reset */
+    th.th-z    { background: var(--z); }
+    th.th-b    { background: var(--b); }
+    th.th-meta { background: #14532d; }
 
-    th.sticky-col  { left: 0;    z-index: 20; }
-    th.sticky-col-2{ left: 68px; z-index: 20; }
+    /* Sticky left columns: higher z-index so they overlay both rows and data cells */
+    th.sticky-col   { position: sticky; left: 0;    z-index: 40; }
+    th.sticky-col-2 { position: sticky; left: 68px; z-index: 40; }
 
     /* Sortable headers */
     th.sortable { cursor: pointer; user-select: none; }
@@ -166,8 +187,9 @@
     th.sort-asc  .sort-icon,
     th.sort-desc .sort-icon { opacity: 1; }
 
-    td.sticky-col  { position: sticky; left: 0;    background: white; z-index: 5; }
-    td.sticky-col-2{ position: sticky; left: 68px; background: white; z-index: 5; }
+    /* Body sticky-left cells: lower z than header, higher than normal td */
+    td.sticky-col   { position: sticky; left: 0;    background: white; z-index: 5; }
+    td.sticky-col-2 { position: sticky; left: 68px; background: white; z-index: 5; }
 
     .col-divider { border-left: 2px solid var(--accent) !important; }
 
@@ -181,9 +203,13 @@
     tbody tr:nth-child(even) td.sticky-col-2 { background: #f8fafc; }
 
     tbody tr.data-row td { transition: background-color 0.18s ease; }
-    tbody tr.row-selected td { background-color: rgba(22, 101, 52, 0.08) !important; }
+    tbody tr.row-selected td { background-color: #e8f5e9 !important; }
+    tbody tr.row-selected td.sticky-col,
+    tbody tr.row-selected td.sticky-col-2 { background-color: #e8f5e9 !important; }
     tbody tr.row-selected td:first-child { border-left: 3px solid #166534; }
     tbody tr:hover:not(.row-selected) td { background: #dcfce7 !important; }
+    tbody tr:hover:not(.row-selected) td.sticky-col,
+    tbody tr:hover:not(.row-selected) td.sticky-col-2 { background: #dcfce7 !important; }
 
     td {
       padding: 0.4rem 0.5rem; text-align: center; color: var(--text);
