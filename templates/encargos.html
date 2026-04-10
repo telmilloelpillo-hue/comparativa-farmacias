@@ -70,10 +70,9 @@
 
     /* ── LIST VIEW ── */
     .encargo-row {
-      display: grid;
-      grid-template-columns: 7rem 1fr auto auto auto;
+      display: flex;
       align-items: center;
-      gap: 0.5rem 1.25rem;
+      gap: 1rem;
       padding: 0.9rem 1.5rem;
       background: white;
       border-bottom: 1px solid var(--border);
@@ -81,13 +80,17 @@
       transition: background 0.1s;
     }
     .encargo-row:hover { background: var(--bg); }
-    .encargo-id {
-      font-family: monospace; font-size: 0.72rem; font-weight: 700;
-      color: var(--accent); letter-spacing: 0.04em;
+    .encargo-main { flex: 1; min-width: 0; }
+    .encargo-lab {
+      font-size: 0.88rem; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .encargo-date  { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
-    .encargo-farms { font-size: 0.78rem; color: var(--text); font-weight: 500; }
-    .encargo-count { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+    .encargo-info-sub {
+      font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem;
+    }
+    .encargo-units {
+      font-size: 0.78rem; color: var(--muted); white-space: nowrap; flex-shrink: 0;
+    }
 
     .empty-state {
       text-align: center; padding: 4rem 1.5rem;
@@ -175,16 +178,8 @@
       .topbar-sep, .topbar-title { display: none; }
       .btn-ghost { font-size: 0.72rem; padding: 0.35rem 0.65rem; }
       .page-header { padding: 0.65rem 0.9rem; }
-      .encargo-row {
-        grid-template-columns: 1fr auto;
-        grid-template-rows: auto auto;
-        padding: 0.75rem 0.9rem;
-      }
-      .encargo-id   { grid-column: 1; grid-row: 1; }
-      .encargo-date { grid-column: 1; grid-row: 2; font-size: 0.72rem; }
-      .encargo-farms { display: none; }
-      .encargo-count { grid-column: 2; grid-row: 1; font-size: 0.72rem; }
-      .encargo-status-col { grid-column: 2; grid-row: 2; }
+      .encargo-row { padding: 0.75rem 0.9rem; gap: 0.75rem; }
+      .encargo-units { display: none; }
       .detail-wrap { padding: 0.9rem 0.9rem 2rem; }
       .detail-checks { gap: 1rem; }
     }
@@ -290,14 +285,17 @@ function renderList() {
                           .slice().reverse();
 
   list.innerHTML = sorted.map(enc => {
-    const status = calcStatus(enc);
-    const nProds = (enc.products || []).length;
+    const status   = calcStatus(enc);
+    const nProds   = (enc.products || []).length;
+    const totalUds = (enc.products || []).reduce((s, p) =>
+      s + (p.pedido_total || (p.pedido_zarzuelo || 0) + (p.pedido_barris || 0)), 0);
     return `
       <div class="encargo-row" onclick="showDetail(${enc._idx})">
-        <div class="encargo-id">${enc.order_id}</div>
-        <div class="encargo-date">${enc.date} · ${enc.lab || ''}</div>
-        <div class="encargo-farms">${enc.name1 || ''} vs ${enc.name2 || ''}</div>
-        <div class="encargo-count">${nProds} prod.</div>
+        <div class="encargo-main">
+          <div class="encargo-lab">${enc.lab || 'Sin laboratorio'}</div>
+          <div class="encargo-info-sub">${enc.date} · ${enc.name1 || ''} vs ${enc.name2 || ''}</div>
+        </div>
+        <div class="encargo-units">${nProds} prod · ${totalUds} uds</div>
         <div class="encargo-status-col">${statusBadgeHTML(status)}</div>
       </div>`;
   }).join('');

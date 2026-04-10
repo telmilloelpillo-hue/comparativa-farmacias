@@ -196,6 +196,8 @@
     tbody tr {
       border-bottom: 1px solid var(--border);
       cursor: pointer; transition: filter 0.08s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     tbody tr.hidden-row { display: none; }
     tbody tr:nth-child(even) td { background: #f8fafc; }
@@ -472,7 +474,12 @@
       .header-card { padding: 0.6rem 0.9rem 0.5rem; }
       .stats-row { margin-top: 0.45rem; }
       .lab-name { font-size: 0.95rem; }
-      .decision-panel.open { width: 100%; position: fixed; top: 52px; left: 0; right: 0; bottom: 0; z-index: 150; }
+      .decision-panel.open { width: 100%; position: fixed; top: 52px; left: 0; right: 0; bottom: 0; z-index: 150; overflow: hidden; }
+      .panel-inner { width: 100%; }
+      .vs-row { flex-wrap: wrap; gap: 0.4rem; }
+      .stats-row { flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+      .stat-chip { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
+      .header-card { padding-bottom: 0.75rem; }
     }
     @media (min-width: 1101px) {
       .btn-text-short { display: none; }
@@ -650,6 +657,47 @@
       cursor: pointer; transition: background 0.15s; letter-spacing: 0.01em;
     }
     .btn-confirm:hover { background: #14532d; }
+
+    /* ── QUICK ADD PEDIDO ── */
+    .btn-qadd {
+      margin-left: 3px; padding: 1px 5px;
+      background: var(--accent); color: white; border: none; border-radius: 3px;
+      font-family: 'Inter', sans-serif; font-size: 0.6rem; font-weight: 700;
+      cursor: pointer; vertical-align: middle;
+      opacity: 0; transition: opacity 0.1s, background 0.1s; line-height: 1.6;
+    }
+    tbody tr:hover .btn-qadd { opacity: 1; }
+    .btn-qadd.qadd-done { background: #16a34a; }
+    @media (max-width: 1100px) { .btn-qadd { opacity: 1; } }
+
+    /* ── STEP 2 COMPACT TABLE ── */
+    .step2-table { width: 100%; border-collapse: collapse; }
+    .step2-table thead th {
+      background: var(--accent); color: white; padding: 0.55rem 1rem;
+      font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; text-align: center; white-space: nowrap;
+    }
+    .step2-table thead th:first-child { text-align: left; }
+    .step2-table tbody tr { border-bottom: 1px solid var(--border); background: white; }
+    .step2-table tbody tr:nth-child(even) td { background: #f9fafb; }
+    .step2-table tbody td { padding: 0.55rem 1rem; vertical-align: middle; font-size: 0.78rem; }
+    .step2-td-prod-name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+    .step2-td-prod-code { font-family: monospace; font-size: 0.65rem; color: var(--muted); font-weight: 700; margin-top: 0.1rem; }
+    .step2-td-total { text-align: center; font-weight: 700; color: var(--accent); font-size: 0.88rem; }
+    .step2-td-input { text-align: center; }
+    .step2-input {
+      width: 68px; padding: 0.38rem 0.5rem;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      font-family: 'Inter', sans-serif; font-size: 0.95rem; font-weight: 700;
+      color: var(--text); text-align: center; background: var(--bg); outline: none;
+      transition: border-color 0.15s; display: block; margin: 0 auto;
+    }
+    .step2-input.inp-z:focus { border-color: var(--z); background: white; }
+    .step2-input.inp-b:focus { border-color: var(--b); background: white; }
+    .step2-input:disabled { background: #f1f5f9; color: #94a3b8; cursor: default; }
+    .step2-status { text-align: center; font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
+    .step2-ok   { color: #16a34a; }
+    .step2-warn { color: #b45309; }
   </style>
 </head>
 <body>
@@ -813,7 +861,7 @@
           <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1 }}</td>
           <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1_prev }}</td>
           {% if has_sit %}<td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ r.s365_1 }}</td>{% endif %}
-          <td id="pedido1-{{ r.code }}" class="{{ 'cell-pedido' if pedido1_val else ('cell-muted' if r.status == 'only2') }}">{{ pedido1_val if pedido1_val else '—' }}</td>
+          <td id="pedido1-{{ r.code }}" class="{{ 'cell-pedido' if pedido1_val else ('cell-muted' if r.status == 'only2') }}"><span>{{ pedido1_val if pedido1_val else '—' }}</span>{% if pedido1_val and r.status != 'only2' %}<button class="btn-qadd" id="qadd1-{{ r.code }}" onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','z',{{ pedido1_val }})">+</button>{% endif %}</td>
 
           <!-- F2 -->
           <td class="col-divider {{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.stock2 if r.status != 'only1' else '—' }}</td>
@@ -821,7 +869,7 @@
           <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2 }}</td>
           <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2_prev }}</td>
           {% if has_sit %}<td class="{{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.s365_2 }}</td>{% endif %}
-          <td id="pedido2-{{ r.code }}" class="{{ 'cell-pedido' if pedido2_val else ('cell-muted' if r.status == 'only1') }}">{{ pedido2_val if pedido2_val else '—' }}</td>
+          <td id="pedido2-{{ r.code }}" class="{{ 'cell-pedido' if pedido2_val else ('cell-muted' if r.status == 'only1') }}"><span>{{ pedido2_val if pedido2_val else '—' }}</span>{% if pedido2_val and r.status != 'only1' %}<button class="btn-qadd" id="qadd2-{{ r.code }}" onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','b',{{ pedido2_val }})">+</button>{% endif %}</td>
 
         </tr>
         {% endfor %}
@@ -845,15 +893,8 @@
       </div>
 
       <div class="panel-tabs">
-        <div class="panel-tab active" id="ptab-z"       onclick="switchTab('z')">{{ name1 }}</div>
-        <div class="panel-tab"        id="ptab-b"       onclick="switchTab('b')">{{ name2 }}</div>
-        <div class="panel-tab"        id="ptab-reparto" onclick="switchTab('reparto')">Reparto</div>
-      </div>
-
-      <!-- REPARTO SEARCH (visible only when reparto tab active) -->
-      <div class="reparto-search-wrap" id="repartoSearchWrap" style="display:none">
-        <input class="reparto-search" id="repartoSearch" placeholder="Buscar producto, código o lab…"
-               oninput="renderRepartoTab()">
+        <div class="panel-tab active" id="ptab-z" onclick="switchTab('z')">{{ name1 }}</div>
+        <div class="panel-tab"        id="ptab-b" onclick="switchTab('b')">{{ name2 }}</div>
       </div>
 
       <div class="panel-body">
@@ -910,11 +951,6 @@
             </div>
             <div class="pedido-current" id="pcurrent-b"></div>
           </div>
-        </div>
-
-        <!-- TAB REPARTO -->
-        <div class="tab-pane" id="tab-reparto">
-          <div id="repartoContent"><p class="reparto-empty">Selecciona un producto para ver su historial de reparto.</p></div>
         </div>
 
       </div>
@@ -1278,7 +1314,6 @@ function openPanel(idx) {
 
   renderFarmTab('z', r);
   renderFarmTab('b', r);
-  renderRepartoTab();
 }
 
 function closePanel() {
@@ -1288,14 +1323,10 @@ function closePanel() {
 }
 
 function switchTab(suffix) {
-  const tabs = ['z', 'b', 'reparto'];
-  tabs.forEach(s => {
+  ['z', 'b'].forEach(s => {
     document.getElementById('ptab-' + s).classList.toggle('active', s === suffix);
     document.getElementById('tab-' + s).classList.toggle('active', s === suffix);
   });
-  // Show/hide reparto search bar
-  document.getElementById('repartoSearchWrap').style.display = suffix === 'reparto' ? '' : 'none';
-  if (suffix === 'reparto') renderRepartoTab();
 }
 
 // ─── PEDIDO MANUAL ────────────────────────────────────────────────────────────
@@ -1314,8 +1345,11 @@ function savePedido(suffix) {
   const farmIdx = suffix === 'z' ? 1 : 2;
   const cell = document.getElementById('pedido' + farmIdx + '-' + code);
   if (cell) {
-    cell.textContent = val > 0 ? val : '—';
+    const span = cell.querySelector('span');
+    if (span) span.textContent = val > 0 ? val : '—'; else cell.textContent = val > 0 ? val : '—';
     cell.className = val > 0 ? 'cell-pedido' : 'cell-muted';
+    const btn = document.getElementById('qadd' + farmIdx + '-' + code);
+    if (btn) { if (val > 0) { btn.textContent = '✓'; btn.classList.add('qadd-done'); } else { btn.textContent = '+'; btn.classList.remove('qadd-done'); } }
   }
 
   // Show indicator
@@ -1356,6 +1390,40 @@ function updateTopbarBadge() {
   }
   // Keep stepper "Siguiente" button in sync
   if (typeof updateStepperUI === 'function') updateStepperUI();
+}
+
+// ─── QUICK ADD PEDIDO ─────────────────────────────────────────────────────────
+function quickAddPedido(code, suffix, suggested) {
+  if (!suggested || suggested <= 0) return;
+  const key      = code + '_' + suffix;
+  const farmIdx  = suffix === 'z' ? 1 : 2;
+  const alreadySet = (manualPedidos[key] || 0) > 0;
+
+  if (alreadySet) { delete manualPedidos[key]; } else { manualPedidos[key] = suggested; }
+  _persistPedidos();
+
+  const hasVal = (manualPedidos[key] || 0) > 0;
+  const cell   = document.getElementById('pedido' + farmIdx + '-' + code);
+  const btn    = document.getElementById('qadd'   + farmIdx + '-' + code);
+
+  if (cell) {
+    const span = cell.querySelector('span');
+    if (span) span.textContent = hasVal ? manualPedidos[key] : suggested;
+    cell.className = hasVal ? 'cell-pedido' : 'cell-muted';
+  }
+  if (btn) {
+    if (hasVal) { btn.textContent = '✓'; btn.classList.add('qadd-done'); }
+    else        { btn.textContent = '+'; btn.classList.remove('qadd-done'); }
+  }
+
+  // Sync open panel inputs if this product is selected
+  if (selectedIdx !== null && PRODUCTS[selectedIdx]?.code === code) {
+    const input = document.getElementById('mpedido-' + suffix);
+    if (input) input.value = hasVal ? manualPedidos[key] : '';
+    updatePedidoCurrent(suffix, code);
+  }
+
+  updateTopbarBadge();
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
@@ -1656,51 +1724,56 @@ function buildStep2Cards() {
   const productMap = {};
   PRODUCTS.forEach(p => { productMap[p.code] = p; });
 
-  // Always refresh totals from current manualPedidos
   codes.forEach(code => {
     const qz = manualPedidos[code + '_z'] || 0;
     const qb = manualPedidos[code + '_b'] || 0;
     repartoTotals[code] = qz + qb;
-    // Only seed allocation if not already set by user
-    if (!repartoAlloc[code]) {
-      repartoAlloc[code] = { z: qz, b: qb };
-    }
+    if (!repartoAlloc[code]) repartoAlloc[code] = { z: qz, b: qb };
   });
 
-  const container = document.getElementById('step2Cards');
-  container.innerHTML = codes.map(code => {
+  const rows = codes.map(code => {
     const p     = productMap[code] || {};
     const alloc = repartoAlloc[code];
     const total = repartoTotals[code];
     const only1 = p.status === 'only1';
     const only2 = p.status === 'only2';
+    const ok    = total === 0 || (alloc.z + alloc.b) === total;
     return `
-      <div class="reparto-card" id="rcard-${code}">
-        <div class="reparto-card-name">${p.description || code}</div>
-        <div class="reparto-card-meta">${code}</div>
-        <div class="reparto-card-total">Total pedido: ${total} uds</div>
-        <div class="reparto-card-divider"></div>
-        <div class="reparto-card-inputs">
-          <div class="reparto-input-group">
-            <label class="reparto-input-label label-z">${NAME1}</label>
-            <input type="number" min="0" class="reparto-number-input input-z"
-                   id="ri-${code}-z" value="${alloc.z || ''}"
-                   ${only2 ? 'disabled' : ''}
-                   oninput="onRepartoInput('${code}')">
-          </div>
-          <div class="reparto-input-group">
-            <label class="reparto-input-label label-b">${NAME2}</label>
-            <input type="number" min="0" class="reparto-number-input input-b"
-                   id="ri-${code}-b" value="${alloc.b || ''}"
-                   ${only1 ? 'disabled' : ''}
-                   oninput="onRepartoInput('${code}')">
-          </div>
-        </div>
-        <div class="reparto-warn" id="rwarn-${code}">
-          ${NAME1} + ${NAME2} &ne; total pedido (${total} uds)
-        </div>
-      </div>`;
+      <tr id="rcard-${code}">
+        <td>
+          <div class="step2-td-prod-name">${p.description || code}</div>
+          <div class="step2-td-prod-code">${code}</div>
+        </td>
+        <td class="step2-td-total">${total}</td>
+        <td class="step2-td-input">
+          <input type="number" min="0" class="step2-input inp-z"
+                 id="ri-${code}-z" value="${alloc.z || ''}"
+                 ${only2 ? 'disabled' : ''}
+                 oninput="onRepartoInput('${code}')">
+        </td>
+        <td class="step2-td-input">
+          <input type="number" min="0" class="step2-input inp-b"
+                 id="ri-${code}-b" value="${alloc.b || ''}"
+                 ${only1 ? 'disabled' : ''}
+                 oninput="onRepartoInput('${code}')">
+        </td>
+        <td class="step2-status">
+          <span id="rwarn-${code}" class="${ok ? 'step2-ok' : 'step2-warn'}">${ok ? '✓' : (alloc.z + alloc.b) + '/' + total}</span>
+        </td>
+      </tr>`;
   }).join('');
+
+  document.getElementById('step2Cards').innerHTML = `
+    <table class="step2-table">
+      <thead><tr>
+        <th>Producto</th>
+        <th>Total</th>
+        <th style="color:#fca5a5">${NAME1}</th>
+        <th style="color:#93c5fd">${NAME2}</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 function onRepartoInput(code) {
@@ -1718,7 +1791,9 @@ function validateCard(code, z, b) {
   const warn  = document.getElementById('rwarn-' + code);
   if (!warn) return;
   const total = repartoTotals[code] || 0;
-  warn.classList.toggle('visible', total > 0 && z + b !== total);
+  const ok    = total === 0 || z + b === total;
+  warn.textContent = ok ? '✓' : (z + b) + '/' + total;
+  warn.className   = ok ? 'step2-ok' : 'step2-warn';
 }
 
 function validateStep2() {
@@ -1770,9 +1845,12 @@ function confirmarPedido() {
   let encargos = [];
   try { const s = localStorage.getItem('encargos'); if (s) encargos = JSON.parse(s); } catch(e) {}
 
-  const nextN   = encargos.length + 1;
-  const suffix4 = Date.now().toString(36).toUpperCase().slice(-4);
-  const orderId = 'PED-' + String(nextN).padStart(3, '0') + '-' + suffix4;
+  const suffix4  = Date.now().toString(36).toUpperCase().slice(-4);
+  const labSlug  = (LAB || 'ENC').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
+  const _now     = new Date();
+  const _dd      = String(_now.getDate()).padStart(2, '0');
+  const _mm      = String(_now.getMonth() + 1).padStart(2, '0');
+  const orderId  = labSlug + '-' + _dd + _mm + '-' + suffix4;
 
   const products = codes.map(code => {
     const p     = productMap[code] || {};
@@ -1813,8 +1891,11 @@ function confirmarPedido() {
     const farmIdx = suffix === 'z' ? 1 : 2;
     const cell    = document.getElementById('pedido' + farmIdx + '-' + code);
     if (cell) {
-      cell.textContent = val;
-      cell.className   = 'cell-pedido';
+      const span = cell.querySelector('span');
+      if (span) span.textContent = val; else cell.textContent = val;
+      cell.className = 'cell-pedido';
+      const btn = document.getElementById('qadd' + farmIdx + '-' + code);
+      if (btn) { btn.textContent = '✓'; btn.classList.add('qadd-done'); }
     }
   });
   updateTopbarBadge();
