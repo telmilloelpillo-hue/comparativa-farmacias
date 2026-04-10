@@ -70,23 +70,8 @@
                   "icon": "terminal",
                   "title": "Terminal: ✳ Claude Code"
                 }
-              },
-              {
-                "id": "00ad2fb09395a93c",
-                "type": "leaf",
-                "state": {
-                  "type": "markdown",
-                  "state": {
-                    "file": "Example.md",
-                    "mode": "source",
-                    "source": false
-                  },
-                  "icon": "lucide-file",
-                  "title": "Example"
-                }
               }
-            ],
-            "currentTab": 1
+            ]
           }
         ],
         "direction": "horizontal"
@@ -162,7 +147,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Example.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -172,7 +156,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Enlaces entrantes de Example"
+              "title": "Enlaces entrantes"
             }
           },
           {
@@ -181,12 +165,11 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Example.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Enlaces salientes de Example"
+              "title": "Enlaces salientes"
             }
           },
           {
@@ -224,13 +207,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Example.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Esquema de Example"
+              "title": "Esquema"
             }
           }
         ]
@@ -253,7 +235,7 @@
       "obsidian-git:Open Git source control": false
     }
   },
-  "active": "00ad2fb09395a93c",
+  "active": "387ebbf494a08773",
   "lastOpenFiles": [
     "Example.md",
     "Sin título 2.md",
