@@ -769,7 +769,18 @@ const LAB        = {{ lab   | tojson }};
 const HAS_SIT    = {{ 'true' if (has_sit1 or has_sit2) else 'false' }};
 
 /// pedido manual: { "CODE_z": qty, "CODE_b": qty }
-const manualPedidos = {};
+// Persisted in localStorage under key "pedidos_<LAB>" so it survives reload
+const _STORAGE_KEY = 'pedidos_' + LAB;
+let manualPedidos = {};
+try {
+  const saved = localStorage.getItem(_STORAGE_KEY);
+  if (saved) manualPedidos = JSON.parse(saved);
+} catch(e) {}
+
+function _persistPedidos() {
+  try { localStorage.setItem(_STORAGE_KEY, JSON.stringify(manualPedidos)); } catch(e) {}
+}
+
 let currentPedidoRows = [];
 let selectedIdx  = null;
 let activeFilter = 'all';
@@ -1058,6 +1069,7 @@ function savePedido(suffix) {
 
   if (val > 0) manualPedidos[key] = val;
   else delete manualPedidos[key];
+  _persistPedidos();
 
   // Update table cell
   const farmIdx = suffix === 'z' ? 1 : 2;
@@ -1222,6 +1234,22 @@ function exportCSV() {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
+// Restore persisted pedidos into table cells
+(function restorePedidos() {
+  Object.entries(manualPedidos).forEach(([key, val]) => {
+    if (!val || val <= 0) return;
+    const suffix  = key.slice(-1);          // 'z' or 'b'
+    const code    = key.slice(0, -2);
+    const farmIdx = suffix === 'z' ? 1 : 2;
+    const cell    = document.getElementById('pedido' + farmIdx + '-' + code);
+    if (cell) {
+      cell.textContent = val;
+      cell.className   = 'cell-pedido';
+    }
+  });
+  updateTopbarBadge();
+})();
+
 applySearch();
 </script>
 </body>
