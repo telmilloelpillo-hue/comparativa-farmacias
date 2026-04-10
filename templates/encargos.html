@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Encargos · Farmacias</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --z:      #dc2626;
+      --b:      #1d4ed8;
+      --bg:     #f0fdf4;
+      --border: #d1fae5;
+      --text:   #14532d;
+      --muted:  #4b7c5e;
+      --accent: #166534;
+      --radius: 8px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: var(--accent); color: white;
+      padding: 0 1.5rem; height: 52px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; position: sticky; top: 0; z-index: 200;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 1rem; }
+    .topbar-logo { font-size: 0.85rem; font-weight: 700; color: white; text-decoration: none; }
+    .topbar-sep  { color: rgba(255,255,255,0.25); }
+    .topbar-title{ font-size: 0.8rem; color: rgba(255,255,255,0.65); }
+    .topbar-right{ display: flex; align-items: center; gap: 0.6rem; }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.4rem 0.9rem; border-radius: 6px;
+      font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
+      background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.18); }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.5rem 0.7rem; flex-shrink: 0;
+    }
+    .page-title    { font-size: 1rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+    .page-subtitle { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+
+    /* ── VIEWS ── */
+    #listView, #detailView {
+      flex: 1; overflow-y: auto; min-height: 0;
+    }
+
+    /* ── LIST VIEW ── */
+    .encargo-row {
+      display: grid;
+      grid-template-columns: 7rem 1fr auto auto auto;
+      align-items: center;
+      gap: 0.5rem 1.25rem;
+      padding: 0.9rem 1.5rem;
+      background: white;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .encargo-row:hover { background: var(--bg); }
+    .encargo-id {
+      font-family: monospace; font-size: 0.72rem; font-weight: 700;
+      color: var(--accent); letter-spacing: 0.04em;
+    }
+    .encargo-date  { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+    .encargo-farms { font-size: 0.78rem; color: var(--text); font-weight: 500; }
+    .encargo-count { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+
+    .empty-state {
+      text-align: center; padding: 4rem 1.5rem;
+      font-size: 0.88rem; color: var(--muted); line-height: 1.7;
+    }
+    .empty-state strong { display: block; font-size: 1rem; color: var(--text); margin-bottom: 0.4rem; }
+
+    /* ── STATUS BADGES ── */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      font-size: 0.7rem; font-weight: 700; padding: 0.22rem 0.65rem;
+      border-radius: 999px; white-space: nowrap;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .status-pendiente  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .status-pendiente  .status-dot { background: #f59e0b; }
+    .status-parcial    { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+    .status-parcial    .status-dot { background: #f97316; }
+    .status-completado { background: #f0fdf4; color: #14532d; border: 1px solid #bbf7d0; }
+    .status-completado .status-dot { background: #16a34a; }
+
+    /* ── DETAIL VIEW ── */
+    .detail-wrap { padding: 1.25rem 1.5rem 2rem; }
+
+    .detail-back {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.78rem; font-weight: 600; color: var(--muted);
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.35rem 0.75rem; cursor: pointer; margin-bottom: 1rem;
+      transition: all 0.15s;
+    }
+    .detail-back:hover { border-color: var(--accent); color: var(--accent); }
+
+    .detail-meta-row {
+      display: flex; align-items: center; gap: 1rem; margin-bottom: 0.4rem;
+    }
+    .detail-order-id {
+      font-family: monospace; font-size: 1rem; font-weight: 700; color: var(--accent);
+    }
+    .detail-meta {
+      font-size: 0.78rem; color: var(--muted); margin-bottom: 1.5rem;
+    }
+
+    .detail-pending-summary {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+      padding: 0.85rem 1.1rem; margin-bottom: 1.25rem;
+    }
+    .detail-pending-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: #92400e; margin-bottom: 0.5rem;
+    }
+    .detail-pending-item { font-size: 0.78rem; color: #78350f; padding: 0.18rem 0; }
+    .detail-pending-empty { font-size: 0.78rem; color: #16a34a; font-weight: 600; }
+
+    /* Product rows in detail */
+    .detail-product-block {
+      padding: 0.85rem 0; border-bottom: 1px solid var(--border);
+    }
+    .detail-product-block:last-child { border-bottom: none; }
+    .detail-prod-name {
+      font-size: 0.82rem; font-weight: 600; color: var(--text);
+    }
+    .detail-prod-code {
+      font-family: monospace; font-size: 0.68rem; color: var(--muted);
+      font-weight: 700; margin-top: 0.1rem;
+    }
+    .detail-checks {
+      display: flex; gap: 1.5rem; margin-top: 0.55rem; flex-wrap: wrap;
+    }
+    .detail-check-item {
+      display: flex; align-items: center; gap: 0.45rem;
+      cursor: pointer; user-select: none;
+    }
+    .detail-check-item input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0;
+    }
+    .detail-check-label { font-size: 0.76rem; color: var(--muted); }
+    .detail-check-label strong { font-weight: 700; font-size: 0.8rem; display: block; }
+    .detail-check-item.checked .detail-check-label { color: #16a34a; }
+    .detail-check-item.checked .detail-check-label strong { text-decoration: line-through; text-decoration-color: #86efac; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      .topbar { padding: 0 0.9rem; height: 48px; }
+      .topbar-sep, .topbar-title { display: none; }
+      .btn-ghost { font-size: 0.72rem; padding: 0.35rem 0.65rem; }
+      .page-header { padding: 0.65rem 0.9rem; }
+      .encargo-row {
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        padding: 0.75rem 0.9rem;
+      }
+      .encargo-id   { grid-column: 1; grid-row: 1; }
+      .encargo-date { grid-column: 1; grid-row: 2; font-size: 0.72rem; }
+      .encargo-farms { display: none; }
+      .encargo-count { grid-column: 2; grid-row: 1; font-size: 0.72rem; }
+      .encargo-status-col { grid-column: 2; grid-row: 2; }
+      .detail-wrap { padding: 0.9rem 0.9rem 2rem; }
+      .detail-checks { gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a href="/" class="topbar-logo">Comparativa de Farmacias</a>
+    <span class="topbar-sep"> / </span>
+    <span class="topbar-title">Encargos</span>
+  </div>
+  <div class="topbar-right">
+    <a href="/" class="btn-ghost">Nueva comparativa</a>
+    <a href="/logout" class="btn-ghost">Salir</a>
+  </div>
+</div>
+
+<!-- ── PAGE HEADER ── -->
+<div class="page-header">
+  <div class="page-title"  id="pageTitle">Encargos</div>
+  <div class="page-subtitle" id="pageSubtitle"></div>
+</div>
+
+<!-- ── LIST VIEW ── -->
+<div id="listView">
+  <div id="encargoList"></div>
+  <div id="emptyState" class="empty-state" style="display:none">
+    <strong>No hay encargos registrados</strong>
+    Confirma un pedido desde la comparativa para que aparezca aquí.
+  </div>
+</div>
+
+<!-- ── DETAIL VIEW ── -->
+<div id="detailView" style="display:none">
+  <div class="detail-wrap">
+    <button class="detail-back" onclick="showList()">← Todos los encargos</button>
+
+    <div class="detail-meta-row">
+      <div class="detail-order-id" id="detailOrderId"></div>
+      <div id="detailStatusBadge"></div>
+    </div>
+    <div class="detail-meta" id="detailMeta"></div>
+
+    <div class="detail-pending-summary" id="detailPending"></div>
+
+    <div id="detailProducts"></div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let encargos = [];
+let currentEncargoIdx = null;
+
+function loadEncargos() {
+  try {
+    const s = localStorage.getItem('encargos');
+    if (s) encargos = JSON.parse(s);
+  } catch(e) { encargos = []; }
+}
+
+function persistEncargos() {
+  try { localStorage.setItem('encargos', JSON.stringify(encargos)); } catch(e) {}
+}
+
+// ─── STATUS ───────────────────────────────────────────────────────────────────
+function calcStatus(enc) {
+  let expected = 0, received = 0;
+  (enc.products || []).forEach(p => {
+    if ((p.pedido_zarzuelo || 0) > 0) { expected++; if (p.recibido_zarzuelo) received++; }
+    if ((p.pedido_barris   || 0) > 0) { expected++; if (p.recibido_barris)   received++; }
+  });
+  if (expected === 0) return 'pendiente';
+  if (received === 0) return 'pendiente';
+  if (received >= expected) return 'completado';
+  return 'parcial';
+}
+
+function statusBadgeHTML(status) {
+  const labels = { pendiente: 'Pendiente', parcial: 'Parcial', completado: 'Completado' };
+  return `<span class="status-badge status-${status}">
+    <span class="status-dot"></span>${labels[status] || status}
+  </span>`;
+}
+
+// ─── LIST VIEW ────────────────────────────────────────────────────────────────
+function renderList() {
+  const list = document.getElementById('encargoList');
+  const empty = document.getElementById('emptyState');
+
+  if (encargos.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Newest first
+  const sorted = encargos.map((e, i) => ({ ...e, _idx: i }))
+                          .slice().reverse();
+
+  list.innerHTML = sorted.map(enc => {
+    const status = calcStatus(enc);
+    const nProds = (enc.products || []).length;
+    return `
+      <div class="encargo-row" onclick="showDetail(${enc._idx})">
+        <div class="encargo-id">${enc.order_id}</div>
+        <div class="encargo-date">${enc.date} · ${enc.lab || ''}</div>
+        <div class="encargo-farms">${enc.name1 || ''} vs ${enc.name2 || ''}</div>
+        <div class="encargo-count">${nProds} prod.</div>
+        <div class="encargo-status-col">${statusBadgeHTML(status)}</div>
+      </div>`;
+  }).join('');
+}
+
+function showList() {
+  currentEncargoIdx = null;
+  document.getElementById('listView').style.display   = '';
+  document.getElementById('detailView').style.display = 'none';
+  document.getElementById('pageTitle').textContent    = 'Encargos';
+  document.getElementById('pageSubtitle').textContent =
+    encargos.length + ' pedido' + (encargos.length !== 1 ? 's' : '');
+  renderList();
+}
+
+// ─── DETAIL VIEW ──────────────────────────────────────────────────────────────
+function showDetail(idx) {
+  currentEncargoIdx = idx;
+  document.getElementById('listView').style.display   = 'none';
+  document.getElementById('detailView').style.display = '';
+  renderDetail(idx);
+}
+
+function renderDetail(idx) {
+  const enc    = encargos[idx];
+  const status = calcStatus(enc);
+
+  document.getElementById('pageTitle').textContent    = enc.order_id;
+  document.getElementById('pageSubtitle').textContent = enc.date + ' · ' + (enc.lab || '');
+  document.getElementById('detailOrderId').textContent = enc.order_id;
+  document.getElementById('detailStatusBadge').innerHTML = statusBadgeHTML(status);
+  document.getElementById('detailMeta').textContent =
+    (enc.name1 || 'Farm. 1') + ' vs ' + (enc.name2 || 'Farm. 2') +
+    ' · ' + (enc.products || []).length + ' productos';
+
+  renderPendingSummary(enc);
+  renderDetailProducts(idx);
+}
+
+function renderPendingSummary(enc) {
+  const container = document.getElementById('detailPending');
+  const pending = [];
+  (enc.products || []).forEach(p => {
+    if ((p.pedido_zarzuelo || 0) > 0 && !p.recibido_zarzuelo) {
+      pending.push(p.descripcion + ' → ' + (enc.name1 || 'Farm. 1') + ' (' + p.pedido_zarzuelo + ' uds)');
+    }
+    if ((p.pedido_barris || 0) > 0 && !p.recibido_barris) {
+      pending.push(p.descripcion + ' → ' + (enc.name2 || 'Farm. 2') + ' (' + p.pedido_barris + ' uds)');
+    }
+  });
+
+  if (pending.length === 0) {
+    container.innerHTML = '<div class="detail-pending-title">Pendientes de recibir</div>' +
+      '<div class="detail-pending-empty">Todo recibido</div>';
+  } else {
+    container.innerHTML = '<div class="detail-pending-title">Pendientes de recibir</div>' +
+      pending.map(t => '<div class="detail-pending-item">' + t + '</div>').join('');
+  }
+}
+
+function renderDetailProducts(idx) {
+  const enc       = encargos[idx];
+  const container = document.getElementById('detailProducts');
+
+  container.innerHTML = (enc.products || []).map((p, pIdx) => {
+    const hasZ = (p.pedido_zarzuelo || 0) > 0;
+    const hasB = (p.pedido_barris   || 0) > 0;
+
+    const checkZ = hasZ ? `
+      <label class="detail-check-item${p.recibido_zarzuelo ? ' checked' : ''}"
+             id="chk-wrap-${idx}-${pIdx}-z">
+        <input type="checkbox" ${p.recibido_zarzuelo ? 'checked' : ''}
+               onchange="onCheckboxChange(${idx},${pIdx},'z',this.checked)">
+        <div class="detail-check-label">
+          <strong>${enc.name1 || 'Farm. 1'} (${p.pedido_zarzuelo} uds)</strong>
+          ${p.recibido_zarzuelo ? 'Recibido' : 'Pendiente'}
+        </div>
+      </label>` : '';
+
+    const checkB = hasB ? `
+      <label class="detail-check-item${p.recibido_barris ? ' checked' : ''}"
+             id="chk-wrap-${idx}-${pIdx}-b">
+        <input type="checkbox" ${p.recibido_barris ? 'checked' : ''}
+               onchange="onCheckboxChange(${idx},${pIdx},'b',this.checked)">
+        <div class="detail-check-label">
+          <strong>${enc.name2 || 'Farm. 2'} (${p.pedido_barris} uds)</strong>
+          ${p.recibido_barris ? 'Recibido' : 'Pendiente'}
+        </div>
+      </label>` : '';
+
+    return `
+      <div class="detail-product-block">
+        <div class="detail-prod-name">${p.descripcion}</div>
+        <div class="detail-prod-code">${p.codigo}</div>
+        <div class="detail-checks">${checkZ}${checkB}</div>
+      </div>`;
+  }).join('');
+}
+
+// ─── CHECKBOX ─────────────────────────────────────────────────────────────────
+function onCheckboxChange(eIdx, pIdx, side, checked) {
+  const enc = encargos[eIdx];
+  if (!enc || !enc.products[pIdx]) return;
+
+  if (side === 'z') enc.products[pIdx].recibido_zarzuelo = checked;
+  else              enc.products[pIdx].recibido_barris   = checked;
+
+  enc.status = calcStatus(enc);
+  persistEncargos();
+
+  // Update wrapper class
+  const wrapId = 'chk-wrap-' + eIdx + '-' + pIdx + '-' + side;
+  const wrap   = document.getElementById(wrapId);
+  if (wrap) {
+    wrap.classList.toggle('checked', checked);
+    const lbl  = wrap.querySelector('.detail-check-label');
+    const name = side === 'z' ? (enc.name1 || 'Farm. 1') : (enc.name2 || 'Farm. 2');
+    const qty  = side === 'z' ? enc.products[pIdx].pedido_zarzuelo : enc.products[pIdx].pedido_barris;
+    if (lbl) lbl.innerHTML = `<strong>${name} (${qty} uds)</strong>${checked ? 'Recibido' : 'Pendiente'}`;
+  }
+
+  // Refresh status badge and pending summary without full re-render
+  document.getElementById('detailStatusBadge').innerHTML = statusBadgeHTML(enc.status);
+  renderPendingSummary(enc);
+
+  // Update list row status if we go back (reflected in data)
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadEncargos();
+showList();
+</script>
+</body>
+</html>

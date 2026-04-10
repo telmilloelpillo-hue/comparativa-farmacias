@@ -330,6 +330,11 @@ def pedido_pdf():
                      mimetype='application/pdf')
 
 
+@app.route('/encargos')
+def encargos():
+    return render_template('encargos.html')
+
+
 @app.route('/pregunta', methods=['POST'])
 def pregunta():
     if not session.get('authenticated'):

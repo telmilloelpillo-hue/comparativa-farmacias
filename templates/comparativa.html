@@ -520,10 +520,136 @@
       th { padding: 0.4rem 0.35rem !important; font-size: 0.62rem !important; }
 
       /* Panel: full screen desde arriba */
-      .decision-panel.open {
-        top: 48px;
-      }
+      .decision-panel.open { top: 48px; }
+
+      /* Stepper compacto */
+      .stepper { padding: 0 0.75rem; height: 40px; }
+      .step-item { padding: 0 0.55rem; font-size: 0.68rem; }
+      .step-sep { display: none; }
+
+      /* Step 2 cards */
+      .step2-scroll { padding: 0.9rem 0.75rem 1.5rem; }
+      .step2-nav, .step3-nav { padding: 0.55rem 0.75rem; }
+      .reparto-card-inputs { grid-template-columns: 1fr 1fr; }
+
+      /* Step 3 */
+      .step3-scroll { padding: 0.9rem 0.75rem 1.5rem; }
+      .step3-product { grid-template-columns: 1fr; gap: 0.25rem; }
+      .step3-alloc { font-size: 0.72rem; }
     }
+
+    /* ── STEPPER ── */
+    .stepper {
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem; height: 44px;
+      display: flex; align-items: center; gap: 0; flex-shrink: 0;
+    }
+    .step-item {
+      display: flex; align-items: center; gap: 0.5rem; padding: 0 1rem;
+      height: 100%; font-size: 0.75rem; font-weight: 600; color: var(--muted);
+      border-bottom: 2px solid transparent; white-space: nowrap; user-select: none;
+    }
+    .step-item.active    { color: var(--accent); border-bottom-color: var(--accent); }
+    .step-item.completed { color: #16a34a; }
+    .step-num {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #e2e8f0; color: #64748b;
+      font-size: 0.68rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .step-item.active    .step-num { background: var(--accent); color: white; }
+    .step-item.completed .step-num { background: #16a34a; color: white; }
+    .step-sep { color: #cbd5e1; font-size: 0.72rem; flex-shrink: 0; }
+
+    /* ── STEP NAV BUTTONS ── */
+    .btn-step-next {
+      padding: 0.38rem 1rem; background: var(--accent); color: white;
+      border: none; border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
+    }
+    .btn-step-next:hover    { background: #14532d; }
+    .btn-step-next:disabled { background: #d1fae5; color: #86efac; cursor: default; }
+    .btn-step-prev {
+      padding: 0.38rem 0.85rem; background: white; color: var(--muted);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-step-prev:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── STEP 2: REPARTO VIEW ── */
+    .step2-scroll {
+      flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem 2rem;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .step2-nav {
+      background: white; border-top: 1px solid var(--border);
+      padding: 0.65rem 1.5rem; display: flex; align-items: center;
+      justify-content: space-between; flex-shrink: 0;
+    }
+    .reparto-card {
+      background: white; border: 1px solid var(--border);
+      border-radius: 10px; padding: 1rem 1.25rem;
+    }
+    .reparto-card-name  { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+    .reparto-card-meta  { font-family: monospace; font-size: 0.7rem; color: var(--muted); font-weight: 700; margin-top: 0.1rem; }
+    .reparto-card-total { font-size: 0.72rem; font-weight: 600; color: var(--accent); margin-top: 0.3rem; }
+    .reparto-card-divider { height: 1px; background: var(--border); margin: 0.75rem 0 0; }
+    .reparto-card-inputs {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;
+    }
+    .reparto-input-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .reparto-input-label {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .reparto-input-label.label-z { color: var(--z); }
+    .reparto-input-label.label-b { color: var(--b); }
+    .reparto-number-input {
+      width: 100%; padding: 0.5rem 0.65rem;
+      border: 1.5px solid var(--border); border-radius: 7px;
+      font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700;
+      color: var(--text); text-align: center; background: var(--bg); outline: none;
+      transition: border-color 0.15s;
+    }
+    .reparto-number-input.input-z:focus { border-color: var(--z); background: white; }
+    .reparto-number-input.input-b:focus { border-color: var(--b); background: white; }
+    .reparto-number-input:disabled { background: #f8fafc; color: #cbd5e1; cursor: default; }
+    .reparto-warn {
+      font-size: 0.7rem; font-weight: 600; color: #b45309;
+      background: #fef3c7; border: 1px solid #fde68a; border-radius: 5px;
+      padding: 0.3rem 0.65rem; margin-top: 0.6rem; display: none;
+    }
+    .reparto-warn.visible { display: block; }
+
+    /* ── STEP 3: HOJA VIEW ── */
+    .step3-scroll { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem 2rem; }
+    .step3-nav {
+      background: white; border-top: 1px solid var(--border);
+      padding: 0.85rem 1.5rem; display: flex; align-items: center;
+      justify-content: space-between; flex-shrink: 0;
+    }
+    .step3-title    { font-size: 1rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+    .step3-subtitle { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; margin-bottom: 1.5rem; }
+    .step3-product {
+      padding: 0.7rem 0; border-bottom: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr auto auto auto;
+      align-items: baseline; gap: 0.5rem 1.5rem;
+    }
+    .step3-product:last-child { border-bottom: none; }
+    .step3-prod-name { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+    .step3-alloc     { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+    .step3-alloc strong { font-weight: 700; }
+    .step3-alloc.alloc-z     strong { color: var(--z); }
+    .step3-alloc.alloc-b     strong { color: var(--b); }
+    .step3-alloc.alloc-total strong { color: var(--text); }
+    .btn-confirm {
+      padding: 0.55rem 1.5rem; background: var(--accent); color: white;
+      border: none; border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; letter-spacing: 0.01em;
+    }
+    .btn-confirm:hover { background: #14532d; }
   </style>
 </head>
 <body>
@@ -548,6 +674,21 @@
     </a>
     <a href="/" class="btn btn-ghost">&#10010; Nueva</a>
     <a href="/logout" class="btn btn-ghost">&#8594; Salir</a>
+  </div>
+</div>
+
+<!-- ── STEPPER ── -->
+<div class="stepper" id="stepperRail">
+  <div class="step-item active" id="stepItem-1">
+    <span class="step-num">1</span><span>Pedido</span>
+  </div>
+  <span class="step-sep">›</span>
+  <div class="step-item" id="stepItem-2">
+    <span class="step-num">2</span><span>Reparto</span>
+  </div>
+  <span class="step-sep">›</span>
+  <div class="step-item" id="stepItem-3">
+    <span class="step-num">3</span><span>Hoja</span>
   </div>
 </div>
 
@@ -597,6 +738,7 @@
     <button id="btnResetSort" class="bar-btn" style="display:none" onclick="resetSort()">&#8635; Orden original</button>
     <button class="bar-btn" onclick="exportCSV()">Exportar CSV</button>
     <span class="hint-text">Clic en fila para analizar &nbsp;|&nbsp; Clic en columna para ordenar</span>
+    <button class="btn-step-next" id="btnSiguiente" onclick="goToStep(2)" disabled>Siguiente →</button>
   </div>
 </div>
 
@@ -780,6 +922,28 @@
   </div>
 
 </div><!-- /content-area -->
+
+<!-- ── STEP 2: REPARTO ── -->
+<div id="step2-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+  <div class="step2-scroll" id="step2Cards"></div>
+  <div class="step2-nav">
+    <button class="btn-step-prev" onclick="goToStep(1)">← Anterior</button>
+    <button class="btn-step-next" onclick="goToStep(3)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- ── STEP 3: HOJA ── -->
+<div id="step3-view" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+  <div class="step3-scroll">
+    <div class="step3-title">Hoja de Reparto — <span id="s3LabName"></span></div>
+    <div class="step3-subtitle" id="s3Subtitle"></div>
+    <div id="step3Products"></div>
+  </div>
+  <div class="step3-nav">
+    <button class="btn-step-prev" onclick="goToStep(2)">← Anterior</button>
+    <button class="btn-confirm" onclick="confirmarPedido()">Confirmar pedido</button>
+  </div>
+</div>
 
 <!-- LEGEND -->
 <div class="legend-bar">
@@ -1190,6 +1354,8 @@ function updateTopbarBadge() {
     if (full)  full.innerHTML  = `&#128722; Pedido (${codes.size} prod. · ${totalUds} uds)`;
     if (short) short.innerHTML = `&#128722; ${codes.size}`;
   }
+  // Keep stepper "Siguiente" button in sync
+  if (typeof updateStepperUI === 'function') updateStepperUI();
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
@@ -1428,6 +1594,215 @@ function renderRepartoTab() {
   }).join('');
 }
 
+// ─── STEPPER ──────────────────────────────────────────────────────────────────
+let currentStep   = 1;
+let repartoAlloc  = {};   // { CODE: { z, b } }
+let repartoTotals = {};   // { CODE: total } — locked when entering Step 2
+
+function getPedidoCodes() {
+  return [...new Set(
+    Object.keys(manualPedidos)
+      .filter(k => manualPedidos[k] > 0)
+      .map(k => k.slice(0, -2))
+  )];
+}
+
+function updateStepperUI() {
+  const contentArea = document.querySelector('.content-area');
+  const legendBar   = document.querySelector('.legend-bar');
+  const step2View   = document.getElementById('step2-view');
+  const step3View   = document.getElementById('step3-view');
+  const headerCard  = document.querySelector('.header-card');
+  const searchBar   = document.querySelector('.search-bar');
+
+  const s1 = currentStep === 1;
+  const s2 = currentStep === 2;
+  const s3 = currentStep === 3;
+
+  contentArea.style.display = s1 ? '' : 'none';
+  legendBar.style.display   = s1 ? '' : 'none';
+  headerCard.style.display  = s1 ? '' : 'none';
+  searchBar.style.display   = s1 ? '' : 'none';
+  step2View.style.display   = s2 ? 'flex' : 'none';
+  step3View.style.display   = s3 ? 'flex' : 'none';
+
+  // Stepper rail
+  [1, 2, 3].forEach(n => {
+    const el = document.getElementById('stepItem-' + n);
+    el.classList.toggle('active',    currentStep === n);
+    el.classList.toggle('completed', currentStep > n);
+  });
+
+  // Siguiente button in search bar
+  const btnSig = document.getElementById('btnSiguiente');
+  if (btnSig) btnSig.disabled = getPedidoCodes().length === 0;
+}
+
+function goToStep(step) {
+  if (step === 2) {
+    buildStep2Cards();
+  } else if (step === 3) {
+    if (!validateStep2()) return;
+    buildStep3View();
+  }
+  currentStep = step;
+  updateStepperUI();
+  window.scrollTo(0, 0);
+}
+
+// ─── STEP 2 ───────────────────────────────────────────────────────────────────
+function buildStep2Cards() {
+  const codes = getPedidoCodes();
+  const productMap = {};
+  PRODUCTS.forEach(p => { productMap[p.code] = p; });
+
+  // Always refresh totals from current manualPedidos
+  codes.forEach(code => {
+    const qz = manualPedidos[code + '_z'] || 0;
+    const qb = manualPedidos[code + '_b'] || 0;
+    repartoTotals[code] = qz + qb;
+    // Only seed allocation if not already set by user
+    if (!repartoAlloc[code]) {
+      repartoAlloc[code] = { z: qz, b: qb };
+    }
+  });
+
+  const container = document.getElementById('step2Cards');
+  container.innerHTML = codes.map(code => {
+    const p     = productMap[code] || {};
+    const alloc = repartoAlloc[code];
+    const total = repartoTotals[code];
+    const only1 = p.status === 'only1';
+    const only2 = p.status === 'only2';
+    return `
+      <div class="reparto-card" id="rcard-${code}">
+        <div class="reparto-card-name">${p.description || code}</div>
+        <div class="reparto-card-meta">${code}</div>
+        <div class="reparto-card-total">Total pedido: ${total} uds</div>
+        <div class="reparto-card-divider"></div>
+        <div class="reparto-card-inputs">
+          <div class="reparto-input-group">
+            <label class="reparto-input-label label-z">${NAME1}</label>
+            <input type="number" min="0" class="reparto-number-input input-z"
+                   id="ri-${code}-z" value="${alloc.z || ''}"
+                   ${only2 ? 'disabled' : ''}
+                   oninput="onRepartoInput('${code}')">
+          </div>
+          <div class="reparto-input-group">
+            <label class="reparto-input-label label-b">${NAME2}</label>
+            <input type="number" min="0" class="reparto-number-input input-b"
+                   id="ri-${code}-b" value="${alloc.b || ''}"
+                   ${only1 ? 'disabled' : ''}
+                   oninput="onRepartoInput('${code}')">
+          </div>
+        </div>
+        <div class="reparto-warn" id="rwarn-${code}">
+          ${NAME1} + ${NAME2} &ne; total pedido (${total} uds)
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function onRepartoInput(code) {
+  const zVal = parseInt(document.getElementById('ri-' + code + '-z')?.value) || 0;
+  const bVal = parseInt(document.getElementById('ri-' + code + '-b')?.value) || 0;
+  repartoAlloc[code] = { z: zVal, b: bVal };
+  // Keep manualPedidos in sync so Step 1 table stays updated
+  if (zVal > 0) manualPedidos[code + '_z'] = zVal; else delete manualPedidos[code + '_z'];
+  if (bVal > 0) manualPedidos[code + '_b'] = bVal; else delete manualPedidos[code + '_b'];
+  _persistPedidos();
+  validateCard(code, zVal, bVal);
+}
+
+function validateCard(code, z, b) {
+  const warn  = document.getElementById('rwarn-' + code);
+  if (!warn) return;
+  const total = repartoTotals[code] || 0;
+  warn.classList.toggle('visible', total > 0 && z + b !== total);
+}
+
+function validateStep2() {
+  const codes = getPedidoCodes();
+  let firstInvalid = null;
+  let allValid = true;
+  codes.forEach(code => {
+    const alloc = repartoAlloc[code] || { z: 0, b: 0 };
+    const total = repartoTotals[code] || 0;
+    const invalid = total > 0 && (alloc.z + alloc.b !== total);
+    if (invalid) { allValid = false; if (!firstInvalid) firstInvalid = code; }
+    validateCard(code, alloc.z, alloc.b);
+  });
+  if (!allValid && firstInvalid) {
+    document.getElementById('rcard-' + firstInvalid)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  return allValid;
+}
+
+// ─── STEP 3 ───────────────────────────────────────────────────────────────────
+function buildStep3View() {
+  const codes = getPedidoCodes();
+  const productMap = {};
+  PRODUCTS.forEach(p => { productMap[p.code] = p; });
+
+  document.getElementById('s3LabName').textContent = LAB;
+  document.getElementById('s3Subtitle').textContent =
+    codes.length + ' productos · ' + NAME1 + ' y ' + NAME2;
+
+  document.getElementById('step3Products').innerHTML = codes.map(code => {
+    const p     = productMap[code] || {};
+    const alloc = repartoAlloc[code] || { z: 0, b: 0 };
+    const total = repartoTotals[code] || 0;
+    return `
+      <div class="step3-product">
+        <div class="step3-prod-name">${p.description || code}</div>
+        <div class="step3-alloc alloc-z">${NAME1} <strong>${alloc.z}</strong></div>
+        <div class="step3-alloc alloc-b">${NAME2} <strong>${alloc.b}</strong></div>
+        <div class="step3-alloc alloc-total">Total <strong>${total}</strong></div>
+      </div>`;
+  }).join('');
+}
+
+function confirmarPedido() {
+  const codes = getPedidoCodes();
+  const productMap = {};
+  PRODUCTS.forEach(p => { productMap[p.code] = p; });
+
+  let encargos = [];
+  try { const s = localStorage.getItem('encargos'); if (s) encargos = JSON.parse(s); } catch(e) {}
+
+  const nextN   = encargos.length + 1;
+  const suffix4 = Date.now().toString(36).toUpperCase().slice(-4);
+  const orderId = 'PED-' + String(nextN).padStart(3, '0') + '-' + suffix4;
+
+  const products = codes.map(code => {
+    const p     = productMap[code] || {};
+    const alloc = repartoAlloc[code] || { z: 0, b: 0 };
+    return {
+      codigo:            code,
+      descripcion:       p.description || code,
+      laboratorio:       LAB,
+      pedido_total:      repartoTotals[code] || 0,
+      pedido_zarzuelo:   alloc.z,
+      pedido_barris:     alloc.b,
+      recibido_zarzuelo: false,
+      recibido_barris:   false,
+    };
+  });
+
+  encargos.push({
+    order_id: orderId,
+    date:     new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    lab:      LAB, name1: NAME1, name2: NAME2,
+    status:   'pendiente',
+    products,
+  });
+
+  try { localStorage.setItem('encargos', JSON.stringify(encargos)); } catch(e) {}
+  try { localStorage.removeItem(_STORAGE_KEY); } catch(e) {}
+
+  window.location.href = '/encargos';
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 // Restore persisted pedidos into table cells
 (function restorePedidos() {
@@ -1443,6 +1818,7 @@ function renderRepartoTab() {
     }
   });
   updateTopbarBadge();
+  updateStepperUI();
 })();
 
 applySearch();
