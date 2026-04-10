@@ -308,6 +308,62 @@
     .ab-green  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
     .ab-gray   { background: #f0fdf4; color: #4b7c5e; border: 1px solid #d1fae5; }
 
+    /* ── REPARTO TAB ── */
+    .reparto-search-wrap {
+      padding: 0.6rem 0.9rem 0.5rem; border-bottom: 1px solid var(--border);
+      background: white; flex-shrink: 0;
+    }
+    .reparto-search {
+      width: 100%; padding: 0.42rem 0.7rem;
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      font-family: 'Inter', sans-serif; font-size: 0.8rem; color: var(--text);
+      background: var(--bg); outline: none; transition: border-color 0.15s;
+    }
+    .reparto-search:focus { border-color: #166534; background: white; }
+    .reparto-search::placeholder { color: var(--muted); }
+
+    .reparto-entry {
+      border: 1px solid var(--border); border-radius: 8px;
+      margin-bottom: 0.65rem; overflow: hidden;
+    }
+    .reparto-entry.recent { border-color: #86efac; }
+    .reparto-entry-header {
+      padding: 0.5rem 0.75rem; background: #f8fafc;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .reparto-entry.recent .reparto-entry-header { background: #f0fdf4; }
+    .reparto-date { font-size: 0.7rem; font-weight: 700; color: var(--text); }
+    .reparto-badge-recent {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: #166534; background: #dcfce7;
+      padding: 0.1rem 0.45rem; border-radius: 999px;
+    }
+    .reparto-prod-row {
+      display: grid; grid-template-columns: 1fr auto auto auto;
+      align-items: center; gap: 0.4rem;
+      padding: 0.42rem 0.75rem; border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+    }
+    .reparto-prod-name { color: var(--text); font-weight: 500; }
+    .reparto-prod-code { font-family: monospace; font-size: 0.65rem; color: var(--muted); }
+    .reparto-num {
+      text-align: center; font-weight: 700; min-width: 28px;
+      font-size: 0.78rem;
+    }
+    .reparto-num.total { color: var(--text); }
+    .reparto-num.red   { color: var(--z); }
+    .reparto-num.blue  { color: var(--b); }
+    .reparto-col-header {
+      display: grid; grid-template-columns: 1fr auto auto auto;
+      gap: 0.4rem; padding: 0.25rem 0.75rem;
+      font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted);
+      border-top: 1px solid var(--border); background: #fafafa;
+    }
+    .reparto-col-header.recent { background: #f7fef9; }
+    .reparto-col-header span { text-align: center; }
+    .reparto-empty { font-size: 0.78rem; color: var(--muted); text-align: center; padding: 2rem 0; }
+
     /* Pedido manual */
     .pedido-manual-wrap { margin-top: 0.4rem; }
     .pedido-label-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.4rem; }
@@ -647,8 +703,15 @@
       </div>
 
       <div class="panel-tabs">
-        <div class="panel-tab active" id="ptab-z" onclick="switchTab('z')">{{ name1 }}</div>
-        <div class="panel-tab"        id="ptab-b" onclick="switchTab('b')">{{ name2 }}</div>
+        <div class="panel-tab active" id="ptab-z"       onclick="switchTab('z')">{{ name1 }}</div>
+        <div class="panel-tab"        id="ptab-b"       onclick="switchTab('b')">{{ name2 }}</div>
+        <div class="panel-tab"        id="ptab-reparto" onclick="switchTab('reparto')">Reparto</div>
+      </div>
+
+      <!-- REPARTO SEARCH (visible only when reparto tab active) -->
+      <div class="reparto-search-wrap" id="repartoSearchWrap" style="display:none">
+        <input class="reparto-search" id="repartoSearch" placeholder="Buscar producto, código o lab…"
+               oninput="renderRepartoTab()">
       </div>
 
       <div class="panel-body">
@@ -707,6 +770,11 @@
           </div>
         </div>
 
+        <!-- TAB REPARTO -->
+        <div class="tab-pane" id="tab-reparto">
+          <div id="repartoContent"><p class="reparto-empty">Selecciona un producto para ver su historial de reparto.</p></div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -735,6 +803,8 @@
     <div class="modal-actions">
       <button class="btn btn-primary" id="btnDescargaPedido" onclick="downloadPedidoPDF()">⬇ Guardar PDF</button>
       <button class="btn" onclick="window.print()" style="background:white;color:#6b7280;border:1px solid #e5e7eb;font-size:0.8rem">Imprimir</button>
+      <button class="btn" id="btnGuardarReparto" onclick="guardarReparto()" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;font-size:0.8rem">Guardar en Reparto</button>
+      <span id="repartoSavedMsg" style="display:none;font-size:0.72rem;color:#166534;font-weight:600">Guardado en historial</span>
     </div>
     <div class="modal-body">
       <table class="pedido-table" id="pedidoTable">
@@ -1044,6 +1114,7 @@ function openPanel(idx) {
 
   renderFarmTab('z', r);
   renderFarmTab('b', r);
+  renderRepartoTab();
 }
 
 function closePanel() {
@@ -1053,10 +1124,14 @@ function closePanel() {
 }
 
 function switchTab(suffix) {
-  ['z','b'].forEach(s => {
+  const tabs = ['z', 'b', 'reparto'];
+  tabs.forEach(s => {
     document.getElementById('ptab-' + s).classList.toggle('active', s === suffix);
     document.getElementById('tab-' + s).classList.toggle('active', s === suffix);
   });
+  // Show/hide reparto search bar
+  document.getElementById('repartoSearchWrap').style.display = suffix === 'reparto' ? '' : 'none';
+  if (suffix === 'reparto') renderRepartoTab();
 }
 
 // ─── PEDIDO MANUAL ────────────────────────────────────────────────────────────
@@ -1231,6 +1306,126 @@ function exportCSV() {
   a.href = URL.createObjectURL(blob);
   a.download = `comparativa_${LAB.replace(/\s+/g,'_')}.csv`;
   a.click();
+}
+
+// ─── REPARTO ──────────────────────────────────────────────────────────────────
+const _REPARTO_KEY = 'reparto_' + LAB;
+let repartoOrders = [];
+try {
+  const saved = localStorage.getItem(_REPARTO_KEY);
+  if (saved) repartoOrders = JSON.parse(saved);
+} catch(e) {}
+
+function _persistReparto() {
+  try { localStorage.setItem(_REPARTO_KEY, JSON.stringify(repartoOrders)); } catch(e) {}
+}
+
+function guardarReparto() {
+  const keys = Object.keys(manualPedidos).filter(k => manualPedidos[k] > 0);
+  if (keys.length === 0) return;
+
+  const byCode = {};
+  keys.forEach(k => {
+    const suffix = k.slice(-1);
+    const code   = k.slice(0, -2);
+    if (!byCode[code]) byCode[code] = { qz: 0, qb: 0 };
+    if (suffix === 'z') byCode[code].qz = manualPedidos[k];
+    else                byCode[code].qb = manualPedidos[k];
+  });
+
+  const products = Object.entries(byCode).map(([code, q]) => {
+    const p = PRODUCTS.find(x => x.code === code) || {};
+    return {
+      codigo:          code,
+      descripcion:     p.description || code,
+      laboratorio:     LAB,
+      pedido_total:    q.qz + q.qb,
+      pedido_zarzuelo: q.qz,
+      pedido_barris:   q.qb,
+    };
+  });
+
+  const order = {
+    order_id: Date.now().toString(36),
+    date:     new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' }),
+    products,
+  };
+
+  repartoOrders.unshift(order);
+  _persistReparto();
+
+  const msg = document.getElementById('repartoSavedMsg');
+  msg.style.display = 'inline';
+  setTimeout(() => msg.style.display = 'none', 2500);
+
+  renderRepartoTab();
+}
+
+function renderRepartoTab() {
+  const container = document.getElementById('repartoContent');
+  if (!container) return;
+
+  const searchTerm  = (document.getElementById('repartoSearch')?.value || '').trim().toUpperCase();
+  const selectedCode = selectedIdx !== null ? PRODUCTS[selectedIdx]?.code : null;
+
+  if (repartoOrders.length === 0) {
+    container.innerHTML = '<p class="reparto-empty">Sin repartos guardados.<br>Crea un pedido y pulsa \u201cGuardar en Reparto\u201d.</p>';
+    return;
+  }
+
+  const filtered = repartoOrders.map(order => {
+    let prods = order.products;
+    if (searchTerm) {
+      prods = prods.filter(p =>
+        p.codigo.includes(searchTerm) ||
+        p.descripcion.toUpperCase().includes(searchTerm) ||
+        (p.laboratorio || '').toUpperCase().includes(searchTerm)
+      );
+    } else if (selectedCode) {
+      prods = prods.filter(p => p.codigo === selectedCode);
+    }
+    return { ...order, products: prods };
+  }).filter(o => o.products.length > 0);
+
+  if (filtered.length === 0) {
+    const msg = selectedCode && !searchTerm
+      ? 'Este producto no aparece en ningún reparto guardado.'
+      : 'No hay repartos que coincidan.';
+    container.innerHTML = '<p class="reparto-empty">' + msg + '</p>';
+    return;
+  }
+
+  const NAME1 = {{ name1 | tojson }};
+  const NAME2 = {{ name2 | tojson }};
+
+  container.innerHTML = filtered.map((order, i) => {
+    const isRecent = i === 0;
+    const prodsHtml = order.products.map(p => `
+      <div class="reparto-prod-row">
+        <div>
+          <div class="reparto-prod-name">${p.descripcion}</div>
+          <div class="reparto-prod-code">${p.codigo}</div>
+        </div>
+        <div class="reparto-num red">${p.pedido_zarzuelo || 0}</div>
+        <div class="reparto-num blue">${p.pedido_barris || 0}</div>
+        <div class="reparto-num total">${p.pedido_total || 0}</div>
+      </div>`).join('');
+
+    return `
+      <div class="reparto-entry${isRecent ? ' recent' : ''}">
+        <div class="reparto-entry-header">
+          <span class="reparto-date">${order.date}</span>
+          ${isRecent ? '<span class="reparto-badge-recent">Reciente</span>' : ''}
+        </div>
+        <div class="reparto-col-header${isRecent ? ' recent' : ''}">
+          <span>Producto</span>
+          <span style="color:var(--z)">${NAME1}</span>
+          <span style="color:var(--b)">${NAME2}</span>
+          <span>Total</span>
+        </div>
+        ${prodsHtml}
+      </div>`;
+  }).join('');
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
