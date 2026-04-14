@@ -5,6 +5,7 @@ pdf_parser.py — Parser universal para PDFs de estadísticas de ventas (Farmaci
 import pdfplumber
 import re
 from collections import defaultdict
+from datetime import date as _date
 
 # ─── Posiciones X fijas del layout ────────────────────────────────────────────
 
@@ -68,7 +69,8 @@ def _detect_years_global(all_rows):
         return years[-1], years[-2]
     elif len(years) == 1:
         return years[0], years[0] - 1
-    return 2026, 2025
+    _cur = _date.today().year
+    return _cur, _cur - 1
 
 
 def _extract_description(row_chars):
@@ -405,7 +407,7 @@ def compare_products(products1, products2,
 
     all_yr_cur = [p.get('year_current', 0)
                   for p in list(products1.values()) + list(products2.values())]
-    global_yr_cur  = max(all_yr_cur) if all_yr_cur else 2026
+    global_yr_cur  = max(all_yr_cur) if all_yr_cur else _date.today().year
     global_yr_prev = global_yr_cur - 1
 
     def _totals(p):

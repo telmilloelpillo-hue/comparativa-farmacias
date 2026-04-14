@@ -218,15 +218,16 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
 
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump({
-                    'results':  safe_results,
-                    'name1':    name1,
-                    'name2':    name2,
-                    'lab':      lab1,
-                    'lab_slug': lab_slug,
-                    'count1':   len(products1),
-                    'count2':   len(products2),
-                    'has_sit1': has_sit1,
-                    'has_sit2': has_sit2,
+                    'results':      safe_results,
+                    'name1':        name1,
+                    'name2':        name2,
+                    'lab':          lab1,
+                    'lab_slug':     lab_slug,
+                    'count1':       len(products1),
+                    'count2':       len(products2),
+                    'has_sit1':     has_sit1,
+                    'has_sit2':     has_sit2,
+                    'current_year': datetime.now().year,
                 }, f, ensure_ascii=False)
 
             store['comp_token'] = comp_token
@@ -417,8 +418,8 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
 
     show_s365 = has_situation1 or has_situation2
 
-    yr_cur  = results[0]['year_current'] if results else 2026
-    yr_prev = results[0]['year_prev']    if results else 2025
+    yr_cur  = results[0]['year_current'] if results else datetime.now().year
+    yr_prev = results[0]['year_prev']    if results else datetime.now().year - 1
 
     today   = _dt.today().strftime('%d/%m/%Y')
     n_both  = sum(1 for r in results if r['status'] == 'both')

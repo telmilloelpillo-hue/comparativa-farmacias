@@ -879,8 +879,8 @@
   <!-- TABLE -->
   <div class="table-section" id="tableSection">
     {% set has_sit = has_sit1 or has_sit2 %}
-    {% set yr_cur  = results[0].year_current if results else 2026 %}
-    {% set yr_prev = results[0].year_prev    if results else 2025 %}
+    {% set yr_cur  = results[0].year_current if results else current_year %}
+    {% set yr_prev = results[0].year_prev    if results else (current_year - 1) %}
 
     {# Column index mapping (0-based visible cols):
        0=Código  1=Descripción
@@ -1639,8 +1639,8 @@ function downloadPedidoPDF() {
 // ─── CSV EXPORT ───────────────────────────────────────────────────────────────
 function exportCSV() {
   const hasSit = HAS_SIT;
-  const yr0 = PRODUCTS[0] ? PRODUCTS[0].year_current : 2026;
-  const yr1 = PRODUCTS[0] ? PRODUCTS[0].year_prev    : 2025;
+  const yr0 = PRODUCTS[0] ? PRODUCTS[0].year_current : new Date().getFullYear();
+  const yr1 = PRODUCTS[0] ? PRODUCTS[0].year_prev    : new Date().getFullYear() - 1;
 
   let header = `Codigo,Descripcion,Stock ${NAME1},Smin ${NAME1},V.${yr0} ${NAME1},V.${yr1} ${NAME1}`;
   if (hasSit) header += `,S365 ${NAME1}`;
