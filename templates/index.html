@@ -101,26 +101,6 @@
       gap: 0.5rem;
       margin-left: auto;
     }
-    .topbar-search {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: var(--radius);
-      padding: 0.35rem 0.75rem;
-      width: 240px;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .topbar-search:focus-within { border-color: rgba(255,255,255,0.45); background: rgba(255,255,255,0.18); }
-    .topbar-search input {
-      background: none; border: none; outline: none;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.78rem; color: white; width: 100%;
-    }
-    .topbar-search input::placeholder { color: rgba(255,255,255,0.5); }
-    .search-icon { color: rgba(255,255,255,0.6); font-size: 0.82rem; flex-shrink: 0; }
-
     .topbar-logout {
       font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.8);
       text-decoration: none; padding: 0.35rem 0.7rem;
@@ -453,6 +433,47 @@
       top: 70px;
     }
 
+    /* ══ RIGHT PANEL CARDS ══════════════════════════════════════════════════ */
+    .rp-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      margin-bottom: 1rem; overflow: hidden;
+    }
+    .rp-card:last-child { margin-bottom: 0; }
+    .rp-card-head {
+      padding: 0.7rem 1rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .rp-card-title { font-size: 0.76rem; font-weight: 700; color: var(--text); }
+    .rp-card-link  { font-size: 0.68rem; color: var(--accent); text-decoration: none; }
+    .rp-card-link:hover { text-decoration: underline; }
+    .rp-card-body  { padding: 0.75rem 1rem; }
+
+    .rp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .rp-stat {
+      background: var(--bg); border-radius: 7px;
+      padding: 0.55rem 0.5rem; text-align: center;
+    }
+    .rp-stat-num   { font-size: 1.35rem; font-weight: 700; color: var(--text); line-height: 1; }
+    .rp-stat-label { font-size: 0.6rem; color: var(--muted); margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .rp-enc-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.42rem 0; border-bottom: 1px solid var(--border);
+      text-decoration: none; color: var(--text);
+    }
+    .rp-enc-row:last-child { border-bottom: none; }
+    .rp-enc-row:hover .rp-enc-id { color: var(--accent); }
+    .rp-enc-id   { font-size: 0.7rem; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rp-enc-date { font-size: 0.63rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+
+    .rp-status-row { display: flex; align-items: center; gap: 0.55rem; padding: 0.32rem 0; font-size: 0.74rem; }
+    .rp-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .rp-status-label { flex: 1; color: var(--text); }
+    .rp-status-count { font-weight: 700; color: var(--text); }
+    .rp-empty { font-size: 0.72rem; color: var(--muted); text-align: center; padding: 0.5rem 0; }
+
     /* ══ LOADING OVERLAY ════════════════════════════════════════════════════ */
     .loading-overlay {
       display: none; position: fixed; inset: 0;
@@ -500,8 +521,7 @@
     @media (max-width: 900px) {
       main { grid-template-columns: 1fr; padding: 1.25rem 1rem 3rem; }
       .left-panel { padding-right: 0; border-right: none; }
-      .right-panel { display: none; }
-      .topbar-search { display: none; }
+      .right-panel { padding-left: 0; padding-top: 0.5rem; position: static; }
     }
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
@@ -524,10 +544,6 @@
   </nav>
 
   <div class="topbar-right">
-    <div class="topbar-search">
-      <span class="search-icon">&#128269;</span>
-      <input type="text" id="globalSearch" placeholder="Buscar encargos…" oninput="filterEncargos(this.value)">
-    </div>
     <a href="/logout" class="topbar-logout">Cerrar sesión</a>
   </div>
 </header>
@@ -615,9 +631,36 @@
 
   </section>
 
-  <!-- ── RIGHT: placeholder ── -->
+  <!-- ── RIGHT: panel informativo ── -->
   <aside class="right-panel">
-    <!-- reservado para panel de detalle futuro -->
+
+    <!-- Resumen actual -->
+    <div class="rp-card">
+      <div class="rp-card-head">
+        <div class="rp-card-title">Resumen</div>
+      </div>
+      <div class="rp-card-body">
+        <div class="rp-stats" id="rpStats"></div>
+      </div>
+    </div>
+
+    <!-- Últimos encargos -->
+    <div class="rp-card">
+      <div class="rp-card-head">
+        <div class="rp-card-title">Últimos encargos</div>
+        <a href="/encargos" class="rp-card-link">Ver todos →</a>
+      </div>
+      <div class="rp-card-body" id="rpRecents"></div>
+    </div>
+
+    <!-- Estado general -->
+    <div class="rp-card">
+      <div class="rp-card-head">
+        <div class="rp-card-title">Estado general</div>
+      </div>
+      <div class="rp-card-body" id="rpEstado"></div>
+    </div>
+
   </aside>
 
 </main>
@@ -900,17 +943,53 @@ function renderDashCards(list) {
   }
 }
 
-function filterEncargos(term) {
-  if (!term.trim()) { renderDashCards(_allEncargos); return; }
-  const t = term.trim().toUpperCase();
-  const filtered = _allEncargos.filter(enc =>
-    enc.order_id.toUpperCase().includes(t) ||
-    (enc.lab || '').toUpperCase().includes(t) ||
-    (enc.products || []).some(p =>
-      (p.codigo || '').includes(t) || (p.descripcion || '').toUpperCase().includes(t)
-    )
-  );
-  renderDashCards(filtered);
+function renderRightPanel(list) {
+  // ── Cálculos ──
+  let pendientes = 0, completados = 0, parciales = 0, prodsPendientes = 0;
+  list.forEach(enc => {
+    const st = calcStatus(enc);
+    if (st === 'pendiente')  pendientes++;
+    else if (st === 'completado') completados++;
+    else parciales++;
+    (enc.products || []).forEach(p => {
+      if ((p.pedido_zarzuelo || 0) > 0 && !p.recibido_zarzuelo) prodsPendientes++;
+      if ((p.pedido_barris   || 0) > 0 && !p.recibido_barris)   prodsPendientes++;
+    });
+  });
+
+  // ── Resumen ──
+  document.getElementById('rpStats').innerHTML = `
+    <div class="rp-stat"><div class="rp-stat-num">${pendientes}</div><div class="rp-stat-label">Pendientes</div></div>
+    <div class="rp-stat"><div class="rp-stat-num">${prodsPendientes}</div><div class="rp-stat-label">Prod. pendientes</div></div>
+    <div class="rp-stat"><div class="rp-stat-num">${completados}</div><div class="rp-stat-label">Completados</div></div>
+    <div class="rp-stat"><div class="rp-stat-num">${list.length}</div><div class="rp-stat-label">Total encargos</div></div>
+  `;
+
+  // ── Últimos 5 ──
+  const recents = list.slice().reverse().slice(0, 5);
+  document.getElementById('rpRecents').innerHTML = recents.length === 0
+    ? '<div class="rp-empty">Sin encargos aún</div>'
+    : recents.map(enc => {
+        const st = calcStatus(enc);
+        return `<a href="/encargos" class="rp-enc-row">
+          <span class="rp-enc-id">${enc.order_id}</span>
+          <span class="rp-enc-date">${enc.date}</span>
+          ${statusBadge(st)}
+        </a>`;
+      }).join('');
+
+  // ── Estado general ──
+  const estados = [
+    { label: 'Pendientes',  count: pendientes,  color: '#f59e0b' },
+    { label: 'Parciales',   count: parciales,   color: '#3b82f6' },
+    { label: 'Completados', count: completados, color: '#166534' },
+  ];
+  document.getElementById('rpEstado').innerHTML = estados.map(r => `
+    <div class="rp-status-row">
+      <div class="rp-status-dot" style="background:${r.color}"></div>
+      <span class="rp-status-label">${r.label}</span>
+      <span class="rp-status-count">${r.count}</span>
+    </div>`).join('');
 }
 
 // Init
@@ -920,6 +999,7 @@ try {
 } catch(e) {}
 
 renderDashCards(_allEncargos);
+renderRightPanel(_allEncargos);
 </script>
 
 </body>
