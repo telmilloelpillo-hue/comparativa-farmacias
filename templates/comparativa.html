@@ -264,16 +264,37 @@
       position: relative;
     }
     .decision-panel.open { width: var(--panel-w); }
-    .panel-inner { width: var(--panel-w); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+    .panel-inner { width: var(--panel-w); margin-left: 10px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
     /* Resize handle */
     .panel-resize-handle {
-      position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
-      cursor: ew-resize; z-index: 20; background: transparent;
+      position: absolute; left: 0; top: 0; bottom: 0; width: 10px;
+      cursor: ew-resize; z-index: 20;
+      background: #e5e7eb;
+      border-right: 1px solid #d1d5db;
       transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center;
     }
     .panel-resize-handle:hover,
-    .panel-resize-handle.dragging { background: var(--accent); opacity: 0.25; }
+    .panel-resize-handle.dragging {
+      background: #d1fae5;
+      border-right-color: var(--accent);
+    }
+    /* Grip dots */
+    .panel-resize-handle::after {
+      content: '';
+      display: block;
+      width: 3px; height: 28px;
+      background: radial-gradient(circle, #9ca3af 1.5px, transparent 1.5px);
+      background-size: 3px 7px;
+      background-repeat: repeat-y;
+    }
+    .panel-resize-handle:hover::after,
+    .panel-resize-handle.dragging::after {
+      background: radial-gradient(circle, var(--accent) 1.5px, transparent 1.5px);
+      background-size: 3px 7px;
+      background-repeat: repeat-y;
+    }
     @media (max-width: 900px) { .panel-resize-handle { display: none; } }
 
     .panel-header {
