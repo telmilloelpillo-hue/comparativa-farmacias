@@ -361,42 +361,67 @@
     .magic-drop-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
     .magic-drop-analyzing { font-size: 0.72rem; color: #6366f1; margin-top: 0.4rem; display: none; }
 
-    /* Preview de detección */
-    .detection-log {
-      background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px;
-      padding: 0.5rem 0.75rem; margin-bottom: 0.9rem;
-      flex-direction: column; gap: 0.5rem;
-    }
-    .det-entry { display: flex; flex-direction: column; font-size: 0.72rem; gap: 0.1rem; }
-    .det-filename { font-weight: 600; color: var(--text); }
-    .det-row { color: var(--muted); padding-left: 0.6rem; }
-    .det-row.type-ventas    { color: var(--z); }
-    .det-row.type-situacion { color: #f59e0b; }
+    /* magic-drop compacto tras detección */
+    .magic-drop.compact { padding: 0.55rem 1rem; margin-bottom: 0.65rem; }
+    .magic-drop.compact .magic-drop-title { font-size: 0.74rem; }
+    .magic-drop.compact .magic-drop-sub   { display: none; }
 
-    /* Slots */
-    .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; margin-bottom: 0.9rem; }
-    .slot-card {
-      border: 1px solid #e5e7eb; border-radius: 7px; padding: 0.5rem 0.65rem;
-      display: flex; align-items: center; gap: 0.5rem; background: #f9fafb;
+    /* Sección resultado */
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    #resultSection { display: none; }
+    #resultSection.visible { display: block; animation: fadeSlideIn 0.22s ease; }
+    .result-header {
+      font-size: 0.65rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.6rem;
+    }
+    .result-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 1rem; }
+    .result-col {
+      border: 1.5px solid #e5e7eb; border-radius: 9px;
+      padding: 0.75rem 0.85rem; background: #f9fafb;
       transition: border-color 0.2s, background 0.2s;
     }
-    .slot-card.filled-z   { border-color: var(--z);    background: var(--z-lt); }
-    .slot-card.filled-b   { border-color: var(--b);    background: var(--b-lt); }
-    .slot-card.filled-sit { border-color: #f59e0b;     background: #fffbeb; }
-    .slot-dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; flex-shrink: 0; }
-    .slot-card.filled-z   .slot-dot { background: var(--z); }
-    .slot-card.filled-b   .slot-dot { background: var(--b); }
-    .slot-card.filled-sit .slot-dot { background: #f59e0b; }
-    .slot-info { flex: 1; min-width: 0; }
-    .slot-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-    .slot-name  { font-size: 0.74rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .slot-file  { font-size: 0.63rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .slot-remove { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 0.78rem; padding: 2px; line-height: 1; }
-    .slot-remove:hover { color: #ef4444; }
-
-    /* Nombres en línea */
-    .name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem; }
-    .name-row .form-group { margin: 0; }
+    .result-col.has-z { border-color: var(--z); background: var(--z-lt); }
+    .result-col.has-b { border-color: var(--b); background: var(--b-lt); }
+    .result-col-head { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.55rem; }
+    .result-col-dot { width: 9px; height: 9px; border-radius: 50%; background: #d1d5db; flex-shrink: 0; }
+    .has-z .result-col-dot { background: var(--z); }
+    .has-b .result-col-dot { background: var(--b); }
+    .result-name-input {
+      font-size: 0.88rem; font-weight: 700; color: var(--text);
+      border: none; background: transparent; outline: none;
+      width: 100%; font-family: 'Inter', sans-serif; padding: 0;
+    }
+    .result-name-input:focus { border-bottom: 1.5px solid var(--accent); }
+    .result-files { display: flex; flex-direction: column; gap: 0.28rem; }
+    .result-file-row { display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; }
+    .result-file-badge {
+      font-size: 0.58rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.04em; padding: 1px 5px; border-radius: 3px;
+      background: #e5e7eb; color: var(--muted); white-space: nowrap; flex-shrink: 0;
+    }
+    .result-file-badge.badge-ventas { background: #dcfce7; color: #166534; }
+    .result-file-badge.badge-sit    { background: #fef3c7; color: #92400e; }
+    .result-file-name { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .result-file-name.empty { color: var(--muted); font-style: italic; }
+    .result-file-remove {
+      background: none; border: none; cursor: pointer;
+      color: #9ca3af; font-size: 0.75rem; padding: 1px 3px; line-height: 1; flex-shrink: 0;
+    }
+    .result-file-remove:hover { color: #ef4444; }
+    .result-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-top: 0.85rem; border-top: 1px solid var(--border);
+    }
+    .btn-add-more {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.45rem 0.9rem; font-family: 'Inter', sans-serif;
+      font-size: 0.75rem; color: var(--muted); cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-add-more:hover { border-color: var(--accent); color: var(--accent); }
 
     /* Form footer */
     .form-footer {
@@ -536,66 +561,30 @@
             <div class="magic-drop-analyzing" id="magicAnalyzing">Analizando...</div>
           </div>
 
-          <!-- Preview de detección -->
-          <div class="detection-log" id="detectionLog" style="display:none"></div>
-
-          <!-- Slots de asignación -->
-          <div class="slot-grid">
-            <div class="slot-card" id="slot-pdf1">
-              <div class="slot-dot"></div>
-              <div class="slot-info">
-                <div class="slot-label">Estadísticas · Farmacia 1</div>
-                <div class="slot-name" id="slot-pdf1-name">Sin asignar</div>
-                <div class="slot-file" id="slot-pdf1-file"></div>
+          <!-- Resultado detectado -->
+          <div id="resultSection">
+            <div class="result-header">Listo para comparar</div>
+            <div class="result-cols">
+              <div class="result-col" id="rcol1">
+                <div class="result-col-head">
+                  <div class="result-col-dot"></div>
+                  <input type="text" name="name1" id="inp-name1" class="result-name-input" placeholder="Farmacia 1" required>
+                </div>
+                <div class="result-files" id="rfiles1"></div>
               </div>
-              <button type="button" class="slot-remove" id="slot-pdf1-remove" style="display:none" onclick="clearSlot('pdf1')">✕</button>
-            </div>
-            <div class="slot-card" id="slot-pdf2">
-              <div class="slot-dot"></div>
-              <div class="slot-info">
-                <div class="slot-label">Estadísticas · Farmacia 2</div>
-                <div class="slot-name" id="slot-pdf2-name">Sin asignar</div>
-                <div class="slot-file" id="slot-pdf2-file"></div>
+              <div class="result-col" id="rcol2">
+                <div class="result-col-head">
+                  <div class="result-col-dot"></div>
+                  <input type="text" name="name2" id="inp-name2" class="result-name-input" placeholder="Farmacia 2" required>
+                </div>
+                <div class="result-files" id="rfiles2"></div>
               </div>
-              <button type="button" class="slot-remove" id="slot-pdf2-remove" style="display:none" onclick="clearSlot('pdf2')">✕</button>
             </div>
-            <div class="slot-card" id="slot-sit1">
-              <div class="slot-dot"></div>
-              <div class="slot-info">
-                <div class="slot-label">Situación · Farmacia 1 <span class="lbl-optional">Opcional</span></div>
-                <div class="slot-name" id="slot-sit1-name">Sin asignar</div>
-                <div class="slot-file" id="slot-sit1-file"></div>
-              </div>
-              <button type="button" class="slot-remove" id="slot-sit1-remove" style="display:none" onclick="clearSlot('sit1')">✕</button>
+            <div class="error-box" id="errorBox"></div>
+            <div class="result-footer">
+              <button type="button" class="btn-add-more" id="btnAddMore">+ Añadir PDFs</button>
+              <button type="submit" class="btn-submit" id="submitBtn">Generar comparativa</button>
             </div>
-            <div class="slot-card" id="slot-sit2">
-              <div class="slot-dot"></div>
-              <div class="slot-info">
-                <div class="slot-label">Situación · Farmacia 2 <span class="lbl-optional">Opcional</span></div>
-                <div class="slot-name" id="slot-sit2-name">Sin asignar</div>
-                <div class="slot-file" id="slot-sit2-file"></div>
-              </div>
-              <button type="button" class="slot-remove" id="slot-sit2-remove" style="display:none" onclick="clearSlot('sit2')">✕</button>
-            </div>
-          </div>
-
-          <!-- Nombres editables -->
-          <div class="name-row">
-            <div class="form-group">
-              <label>Nombre Farmacia 1</label>
-              <input type="text" name="name1" id="inp-name1" value="Zarzuelo" required>
-            </div>
-            <div class="form-group">
-              <label>Nombre Farmacia 2</label>
-              <input type="text" name="name2" id="inp-name2" value="Barris" required>
-            </div>
-          </div>
-
-          <div class="error-box" id="errorBox"></div>
-
-          <div class="form-footer">
-            <span class="form-hint">Genera un análisis interactivo y descargable</span>
-            <button type="submit" class="btn-submit" id="submitBtn">Generar comparativa</button>
           </div>
         </form>
       </div>
@@ -659,26 +648,66 @@ const slots = {
   sit2: { pharmacy: null, file: null },
 };
 
-function updateSlotUI(key) {
-  const s = slots[key];
-  const card     = document.getElementById('slot-' + key);
-  const nameEl   = document.getElementById('slot-' + key + '-name');
-  const fileEl   = document.getElementById('slot-' + key + '-file');
-  const removeEl = document.getElementById('slot-' + key + '-remove');
-  card.className = 'slot-card';
-  if (s.file) {
-    const colorClass = key.startsWith('sit') ? 'filled-sit'
-                     : key === 'pdf1'         ? 'filled-z' : 'filled-b';
-    card.classList.add(colorClass);
-    nameEl.textContent = s.pharmacy || '—';
-    fileEl.textContent = s.file.name;
-    removeEl.style.display = '';
+function shortName(pharmacy) {
+  if (!pharmacy) return '';
+  const clean = pharmacy.replace(/^farmacia\s+/i, '').trim();
+  const words = clean.split(/\s+/);
+  const last = words[words.length - 1] || clean;
+  return last.charAt(0).toUpperCase() + last.slice(1).toLowerCase();
+}
+
+function renderFileRows(ventasKey, sitKey) {
+  const v = slots[ventasKey];
+  const s = slots[sitKey];
+  let html = '';
+  if (v.file) {
+    html += `<div class="result-file-row"><span class="result-file-badge badge-ventas">Ventas</span><span class="result-file-name" title="${v.file.name}">${v.file.name}</span><button type="button" class="result-file-remove" onclick="clearSlot('${ventasKey}')">✕</button></div>`;
   } else {
-    nameEl.textContent = 'Sin asignar';
-    fileEl.textContent = '';
-    removeEl.style.display = 'none';
+    html += `<div class="result-file-row"><span class="result-file-badge">Ventas</span><span class="result-file-name empty">Sin asignar</span></div>`;
   }
+  if (s.file) {
+    html += `<div class="result-file-row"><span class="result-file-badge badge-sit">Situación</span><span class="result-file-name" title="${s.file.name}">${s.file.name}</span><button type="button" class="result-file-remove" onclick="clearSlot('${sitKey}')">✕</button></div>`;
+  } else {
+    html += `<div class="result-file-row"><span class="result-file-badge">Situación</span><span class="result-file-name empty">Sin informe</span></div>`;
+  }
+  return html;
+}
+
+function renderResult() {
+  const anyAssigned = Object.values(slots).some(s => s.file);
+  const section = document.getElementById('resultSection');
+  if (anyAssigned) {
+    section.classList.add('visible');
+    document.getElementById('magicDrop').classList.add('compact');
+  }
+  // Column 1
+  const col1 = document.getElementById('rcol1');
+  col1.className = 'result-col' + ((slots.pdf1.file || slots.sit1.file) ? ' has-z' : '');
+  document.getElementById('rfiles1').innerHTML = renderFileRows('pdf1', 'sit1');
+  if (slots.pdf1.pharmacy) {
+    const n1 = document.getElementById('inp-name1');
+    if (!n1.dataset.edited) n1.value = shortName(slots.pdf1.pharmacy);
+  }
+  // Column 2
+  const col2 = document.getElementById('rcol2');
+  col2.className = 'result-col' + ((slots.pdf2.file || slots.sit2.file) ? ' has-b' : '');
+  document.getElementById('rfiles2').innerHTML = renderFileRows('pdf2', 'sit2');
+  if (slots.pdf2.pharmacy) {
+    const n2 = document.getElementById('inp-name2');
+    if (!n2.dataset.edited) n2.value = shortName(slots.pdf2.pharmacy);
+  }
+}
+
+// Marcar nombre como editado manualmente para no sobreescribirlo
+['inp-name1', 'inp-name2'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    this.dataset.edited = '1';
+  });
+});
+
+function syncInput(key) {
   const input = document.getElementById('slot-input-' + key);
+  const s = slots[key];
   if (s.file) {
     const dt = new DataTransfer(); dt.items.add(s.file); input.files = dt.files;
   } else {
@@ -686,14 +715,10 @@ function updateSlotUI(key) {
   }
 }
 
-function updateNameInputs() {
-  if (slots.pdf1.pharmacy) document.getElementById('inp-name1').value = slots.pdf1.pharmacy;
-  if (slots.pdf2.pharmacy) document.getElementById('inp-name2').value = slots.pdf2.pharmacy;
-}
-
 function clearSlot(key) {
   slots[key] = { pharmacy: null, file: null };
-  updateSlotUI(key);
+  syncInput(key);
+  renderResult();
 }
 
 function assignFile(file, detectedType, detectedPharmacy) {
@@ -726,8 +751,8 @@ function assignFile(file, detectedType, detectedPharmacy) {
     }
   }
   slots[target] = { pharmacy: detectedPharmacy, file };
-  updateSlotUI(target);
-  updateNameInputs();
+  syncInput(target);
+  renderResult();
 }
 
 async function analyzeFile(file) {
@@ -742,26 +767,12 @@ async function analyzeFile(file) {
   }
 }
 
-function addDetectionEntry(file, info) {
-  const log = document.getElementById('detectionLog');
-  log.style.display = 'flex';
-  const typeLabel = info.type === 'situacion' ? 'Situación' : 'Ventas';
-  const typeClass = info.type === 'situacion' ? 'type-situacion' : 'type-ventas';
-  const entry = document.createElement('div');
-  entry.className = 'det-entry';
-  entry.innerHTML = `<span class="det-filename">📄 ${file.name}</span>`
-    + `<span class="det-row ${typeClass}">→ ${typeLabel}</span>`
-    + `<span class="det-row">→ ${info.pharmacy || '—'}</span>`;
-  log.appendChild(entry);
-}
-
 async function handleFiles(files) {
   const analyzing = document.getElementById('magicAnalyzing');
   analyzing.style.display = 'block';
   const tasks = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
   for (const file of tasks) {
     const info = await analyzeFile(file);
-    addDetectionEntry(file, info);
     assignFile(file, info.type, info.pharmacy || file.name.replace(/\.pdf$/i, ''));
   }
   analyzing.style.display = 'none';
@@ -776,6 +787,7 @@ magicDrop.addEventListener('drop', e => {
   if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
 });
 magicInput.addEventListener('change', () => { if (magicInput.files.length) handleFiles(magicInput.files); });
+document.getElementById('btnAddMore').addEventListener('click', () => magicInput.click());
 
 // ── Loading & polling ─────────────────────────────────────────────────────────
 let _pollId = null;
