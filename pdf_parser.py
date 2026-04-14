@@ -658,3 +658,33 @@ def detect_lab(pdf_path):
         return guessed
 
     return f'Lab {code}' if code else 'Laboratorio desconocido'
+
+
+def detect_pdf_header(pdf_path):
+    """Lee SOLO la cabecera de la página 1 para detectar tipo de documento y farmacia.
+
+    Returns:
+        {'type': 'ventas'|'situacion', 'pharmacy': str}
+    """
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[0]
+        chars = page.chars
+        page_width = float(page.width)
+
+    # Solo caracteres en la banda superior (top < 60 puntos)
+    header_chars = [c for c in chars if float(c.get('top', 999)) < 60]
+
+    mid = page_width * 0.45  # separador izquierda/derecha
+    left_chars  = sorted([c for c in header_chars if float(c['x0']) < mid],  key=lambda c: c['x0'])
+    right_chars = sorted([c for c in header_chars if float(c['x0']) >= mid], key=lambda c: c['x0'])
+
+    left_text  = ''.join(c['text'] for c in left_chars).strip()
+    right_text = ''.join(c['text'] for c in right_chars).strip()
+
+    left_lower = left_text.lower()
+    if 'situaci' in left_lower or 'informe' in left_lower:
+        doc_type = 'situacion'
+    else:
+        doc_type = 'ventas'
+
+    return {'type': doc_type, 'pharmacy': right_text}

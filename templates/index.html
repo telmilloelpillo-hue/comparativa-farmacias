@@ -346,6 +346,58 @@
     .has-sit .drop-sm-filename { display: block; }
     .has-sit .drop-sm-hint { display: none; }
 
+    /* Zona mágica de auto-detección */
+    .magic-drop {
+      border: 2px dashed #d1d5db; border-radius: 10px;
+      padding: 1.4rem 1rem; text-align: center; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      margin-bottom: 1rem; position: relative;
+    }
+    .magic-drop.dragover { border-color: #6366f1; background: #eef2ff; }
+    .magic-drop input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .magic-drop-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+    .magic-drop-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+    .magic-drop-analyzing { font-size: 0.72rem; color: #6366f1; margin-top: 0.4rem; display: none; }
+
+    /* Preview de detección */
+    .detection-log {
+      background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 7px;
+      padding: 0.5rem 0.75rem; margin-bottom: 0.9rem;
+      flex-direction: column; gap: 0.5rem;
+    }
+    .det-entry { display: flex; flex-direction: column; font-size: 0.72rem; gap: 0.1rem; }
+    .det-filename { font-weight: 600; color: var(--text); }
+    .det-row { color: var(--muted); padding-left: 0.6rem; }
+    .det-row.type-ventas    { color: var(--z); }
+    .det-row.type-situacion { color: #f59e0b; }
+
+    /* Slots */
+    .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; margin-bottom: 0.9rem; }
+    .slot-card {
+      border: 1px solid #e5e7eb; border-radius: 7px; padding: 0.5rem 0.65rem;
+      display: flex; align-items: center; gap: 0.5rem; background: #f9fafb;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .slot-card.filled-z   { border-color: var(--z);    background: var(--z-lt); }
+    .slot-card.filled-b   { border-color: var(--b);    background: var(--b-lt); }
+    .slot-card.filled-sit { border-color: #f59e0b;     background: #fffbeb; }
+    .slot-dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; flex-shrink: 0; }
+    .slot-card.filled-z   .slot-dot { background: var(--z); }
+    .slot-card.filled-b   .slot-dot { background: var(--b); }
+    .slot-card.filled-sit .slot-dot { background: #f59e0b; }
+    .slot-info { flex: 1; min-width: 0; }
+    .slot-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .slot-name  { font-size: 0.74rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .slot-file  { font-size: 0.63rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .slot-remove { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 0.78rem; padding: 2px; line-height: 1; }
+    .slot-remove:hover { color: #ef4444; }
+
+    /* Nombres en línea */
+    .name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 1rem; }
+    .name-row .form-group { margin: 0; }
+
     /* Form footer */
     .form-footer {
       margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);
@@ -470,83 +522,80 @@
       </div>
       <div class="dash-card-body">
         <form id="mainForm" action="/comparar" method="POST" enctype="multipart/form-data">
-          <div class="form-grid">
+          <!-- Inputs ocultos — asignados por JS -->
+          <input type="file" name="pdf1" id="slot-input-pdf1" accept=".pdf" required style="display:none">
+          <input type="file" name="pdf2" id="slot-input-pdf2" accept=".pdf" required style="display:none">
+          <input type="file" name="sit1" id="slot-input-sit1" accept=".pdf" style="display:none">
+          <input type="file" name="sit2" id="slot-input-sit2" accept=".pdf" style="display:none">
 
-            <!-- Farmacia 1 -->
-            <div class="pharmacy-col">
-              <div class="col-header">
-                <span class="col-dot dot-z"></span>
-                <span class="col-header-text">Farmacia 1</span>
+          <!-- Zona mágica de arrastre -->
+          <div class="magic-drop" id="magicDrop">
+            <input type="file" id="magicFileInput" accept=".pdf" multiple>
+            <div class="magic-drop-title">Arrastra los PDFs aquí</div>
+            <div class="magic-drop-sub">Estadísticas e informes de situación — se detectan solos</div>
+            <div class="magic-drop-analyzing" id="magicAnalyzing">Analizando...</div>
+          </div>
+
+          <!-- Preview de detección -->
+          <div class="detection-log" id="detectionLog" style="display:none"></div>
+
+          <!-- Slots de asignación -->
+          <div class="slot-grid">
+            <div class="slot-card" id="slot-pdf1">
+              <div class="slot-dot"></div>
+              <div class="slot-info">
+                <div class="slot-label">Estadísticas · Farmacia 1</div>
+                <div class="slot-name" id="slot-pdf1-name">Sin asignar</div>
+                <div class="slot-file" id="slot-pdf1-file"></div>
               </div>
-              <div class="form-group">
-                <label>Nombre</label>
-                <input type="text" name="name1" value="Zarzuelo" required>
-              </div>
-              <p class="section-sep">Ventas</p>
-              <div class="form-group">
-                <label>PDF de estadísticas</label>
-                <div class="file-drop" id="drop1">
-                  <input type="file" name="pdf1" accept=".pdf" required id="file1">
-                  <p class="drop-label"><strong>Arrastra o haz clic</strong>para subir el PDF</p>
-                  <p class="drop-filename" id="fname1"></p>
-                </div>
-              </div>
-              <p class="section-sep">Situación</p>
-              <div class="form-group">
-                <label>Informe de situación <span class="lbl-optional">Opcional</span></label>
-                <div class="file-drop-sm" id="drop-sit1">
-                  <input type="file" name="sit1" accept=".pdf" id="file-sit1">
-                  <div class="drop-sm-body">
-                    <strong class="drop-sm-hint">Seleccionar informe</strong>
-                    <span class="drop-sm-hint">Stock parado · +365 días sin venta</span>
-                    <span class="drop-sm-filename" id="fname-sit1"></span>
-                  </div>
-                </div>
-              </div>
+              <button type="button" class="slot-remove" id="slot-pdf1-remove" style="display:none" onclick="clearSlot('pdf1')">✕</button>
             </div>
-
-            <!-- Farmacia 2 -->
-            <div class="pharmacy-col">
-              <div class="col-header">
-                <span class="col-dot dot-b"></span>
-                <span class="col-header-text">Farmacia 2</span>
+            <div class="slot-card" id="slot-pdf2">
+              <div class="slot-dot"></div>
+              <div class="slot-info">
+                <div class="slot-label">Estadísticas · Farmacia 2</div>
+                <div class="slot-name" id="slot-pdf2-name">Sin asignar</div>
+                <div class="slot-file" id="slot-pdf2-file"></div>
               </div>
-              <div class="form-group">
-                <label>Nombre</label>
-                <input type="text" name="name2" value="Barris" required>
-              </div>
-              <p class="section-sep">Ventas</p>
-              <div class="form-group">
-                <label>PDF de estadísticas</label>
-                <div class="file-drop" id="drop2">
-                  <input type="file" name="pdf2" accept=".pdf" required id="file2">
-                  <p class="drop-label"><strong>Arrastra o haz clic</strong>para subir el PDF</p>
-                  <p class="drop-filename" id="fname2"></p>
-                </div>
-              </div>
-              <p class="section-sep">Situación</p>
-              <div class="form-group">
-                <label>Informe de situación <span class="lbl-optional">Opcional</span></label>
-                <div class="file-drop-sm" id="drop-sit2">
-                  <input type="file" name="sit2" accept=".pdf" id="file-sit2">
-                  <div class="drop-sm-body">
-                    <strong class="drop-sm-hint">Seleccionar informe</strong>
-                    <span class="drop-sm-hint">Stock parado · +365 días sin venta</span>
-                    <span class="drop-sm-filename" id="fname-sit2"></span>
-                  </div>
-                </div>
-              </div>
+              <button type="button" class="slot-remove" id="slot-pdf2-remove" style="display:none" onclick="clearSlot('pdf2')">✕</button>
             </div>
+            <div class="slot-card" id="slot-sit1">
+              <div class="slot-dot"></div>
+              <div class="slot-info">
+                <div class="slot-label">Situación · Farmacia 1 <span class="lbl-optional">Opcional</span></div>
+                <div class="slot-name" id="slot-sit1-name">Sin asignar</div>
+                <div class="slot-file" id="slot-sit1-file"></div>
+              </div>
+              <button type="button" class="slot-remove" id="slot-sit1-remove" style="display:none" onclick="clearSlot('sit1')">✕</button>
+            </div>
+            <div class="slot-card" id="slot-sit2">
+              <div class="slot-dot"></div>
+              <div class="slot-info">
+                <div class="slot-label">Situación · Farmacia 2 <span class="lbl-optional">Opcional</span></div>
+                <div class="slot-name" id="slot-sit2-name">Sin asignar</div>
+                <div class="slot-file" id="slot-sit2-file"></div>
+              </div>
+              <button type="button" class="slot-remove" id="slot-sit2-remove" style="display:none" onclick="clearSlot('sit2')">✕</button>
+            </div>
+          </div>
 
-          </div><!-- /form-grid -->
+          <!-- Nombres editables -->
+          <div class="name-row">
+            <div class="form-group">
+              <label>Nombre Farmacia 1</label>
+              <input type="text" name="name1" id="inp-name1" value="Zarzuelo" required>
+            </div>
+            <div class="form-group">
+              <label>Nombre Farmacia 2</label>
+              <input type="text" name="name2" id="inp-name2" value="Barris" required>
+            </div>
+          </div>
 
           <div class="error-box" id="errorBox"></div>
 
           <div class="form-footer">
             <span class="form-hint">Genera un análisis interactivo y descargable</span>
-            <button type="submit" class="btn-submit" id="submitBtn">
-              Generar comparativa
-            </button>
+            <button type="submit" class="btn-submit" id="submitBtn">Generar comparativa</button>
           </div>
         </form>
       </div>
@@ -602,39 +651,131 @@
 </div>
 
 <script>
-// ── Drag & drop ───────────────────────────────────────────────────────────────
-function setupDrop(inputId, dropId, fnameId, hasClass) {
-  const input = document.getElementById(inputId);
-  const drop  = document.getElementById(dropId);
-  const fname = document.getElementById(fnameId);
-  function apply(file) { drop.classList.add(hasClass); fname.textContent = file.name; }
-  input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
-  drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('dragover'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-  drop.addEventListener('drop', e => {
-    e.preventDefault(); drop.classList.remove('dragover');
-    const f = e.dataTransfer.files[0];
-    if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; apply(f); }
-  });
+// ── Auto-detect PDF slots ─────────────────────────────────────────────────────
+const slots = {
+  pdf1: { pharmacy: null, file: null },
+  pdf2: { pharmacy: null, file: null },
+  sit1: { pharmacy: null, file: null },
+  sit2: { pharmacy: null, file: null },
+};
+
+function updateSlotUI(key) {
+  const s = slots[key];
+  const card     = document.getElementById('slot-' + key);
+  const nameEl   = document.getElementById('slot-' + key + '-name');
+  const fileEl   = document.getElementById('slot-' + key + '-file');
+  const removeEl = document.getElementById('slot-' + key + '-remove');
+  card.className = 'slot-card';
+  if (s.file) {
+    const colorClass = key.startsWith('sit') ? 'filled-sit'
+                     : key === 'pdf1'         ? 'filled-z' : 'filled-b';
+    card.classList.add(colorClass);
+    nameEl.textContent = s.pharmacy || '—';
+    fileEl.textContent = s.file.name;
+    removeEl.style.display = '';
+  } else {
+    nameEl.textContent = 'Sin asignar';
+    fileEl.textContent = '';
+    removeEl.style.display = 'none';
+  }
+  const input = document.getElementById('slot-input-' + key);
+  if (s.file) {
+    const dt = new DataTransfer(); dt.items.add(s.file); input.files = dt.files;
+  } else {
+    input.value = '';
+  }
 }
-function setupDropSm(inputId, dropId, fnameId) {
-  const input = document.getElementById(inputId);
-  const drop  = document.getElementById(dropId);
-  const fname = document.getElementById(fnameId);
-  function apply(file) { drop.classList.add('has-sit'); fname.textContent = file.name; }
-  input.addEventListener('change', () => { if (input.files[0]) apply(input.files[0]); });
-  drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('dragover'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-  drop.addEventListener('drop', e => {
-    e.preventDefault(); drop.classList.remove('dragover');
-    const f = e.dataTransfer.files[0];
-    if (f) { const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files; apply(f); }
-  });
+
+function updateNameInputs() {
+  if (slots.pdf1.pharmacy) document.getElementById('inp-name1').value = slots.pdf1.pharmacy;
+  if (slots.pdf2.pharmacy) document.getElementById('inp-name2').value = slots.pdf2.pharmacy;
 }
-setupDrop('file1', 'drop1', 'fname1', 'has-z');
-setupDrop('file2', 'drop2', 'fname2', 'has-b');
-setupDropSm('file-sit1', 'drop-sit1', 'fname-sit1');
-setupDropSm('file-sit2', 'drop-sit2', 'fname-sit2');
+
+function clearSlot(key) {
+  slots[key] = { pharmacy: null, file: null };
+  updateSlotUI(key);
+}
+
+function assignFile(file, detectedType, detectedPharmacy) {
+  const ventas = detectedType !== 'situacion';
+  let target = null;
+  if (ventas) {
+    if (slots.pdf1.pharmacy && slots.pdf1.pharmacy.toLowerCase() === detectedPharmacy.toLowerCase()) {
+      target = 'pdf1';
+    } else if (slots.pdf2.pharmacy && slots.pdf2.pharmacy.toLowerCase() === detectedPharmacy.toLowerCase()) {
+      target = 'pdf2';
+    } else if (!slots.pdf1.file) {
+      target = 'pdf1';
+    } else if (!slots.pdf2.file) {
+      target = 'pdf2';
+    } else {
+      target = 'pdf1';
+    }
+  } else {
+    const p = detectedPharmacy.toLowerCase();
+    const p1 = (slots.pdf1.pharmacy || '').toLowerCase();
+    const p2 = (slots.pdf2.pharmacy || '').toLowerCase();
+    if (p1 && (p.includes(p1.slice(0, 5)) || p1.includes(p.slice(0, 5)))) {
+      target = 'sit1';
+    } else if (p2 && (p.includes(p2.slice(0, 5)) || p2.includes(p.slice(0, 5)))) {
+      target = 'sit2';
+    } else if (!slots.sit1.file) {
+      target = 'sit1';
+    } else {
+      target = 'sit2';
+    }
+  }
+  slots[target] = { pharmacy: detectedPharmacy, file };
+  updateSlotUI(target);
+  updateNameInputs();
+}
+
+async function analyzeFile(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const resp = await fetch('/detect_pdf', { method: 'POST', body: fd });
+    if (!resp.ok) return { type: 'ventas', pharmacy: '' };
+    return await resp.json();
+  } catch {
+    return { type: 'ventas', pharmacy: '' };
+  }
+}
+
+function addDetectionEntry(file, info) {
+  const log = document.getElementById('detectionLog');
+  log.style.display = 'flex';
+  const typeLabel = info.type === 'situacion' ? 'Situación' : 'Ventas';
+  const typeClass = info.type === 'situacion' ? 'type-situacion' : 'type-ventas';
+  const entry = document.createElement('div');
+  entry.className = 'det-entry';
+  entry.innerHTML = `<span class="det-filename">📄 ${file.name}</span>`
+    + `<span class="det-row ${typeClass}">→ ${typeLabel}</span>`
+    + `<span class="det-row">→ ${info.pharmacy || '—'}</span>`;
+  log.appendChild(entry);
+}
+
+async function handleFiles(files) {
+  const analyzing = document.getElementById('magicAnalyzing');
+  analyzing.style.display = 'block';
+  const tasks = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+  for (const file of tasks) {
+    const info = await analyzeFile(file);
+    addDetectionEntry(file, info);
+    assignFile(file, info.type, info.pharmacy || file.name.replace(/\.pdf$/i, ''));
+  }
+  analyzing.style.display = 'none';
+}
+
+const magicDrop  = document.getElementById('magicDrop');
+const magicInput = document.getElementById('magicFileInput');
+magicDrop.addEventListener('dragover',  e => { e.preventDefault(); magicDrop.classList.add('dragover'); });
+magicDrop.addEventListener('dragleave', () => magicDrop.classList.remove('dragover'));
+magicDrop.addEventListener('drop', e => {
+  e.preventDefault(); magicDrop.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+});
+magicInput.addEventListener('change', () => { if (magicInput.files.length) handleFiles(magicInput.files); });
 
 // ── Loading & polling ─────────────────────────────────────────────────────────
 let _pollId = null;
@@ -667,8 +808,8 @@ function _startPolling(jobToken) {
 
 document.getElementById('mainForm').addEventListener('submit', async function(e) {
   e.preventDefault();
-  const f1  = document.getElementById('file1').files.length;
-  const f2  = document.getElementById('file2').files.length;
+  const f1  = document.getElementById('slot-input-pdf1').files.length;
+  const f2  = document.getElementById('slot-input-pdf2').files.length;
   const err = document.getElementById('errorBox');
   if (!f1 || !f2) {
     err.style.display = 'block';

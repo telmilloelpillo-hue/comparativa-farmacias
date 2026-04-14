@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, send_file, session, redirect, url_for, jsonify
 import os, tempfile, uuid, json, threading
 from datetime import datetime
-from pdf_parser import extract_products, compare_products, detect_lab, extract_situation
+from pdf_parser import extract_products, compare_products, detect_lab, extract_situation, detect_pdf_header
 
 try:
     import anthropic as _anthropic
@@ -65,6 +65,27 @@ def check_auth():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/detect_pdf', methods=['POST'])
+def detect_pdf_route():
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'error': 'No file'}), 400
+    header = f.read(4)
+    f.seek(0)
+    if header != b'%PDF':
+        return jsonify({'error': 'Not a PDF'}), 400
+    tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    try:
+        f.save(tmp.name)
+        tmp.close()
+        result = detect_pdf_header(tmp.name)
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+    return jsonify(result)
 
 @app.route('/comparar', methods=['POST'])
 def comparar():
