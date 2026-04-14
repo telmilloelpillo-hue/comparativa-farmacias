@@ -249,7 +249,7 @@
     <div class="detail-meta-row">
       <div class="detail-order-id" id="detailOrderId"></div>
       <div style="display:flex;align-items:center;gap:0.6rem">
-        <a id="detailPdfBtn" class="enc-pdf-btn" style="display:none" target="_blank">PDF</a>
+        <button id="detailPdfBtn" class="enc-pdf-btn" onclick="downloadDetailPdf()">PDF</button>
         <div id="detailStatusBadge"></div>
       </div>
     </div>
@@ -275,6 +275,43 @@ function loadEncargos() {
 
 function persistEncargos() {
   try { localStorage.setItem('encargos', JSON.stringify(encargos)); } catch(e) {}
+}
+
+// ─── PDF DEL PEDIDO ───────────────────────────────────────────────────────────
+async function downloadDetailPdf() {
+  if (currentEncargoIdx === null) return;
+  const enc = encargos[currentEncargoIdx];
+
+  // Si el PDF ya está guardado en servidor, abrirlo directamente
+  if (enc.pdf_id) {
+    window.open('/pedido_file/' + enc.pdf_id, '_blank');
+    return;
+  }
+
+  // Si no hay pdf_id (encargo antiguo), generarlo on-the-fly
+  const btn = document.getElementById('detailPdfBtn');
+  btn.textContent = '...'; btn.disabled = true;
+  const rows = (enc.products || []).map(p => ({
+    code: p.codigo, desc: p.descripcion,
+    qz:  p.pedido_zarzuelo || 0,
+    qb:  p.pedido_barris   || 0,
+    tot: p.pedido_total    || (p.pedido_zarzuelo || 0) + (p.pedido_barris || 0),
+  }));
+  try {
+    const resp = await fetch('/pedido_pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lab: enc.lab, name1: enc.name1, name2: enc.name2, rows }),
+    });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `pedido_${enc.order_id}.pdf`;
+      a.click(); URL.revokeObjectURL(url);
+    }
+  } catch(e) {}
+  btn.textContent = 'PDF'; btn.disabled = false;
 }
 
 // ─── STATUS ───────────────────────────────────────────────────────────────────
@@ -357,9 +394,7 @@ function renderDetail(idx) {
   document.getElementById('pageSubtitle').textContent = enc.date + ' · ' + (enc.lab || '');
   document.getElementById('detailOrderId').textContent = enc.order_id;
   document.getElementById('detailStatusBadge').innerHTML = statusBadgeHTML(status);
-  const pdfBtn = document.getElementById('detailPdfBtn');
-  if (enc.pdf_id) { pdfBtn.href = '/pedido_file/' + enc.pdf_id; pdfBtn.style.display = ''; }
-  else { pdfBtn.style.display = 'none'; }
+  document.getElementById('detailPdfBtn').style.display = '';
   document.getElementById('detailMeta').textContent =
     (enc.name1 || 'Farm. 1') + ' vs ' + (enc.name2 || 'Farm. 2') +
     ' · ' + (enc.products || []).length + ' productos';
