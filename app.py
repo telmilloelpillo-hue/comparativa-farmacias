@@ -32,7 +32,7 @@ C_Z_BG      = colors.HexColor('#fef2f2')   # rojo muy suave
 C_B_BG      = colors.HexColor('#eff6ff')   # azul muy suave
 C_Z_HDR     = colors.HexColor('#dc2626')   # rojo farmacia 1
 C_B_HDR     = colors.HexColor('#1d4ed8')   # azul farmacia 2
-C_ROW_ALT   = colors.HexColor('#f0fdf4')   # verde muy suave (fila par)
+C_ROW_ALT   = colors.HexColor('#f3f4f6')   # gris muy suave (fila par)
 C_GRID      = colors.HexColor('#d1fae5')   # borde verde suave
 C_WARNING   = colors.HexColor('#fef9c3')
 C_PARADO    = colors.HexColor('#ffe0b2')   # naranja suave → stock parado
@@ -502,6 +502,8 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     for r in results:
         idx = len(data)
         desc_text = r['description']
+        # strip characters unsupported by Helvetica (e.g. ■ → black square in PDF)
+        desc_text = desc_text.replace('\u25a0', '').replace('\u25cf', '').replace('\u25aa', '').strip()
         max_desc = 48 if show_s365 else 52
         if len(desc_text) > max_desc:
             desc_text = desc_text[:max_desc-2] + '…'
@@ -567,16 +569,14 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     ])
 
     for idx, status, needs_review, parado1, parado2, pedido1, pedido2 in row_meta:
-        if needs_review:
-            ts.add('BACKGROUND', (0,idx), (-1,idx), C_WARNING)
-        elif status == 'only1':
-            ts.add('BACKGROUND', (0,idx), (-1,idx), C_Z_BG)
-            ts.add('TEXTCOLOR',  (span2_start,idx), (-1,idx), colors.HexColor('#bbbbbb'))
-        elif status == 'only2':
-            ts.add('BACKGROUND', (0,idx), (-1,idx), C_B_BG)
-            ts.add('TEXTCOLOR',  (2,idx), (span1_end,idx), colors.HexColor('#bbbbbb'))
-        elif idx % 2 == 0:
+        # alternating white / light-gray rows for all data rows
+        if idx % 2 == 0:
             ts.add('BACKGROUND', (0,idx), (-1,idx), C_ROW_ALT)
+        # gray text for columns that don't apply to this pharmacy
+        if status == 'only1':
+            ts.add('TEXTCOLOR', (span2_start,idx), (-1,idx), colors.HexColor('#bbbbbb'))
+        elif status == 'only2':
+            ts.add('TEXTCOLOR', (2,idx), (span1_end,idx), colors.HexColor('#bbbbbb'))
 
         if parado1:
             ts.add('BACKGROUND', (2,idx), (2,idx), C_PARADO)
@@ -596,9 +596,6 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
 
     # ── Leyenda ───────────────────────────────────────────────────────────────
     legend_items = [
-        (C_Z_BG,    C_Z_HDR,                    f'Solo en {name1}'),
-        (C_B_BG,    C_B_HDR,                    f'Solo en {name2}'),
-        (C_WARNING, colors.HexColor('#b8860b'),  'Revisar'),
         (C_PEDIDO,  colors.HexColor('#2e7d32'),  'Pedido sugerido'),
     ]
     if show_s365:
