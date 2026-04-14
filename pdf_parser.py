@@ -660,31 +660,45 @@ def detect_lab(pdf_path):
     return f'Lab {code}' if code else 'Laboratorio desconocido'
 
 
+_DATE_LINE_RE = re.compile(
+    r'^(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|\d{1,2}[\/\-])',
+    re.IGNORECASE,
+)
+
 def detect_pdf_header(pdf_path):
     """Lee SOLO la cabecera de la página 1 para detectar tipo de documento y farmacia.
+
+    Usa crop + extract_text en lugar de chars crudos para evitar interleaving
+    entre líneas distintas (ej: nombre farmacia vs línea de fecha).
 
     Returns:
         {'type': 'ventas'|'situacion', 'pharmacy': str}
     """
     with pdfplumber.open(pdf_path) as pdf:
         page = pdf.pages[0]
-        chars = page.chars
-        page_width = float(page.width)
+        w = float(page.width)
+        mid = w * 0.45
 
-    # Solo caracteres en la banda superior (top < 60 puntos)
-    header_chars = [c for c in chars if float(c.get('top', 999)) < 60]
+        left_text  = (page.crop((0,   0, mid, 65)).extract_text() or '').strip()
+        right_text = (page.crop((mid, 0, w,   65)).extract_text() or '').strip()
 
-    mid = page_width * 0.45  # separador izquierda/derecha
-    left_chars  = sorted([c for c in header_chars if float(c['x0']) < mid],  key=lambda c: c['x0'])
-    right_chars = sorted([c for c in header_chars if float(c['x0']) >= mid], key=lambda c: c['x0'])
+    # Tipo de documento: buscar clave en líneas del lado izquierdo
+    doc_type = 'ventas'
+    for line in left_text.splitlines():
+        ll = line.lower()
+        if 'situaci' in ll or 'informe' in ll:
+            doc_type = 'situacion'
+            break
+        if 'estad' in ll or 'ventas' in ll:
+            doc_type = 'ventas'
+            break
 
-    left_text  = ''.join(c['text'] for c in left_chars).strip()
-    right_text = ''.join(c['text'] for c in right_chars).strip()
+    # Farmacia: primera línea del lado derecho que no sea una fecha
+    pharmacy = ''
+    for line in right_text.splitlines():
+        line = line.strip()
+        if line and not _DATE_LINE_RE.match(line):
+            pharmacy = line
+            break
 
-    left_lower = left_text.lower()
-    if 'situaci' in left_lower or 'informe' in left_lower:
-        doc_type = 'situacion'
-    else:
-        doc_type = 'ventas'
-
-    return {'type': doc_type, 'pharmacy': right_text}
+    return {'type': doc_type, 'pharmacy': pharmacy}
