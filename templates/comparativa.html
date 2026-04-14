@@ -2006,7 +2006,10 @@ function downloadRepartoPDF() {
   .finally(() => { btn.textContent = 'Descargar PDF'; btn.disabled = false; });
 }
 
-function confirmarPedido() {
+async function confirmarPedido() {
+  const btn = document.querySelector('.btn-confirm');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
   const codes = getPedidoCodes();
   const productMap = {};
   PRODUCTS.forEach(p => { productMap[p.code] = p; });
@@ -2036,12 +2039,28 @@ function confirmarPedido() {
     };
   });
 
+  // Guardar PDF en el servidor para histórico
+  const pdfRows = products.map(p => ({
+    code: p.codigo, desc: p.descripcion,
+    qz: p.pedido_zarzuelo, qb: p.pedido_barris, tot: p.pedido_total,
+  }));
+  let pdf_id = null;
+  try {
+    const resp = await fetch('/save_pedido_pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: orderId, lab: LAB, name1: NAME1, name2: NAME2, rows: pdfRows }),
+    });
+    if (resp.ok) { const d = await resp.json(); pdf_id = d.pdf_id || null; }
+  } catch(e) {}
+
   encargos.push({
     order_id: orderId,
     date:     new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }),
     lab:      LAB, name1: NAME1, name2: NAME2,
     status:   'pendiente',
     products,
+    pdf_id,
   });
 
   try { localStorage.setItem('encargos', JSON.stringify(encargos)); } catch(e) {}

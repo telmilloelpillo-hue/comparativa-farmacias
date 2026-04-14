@@ -91,6 +91,13 @@
     .encargo-units {
       font-size: 0.78rem; color: var(--muted); white-space: nowrap; flex-shrink: 0;
     }
+    .enc-pdf-btn {
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
+      color: var(--accent); border: 1px solid var(--accent); border-radius: 4px;
+      padding: 2px 8px; text-decoration: none; white-space: nowrap; flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+    .enc-pdf-btn:hover { background: var(--accent); color: #fff; }
 
     .empty-state {
       text-align: center; padding: 4rem 1.5rem;
@@ -241,7 +248,10 @@
 
     <div class="detail-meta-row">
       <div class="detail-order-id" id="detailOrderId"></div>
-      <div id="detailStatusBadge"></div>
+      <div style="display:flex;align-items:center;gap:0.6rem">
+        <a id="detailPdfBtn" class="enc-pdf-btn" style="display:none" target="_blank">PDF</a>
+        <div id="detailStatusBadge"></div>
+      </div>
     </div>
     <div class="detail-meta" id="detailMeta"></div>
 
@@ -315,6 +325,7 @@ function renderList() {
           <div class="encargo-info-sub">${enc.date} · ${enc.name1 || ''} vs ${enc.name2 || ''}</div>
         </div>
         <div class="encargo-units">${nProds} prod · ${totalUds} uds</div>
+        ${enc.pdf_id ? `<a class="enc-pdf-btn" href="/pedido_file/${enc.pdf_id}" target="_blank" onclick="event.stopPropagation()" title="Ver PDF del pedido">PDF</a>` : ''}
         <div class="encargo-status-col">${statusBadgeHTML(status)}</div>
       </div>`;
   }).join('');
@@ -346,6 +357,9 @@ function renderDetail(idx) {
   document.getElementById('pageSubtitle').textContent = enc.date + ' · ' + (enc.lab || '');
   document.getElementById('detailOrderId').textContent = enc.order_id;
   document.getElementById('detailStatusBadge').innerHTML = statusBadgeHTML(status);
+  const pdfBtn = document.getElementById('detailPdfBtn');
+  if (enc.pdf_id) { pdfBtn.href = '/pedido_file/' + enc.pdf_id; pdfBtn.style.display = ''; }
+  else { pdfBtn.style.display = 'none'; }
   document.getElementById('detailMeta').textContent =
     (enc.name1 || 'Farm. 1') + ' vs ' + (enc.name2 || 'Farm. 2') +
     ' · ' + (enc.products || []).length + ' productos';

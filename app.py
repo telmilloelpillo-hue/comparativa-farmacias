@@ -23,6 +23,8 @@ _progress_store = {}
 
 # ── Configuración ──────────────────────────────────────────────────────────────
 PASSWORD             = "farmacias2026"
+PEDIDOS_DIR          = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pedidos')
+os.makedirs(PEDIDOS_DIR, exist_ok=True)
 MAX_PDF_MB           = 20
 app.config['MAX_CONTENT_LENGTH'] = MAX_PDF_MB * 1024 * 1024
 
@@ -350,6 +352,37 @@ def pedido_pdf():
     return send_file(tmp.name, as_attachment=True,
                      download_name=f'pedido_{slug}_{fecha}.pdf',
                      mimetype='application/pdf')
+
+
+@app.route('/save_pedido_pdf', methods=['POST'])
+def save_pedido_pdf():
+    if not session.get('authenticated'):
+        return jsonify({'error': 'no auth'}), 401
+    data     = request.get_json(force=True)
+    order_id = data.get('order_id', '')
+    lab      = data.get('lab',      'Farmacia')
+    name1    = data.get('name1',    'Farmacia 1')
+    name2    = data.get('name2',    'Farmacia 2')
+    rows     = data.get('rows',     [])
+    if not order_id:
+        return jsonify({'error': 'order_id required'}), 400
+    safe_id  = ''.join(c if c.isalnum() or c in '-_' else '_' for c in order_id)
+    pdf_path = os.path.join(PEDIDOS_DIR, f'{safe_id}.pdf')
+    _generate_pedido_pdf(rows, pdf_path, lab, name1, name2)
+    return jsonify({'pdf_id': safe_id})
+
+
+@app.route('/pedido_file/<pdf_id>')
+def pedido_file(pdf_id):
+    if not session.get('authenticated'):
+        return redirect(url_for('login'))
+    safe_id  = ''.join(c if c.isalnum() or c in '-_' else '_' for c in pdf_id)
+    pdf_path = os.path.join(PEDIDOS_DIR, f'{safe_id}.pdf')
+    if not os.path.exists(pdf_path):
+        return 'PDF no encontrado', 404
+    return send_file(pdf_path, mimetype='application/pdf',
+                     as_attachment=False,
+                     download_name=f'pedido_{safe_id}.pdf')
 
 
 @app.route('/encargos')
