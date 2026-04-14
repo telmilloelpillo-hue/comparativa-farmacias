@@ -102,6 +102,19 @@
     .stat-chip.chip-b.active, .stat-chip.chip-b:hover { background: var(--b); border-color: var(--b); }
     .stat-chip.chip-par.active,.stat-chip.chip-par:hover{ background: #e65100; border-color: #e65100; }
 
+    /* ── PERIOD MONTH SELECTOR ── */
+    .period-row { display: flex; align-items: center; gap: 0.75rem; margin: 0.4rem 0 0.2rem; flex-wrap: wrap; }
+    .period-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+    .mes-group { display: flex; gap: 0.3rem; }
+    .mes-btn {
+      padding: 0.2rem 0.6rem; border: 1px solid var(--border); border-radius: 999px;
+      font-size: 0.72rem; font-weight: 600; cursor: pointer;
+      background: var(--surface); color: var(--muted); transition: all 0.15s;
+    }
+    .mes-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .mes-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+    .ped-hint { font-size: 0.68rem; color: var(--muted); margin-top: 0.25rem; font-style: italic; display: block; }
+
     /* ── SEARCH + ACTIONS BAR ── */
     .search-bar {
       background: white; border-bottom: 1px solid var(--border);
@@ -772,6 +785,17 @@
     </div>
     {% endif %}
   </div>
+
+  <div class="period-row">
+    <span class="period-label">Pedido para:</span>
+    <div class="mes-group" id="mesGroup">
+      <button class="mes-btn" data-mes="2" onclick="setMesesPedido(2)">2m</button>
+      <button class="mes-btn active" data-mes="3" onclick="setMesesPedido(3)">3m</button>
+      <button class="mes-btn" data-mes="4" onclick="setMesesPedido(4)">4m</button>
+      <button class="mes-btn" data-mes="5" onclick="setMesesPedido(5)">5m</button>
+      <button class="mes-btn" data-mes="6" onclick="setMesesPedido(6)">6m</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── SEARCH BAR ── -->
@@ -861,7 +885,7 @@
           <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1 }}</td>
           <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1_prev }}</td>
           {% if has_sit %}<td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ r.s365_1 }}</td>{% endif %}
-          <td id="pedido1-{{ r.code }}" class="{{ 'cell-pedido' if pedido1_val else ('cell-muted' if r.status == 'only2') }}"><span>{{ pedido1_val if pedido1_val else '—' }}</span>{% if pedido1_val and r.status != 'only2' %}<button class="btn-qadd" id="qadd1-{{ r.code }}" onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','z',{{ pedido1_val }})">+</button>{% endif %}</td>
+          <td id="pedido1-{{ r.code }}" class="{{ 'cell-pedido' if pedido1_val else ('cell-muted' if r.status == 'only2') }}"><span>{{ pedido1_val if pedido1_val else '—' }}</span>{% if r.status != 'only2' %}<button class="btn-qadd" id="qadd1-{{ r.code }}" onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','z')">+</button>{% endif %}</td>
 
           <!-- F2 -->
           <td class="col-divider {{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.stock2 if r.status != 'only1' else '—' }}</td>
@@ -869,7 +893,7 @@
           <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2 }}</td>
           <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2_prev }}</td>
           {% if has_sit %}<td class="{{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.s365_2 }}</td>{% endif %}
-          <td id="pedido2-{{ r.code }}" class="{{ 'cell-pedido' if pedido2_val else ('cell-muted' if r.status == 'only1') }}"><span>{{ pedido2_val if pedido2_val else '—' }}</span>{% if pedido2_val and r.status != 'only1' %}<button class="btn-qadd" id="qadd2-{{ r.code }}" onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','b',{{ pedido2_val }})">+</button>{% endif %}</td>
+          <td id="pedido2-{{ r.code }}" class="{{ 'cell-pedido' if pedido2_val else ('cell-muted' if r.status == 'only1') }}"><span>{{ pedido2_val if pedido2_val else '—' }}</span>{% if r.status != 'only1' %}<button class="btn-qadd" id="qadd2-{{ r.code }}" onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','b')">+</button>{% endif %}</td>
 
         </tr>
         {% endfor %}
@@ -922,6 +946,7 @@
               <button class="pedido-save-btn" onclick="savePedido('z')">Guardar</button>
               <button class="pedido-clear-btn" onclick="clearPedido('z')">Borrar</button>
             </div>
+            <span class="ped-hint" id="psugerido-z"></span>
             <div class="pedido-current" id="pcurrent-z"></div>
           </div>
         </div>
@@ -949,6 +974,7 @@
               <button class="pedido-save-btn" onclick="savePedido('b')">Guardar</button>
               <button class="pedido-clear-btn" onclick="clearPedido('b')">Borrar</button>
             </div>
+            <span class="ped-hint" id="psugerido-b"></span>
             <div class="pedido-current" id="pcurrent-b"></div>
           </div>
         </div>
@@ -1057,6 +1083,7 @@ function _persistPedidos() {
 let currentPedidoRows = [];
 let selectedIdx  = null;
 let activeFilter = 'all';
+let mesesPedido  = 3;
 let sortState    = { col: null, asc: true };
 // Últimos 6 meses del año anterior (Jul–Dic) + 12 del año actual
 const MONTH_LABELS = ['J','A','S','O','N','D','E','F','M','A','M','J','J','A','S','O','N','D'];
@@ -1290,6 +1317,8 @@ function renderFarmTab(suffix, r) {
   const saved = manualPedidos[key];
   const input = document.getElementById('mpedido-' + suffix);
   input.value = saved != null && saved > 0 ? saved : '';
+  const hint = document.getElementById('psugerido-' + suffix);
+  if (hint) hint.textContent = 'Sugerido (' + mesesPedido + 'm): ' + calcPedidoSugerido(r, suffix, mesesPedido);
   updatePedidoCurrent(suffix, r.code);
 }
 
@@ -1395,8 +1424,53 @@ function updateTopbarBadge() {
   if (typeof updateStepperUI === 'function') updateStepperUI();
 }
 
+// ─── PEDIDO MONTH SELECTOR ────────────────────────────────────────────────────
+function calcPedidoSugerido(r, suffix, n) {
+  const isZ    = suffix === 'z';
+  const totCur = parseInt(r[isZ ? 'total1' : 'total2'])          || 0;
+  const totPrv = parseInt(r[isZ ? 'total1_prev' : 'total2_prev']) || 0;
+  const stock  = parseInt(r[isZ ? 'stock1' : 'stock2'])           || 0;
+  const v12m   = totCur + totPrv;
+  return Math.max(0, Math.ceil(v12m * n / 12) - stock);
+}
+
+function setMesesPedido(n) {
+  mesesPedido = n;
+  document.querySelectorAll('.mes-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.mes) === n);
+  });
+  recalcTablePedidos();
+  if (selectedIdx !== null) {
+    const r = PRODUCTS[selectedIdx];
+    ['z', 'b'].forEach(suffix => {
+      const hint = document.getElementById('psugerido-' + suffix);
+      if (hint) hint.textContent = 'Sugerido (' + n + 'm): ' + calcPedidoSugerido(r, suffix, mesesPedido);
+    });
+  }
+}
+
+function recalcTablePedidos() {
+  PRODUCTS.forEach(r => {
+    ['z', 'b'].forEach(suffix => {
+      const farmIdx = suffix === 'z' ? 1 : 2;
+      const key     = r.code + '_' + suffix;
+      if ((manualPedidos[key] || 0) > 0) return;
+      const newVal = calcPedidoSugerido(r, suffix, mesesPedido);
+      const cell   = document.getElementById('pedido' + farmIdx + '-' + r.code);
+      if (!cell) return;
+      const isOnlyOther = (suffix === 'z' && r.status === 'only2') ||
+                          (suffix === 'b' && r.status === 'only1');
+      const span = cell.querySelector('span');
+      if (span) span.textContent = newVal > 0 ? newVal : '—';
+      cell.className = newVal > 0 ? 'cell-pedido' : (isOnlyOther ? 'cell-muted' : '');
+    });
+  });
+}
+
 // ─── QUICK ADD PEDIDO ─────────────────────────────────────────────────────────
-function quickAddPedido(code, suffix, suggested) {
+function quickAddPedido(code, suffix) {
+  const _r = PRODUCTS.find(p => p.code === code);
+  const suggested = _r ? calcPedidoSugerido(_r, suffix, mesesPedido) : 0;
   if (!suggested || suggested <= 0) return;
   const key      = code + '_' + suffix;
   const farmIdx  = suffix === 'z' ? 1 : 2;
