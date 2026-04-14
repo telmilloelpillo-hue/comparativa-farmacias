@@ -27,16 +27,16 @@ MAX_PDF_MB           = 20
 app.config['MAX_CONTENT_LENGTH'] = MAX_PDF_MB * 1024 * 1024
 
 # ── Colores ────────────────────────────────────────────────────────────────────
-C_HEADER    = colors.HexColor('#2c3e50')
-C_Z_BG      = colors.HexColor('#fdecea')
-C_B_BG      = colors.HexColor('#e8f3fb')
-C_Z_HDR     = colors.HexColor('#c0392b')
-C_B_HDR     = colors.HexColor('#1a6fa8')
-C_ROW_ALT   = colors.HexColor('#f7f5f0')
-C_GRID      = colors.HexColor('#d0cdc8')
-C_WARNING   = colors.HexColor('#fff3cd')
+C_HEADER    = colors.HexColor('#166534')   # verde acento web
+C_Z_BG      = colors.HexColor('#fef2f2')   # rojo muy suave
+C_B_BG      = colors.HexColor('#eff6ff')   # azul muy suave
+C_Z_HDR     = colors.HexColor('#dc2626')   # rojo farmacia 1
+C_B_HDR     = colors.HexColor('#1d4ed8')   # azul farmacia 2
+C_ROW_ALT   = colors.HexColor('#f0fdf4')   # verde muy suave (fila par)
+C_GRID      = colors.HexColor('#d1fae5')   # borde verde suave
+C_WARNING   = colors.HexColor('#fef9c3')
 C_PARADO    = colors.HexColor('#ffe0b2')   # naranja suave → stock parado
-C_PEDIDO    = colors.HexColor('#d4edda')   # verde suave → pedido > 0
+C_PEDIDO    = colors.HexColor('#dcfce7')   # verde suave → pedido > 0
 
 # ── Login ──────────────────────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
@@ -410,7 +410,7 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
         textColor=colors.white)
     sub_style = ParagraphStyle('sub',
         fontName='Helvetica', fontSize=7.5, leading=9,
-        textColor=colors.HexColor('#a0aab4'))
+        textColor=colors.HexColor('#d1fae5'))
     cell_style = ParagraphStyle('cell',
         fontName='Helvetica', fontSize=7, leading=8.5,
         textColor=colors.HexColor('#1c1a17'))
@@ -670,7 +670,7 @@ def _build_logistics_table(results, name1, name2,
     from reportlab.platypus import KeepTogether
 
     now = _dt.today()
-    C_LOG_HDR   = colors.HexColor('#2c3e50')
+    C_LOG_HDR   = colors.HexColor('#166534')
     C_TRASPASO  = colors.HexColor('#e8f5e9')   # verde suave
     C_EXCESO    = colors.HexColor('#fff3e0')   # naranja suave
     C_CADUCIDAD = colors.HexColor('#fce4ec')   # rojo suave

@@ -977,7 +977,10 @@
   </div>
   <div class="step3-nav">
     <button class="btn-step-prev" onclick="goToStep(2)">← Anterior</button>
-    <button class="btn-confirm" onclick="confirmarPedido()">Confirmar pedido</button>
+    <div style="display:flex;gap:0.65rem;align-items:center">
+      <button class="btn-step-prev" id="btnDescargaReparto" onclick="downloadRepartoPDF()">&#11015; Descargar PDF</button>
+      <button class="btn-confirm" onclick="confirmarPedido()">Confirmar pedido</button>
+    </div>
   </div>
 </div>
 
@@ -1779,7 +1782,9 @@ function buildStep2Cards() {
 function onRepartoInput(code) {
   const zVal = parseInt(document.getElementById('ri-' + code + '-z')?.value) || 0;
   const bVal = parseInt(document.getElementById('ri-' + code + '-b')?.value) || 0;
-  repartoAlloc[code] = { z: zVal, b: bVal };
+  repartoAlloc[code]  = { z: zVal, b: bVal };
+  // Update the total to match what the user actually entered
+  repartoTotals[code] = zVal + bVal;
   // Keep manualPedidos in sync so Step 1 table stays updated
   if (zVal > 0) manualPedidos[code + '_z'] = zVal; else delete manualPedidos[code + '_z'];
   if (bVal > 0) manualPedidos[code + '_b'] = bVal; else delete manualPedidos[code + '_b'];
@@ -1835,6 +1840,39 @@ function buildStep3View() {
         <div class="step3-alloc alloc-total">Total <strong>${total}</strong></div>
       </div>`;
   }).join('');
+}
+
+function downloadRepartoPDF() {
+  const codes = getPedidoCodes();
+  const productMap = {};
+  PRODUCTS.forEach(p => { productMap[p.code] = p; });
+
+  const rows = codes.map(code => {
+    const p     = productMap[code] || {};
+    const alloc = repartoAlloc[code] || { z: 0, b: 0 };
+    const total = repartoTotals[code] || 0;
+    return { code, desc: p.description || code, qz: alloc.z, qb: alloc.b, tot: total };
+  }).filter(r => r.tot > 0);
+
+  if (!rows.length) return;
+
+  const btn = document.getElementById('btnDescargaReparto');
+  btn.textContent = 'Generando…'; btn.disabled = true;
+  fetch('/pedido_pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lab: LAB, name1: NAME1, name2: NAME2, rows })
+  })
+  .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
+  .then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pedido_${LAB.replace(/\s+/g,'_')}.pdf`;
+    a.click(); URL.revokeObjectURL(url);
+  })
+  .catch(() => alert('Error al generar el PDF.'))
+  .finally(() => { btn.textContent = '⬇ Descargar PDF'; btn.disabled = false; });
 }
 
 function confirmarPedido() {
