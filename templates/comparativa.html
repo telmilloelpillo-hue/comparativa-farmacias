@@ -196,9 +196,26 @@
     /* Sortable headers */
     th.sortable { cursor: pointer; user-select: none; }
     th.sortable:hover { filter: brightness(1.15); }
-    .sort-icon { display: inline-block; margin-left: 3px; font-size: 0.6rem; opacity: 0.6; }
-    th.sort-asc  .sort-icon,
+    .sort-icon {
+      display: inline-flex; flex-direction: column; gap: 1px;
+      vertical-align: middle; margin-left: 4px; margin-bottom: 1px;
+      opacity: 0.45;
+    }
+    .sort-icon::before, .sort-icon::after {
+      content: ''; display: block; width: 0; height: 0;
+    }
+    .sort-icon::before {
+      border-left: 3px solid transparent; border-right: 3px solid transparent;
+      border-bottom: 3.5px solid currentColor;
+    }
+    .sort-icon::after {
+      border-left: 3px solid transparent; border-right: 3px solid transparent;
+      border-top: 3.5px solid currentColor;
+    }
+    th.sort-asc  .sort-icon { opacity: 1; }
+    th.sort-asc  .sort-icon::after  { display: none; }
     th.sort-desc .sort-icon { opacity: 1; }
+    th.sort-desc .sort-icon::before { display: none; }
 
     /* Body sticky-left cells: lower z than header, higher than normal td */
     td.sticky-col   { position: sticky; left: 0;    background: white; z-index: 5; }
@@ -244,9 +261,20 @@
       width: 0; overflow: hidden; border-left: 1px solid var(--border);
       background: white; display: flex; flex-direction: column;
       transition: width 0.22s ease; flex-shrink: 0;
+      position: relative;
     }
     .decision-panel.open { width: var(--panel-w); }
     .panel-inner { width: var(--panel-w); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+    /* Resize handle */
+    .panel-resize-handle {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 6px;
+      cursor: ew-resize; z-index: 20; background: transparent;
+      transition: background 0.15s;
+    }
+    .panel-resize-handle:hover,
+    .panel-resize-handle.dragging { background: var(--accent); opacity: 0.25; }
+    @media (max-width: 900px) { .panel-resize-handle { display: none; } }
 
     .panel-header {
       padding: 0.8rem 0.9rem 0.65rem; border-bottom: 1px solid var(--border);
@@ -672,11 +700,21 @@
     .btn-confirm:hover { background: #14532d; }
 
     /* ── QUICK ADD PEDIDO ── */
+    td[id^="pedido"] {
+      position: relative;
+      text-align: center;
+    }
+    td[id^="pedido"] span {
+      display: inline-block;
+      width: 100%;
+      text-align: center;
+    }
     .btn-qadd {
-      margin-left: 3px; padding: 1px 5px;
+      position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+      padding: 1px 5px;
       background: var(--accent); color: white; border: none; border-radius: 3px;
       font-family: 'Inter', sans-serif; font-size: 0.6rem; font-weight: 700;
-      cursor: pointer; vertical-align: middle;
+      cursor: pointer;
       opacity: 0; transition: opacity 0.1s, background 0.1s; line-height: 1.6;
     }
     tbody tr:hover .btn-qadd { opacity: 1; }
@@ -842,19 +880,19 @@
           <th class="th-b col-divider" colspan="{{ 5 + (1 if has_sit else 0) }}">{{ name2 }}</th>
         </tr>
         <tr>
-          <th class="th-z sortable" data-col="{{ p1_base }}"     onclick="sortTable({{ p1_base }})">Stock <span class="sort-icon">&#8597;</span></th>
-          <th class="th-z sortable" data-col="{{ p1_base+1 }}"   onclick="sortTable({{ p1_base+1 }})">S.min <span class="sort-icon">&#8597;</span></th>
-          <th class="th-z sortable" data-col="{{ p1_base+2 }}"   onclick="sortTable({{ p1_base+2 }})">V.{{ yr_cur }} <span class="sort-icon">&#8597;</span></th>
-          <th class="th-z sortable" data-col="{{ p1_base+3 }}"   onclick="sortTable({{ p1_base+3 }})">V.{{ yr_prev }} <span class="sort-icon">&#8597;</span></th>
-          {% if has_sit %}<th class="th-z sortable" data-col="{{ p1_base+4 }}" onclick="sortTable({{ p1_base+4 }})">S.365 <span class="sort-icon">&#8597;</span></th>{% endif %}
-          <th class="th-z sortable" data-col="{{ p1_ped }}"      onclick="sortTable({{ p1_ped }})">Pedido <span class="sort-icon">&#8597;</span></th>
+          <th class="th-z sortable" data-col="{{ p1_base }}"     onclick="sortTable({{ p1_base }})">Stock <span class="sort-icon"></span></th>
+          <th class="th-z sortable" data-col="{{ p1_base+1 }}"   onclick="sortTable({{ p1_base+1 }})">S.min <span class="sort-icon"></span></th>
+          <th class="th-z sortable" data-col="{{ p1_base+2 }}"   onclick="sortTable({{ p1_base+2 }})">V.{{ yr_cur }} <span class="sort-icon"></span></th>
+          <th class="th-z sortable" data-col="{{ p1_base+3 }}"   onclick="sortTable({{ p1_base+3 }})">V.{{ yr_prev }} <span class="sort-icon"></span></th>
+          {% if has_sit %}<th class="th-z sortable" data-col="{{ p1_base+4 }}" onclick="sortTable({{ p1_base+4 }})">S.365 <span class="sort-icon"></span></th>{% endif %}
+          <th class="th-z sortable" data-col="{{ p1_ped }}"      onclick="sortTable({{ p1_ped }})">Pedido <span class="sort-icon"></span></th>
 
-          <th class="th-b col-divider sortable" data-col="{{ p2_base }}"   onclick="sortTable({{ p2_base }})">Stock <span class="sort-icon">&#8597;</span></th>
-          <th class="th-b sortable" data-col="{{ p2_base+1 }}"             onclick="sortTable({{ p2_base+1 }})">S.min <span class="sort-icon">&#8597;</span></th>
-          <th class="th-b sortable" data-col="{{ p2_base+2 }}"             onclick="sortTable({{ p2_base+2 }})">V.{{ yr_cur }} <span class="sort-icon">&#8597;</span></th>
-          <th class="th-b sortable" data-col="{{ p2_base+3 }}"             onclick="sortTable({{ p2_base+3 }})">V.{{ yr_prev }} <span class="sort-icon">&#8597;</span></th>
-          {% if has_sit %}<th class="th-b sortable" data-col="{{ p2_base+4 }}" onclick="sortTable({{ p2_base+4 }})">S.365 <span class="sort-icon">&#8597;</span></th>{% endif %}
-          <th class="th-b sortable" data-col="{{ p2_ped }}"                onclick="sortTable({{ p2_ped }})">Pedido <span class="sort-icon">&#8597;</span></th>
+          <th class="th-b col-divider sortable" data-col="{{ p2_base }}"   onclick="sortTable({{ p2_base }})">Stock <span class="sort-icon"></span></th>
+          <th class="th-b sortable" data-col="{{ p2_base+1 }}"             onclick="sortTable({{ p2_base+1 }})">S.min <span class="sort-icon"></span></th>
+          <th class="th-b sortable" data-col="{{ p2_base+2 }}"             onclick="sortTable({{ p2_base+2 }})">V.{{ yr_cur }} <span class="sort-icon"></span></th>
+          <th class="th-b sortable" data-col="{{ p2_base+3 }}"             onclick="sortTable({{ p2_base+3 }})">V.{{ yr_prev }} <span class="sort-icon"></span></th>
+          {% if has_sit %}<th class="th-b sortable" data-col="{{ p2_base+4 }}" onclick="sortTable({{ p2_base+4 }})">S.365 <span class="sort-icon"></span></th>{% endif %}
+          <th class="th-b sortable" data-col="{{ p2_ped }}"                onclick="sortTable({{ p2_ped }})">Pedido <span class="sort-icon"></span></th>
         </tr>
       </thead>
       <tbody>
@@ -904,7 +942,8 @@
 
   <!-- ── DECISION PANEL ── -->
   <div class="decision-panel" id="decisionPanel">
-    <div class="panel-inner">
+    <div class="panel-resize-handle" id="panelResizeHandle"></div>
+    <div class="panel-inner" id="panelInner">
 
       <div class="panel-header">
         <div class="panel-header-row">
@@ -1150,17 +1189,13 @@ function sortTable(colIdx) {
   rows.forEach(r => tbody.appendChild(r));
   document.getElementById('btnResetSort').style.display = '';
 
-  // Update header icons
+  // Update header icons (CSS triangles, no innerHTML needed)
   document.querySelectorAll('th.sortable').forEach(th => {
-    const icon = th.querySelector('.sort-icon');
-    if (!icon) return;
     const c = parseInt(th.dataset.col);
     if (c === colIdx) {
-      icon.innerHTML = asc ? '&#9650;' : '&#9660;';
       th.classList.toggle('sort-asc', asc);
       th.classList.toggle('sort-desc', !asc);
     } else {
-      icon.innerHTML = '&#8597;';
       th.classList.remove('sort-asc','sort-desc');
     }
   });
@@ -1172,7 +1207,6 @@ function resetSort() {
   rows.sort((a, b) => parseInt(a.dataset.idx) - parseInt(b.dataset.idx));
   rows.forEach(r => tbody.appendChild(r));
   sortState = { col: null, asc: true };
-  document.querySelectorAll('th.sortable .sort-icon').forEach(ic => ic.innerHTML = '&#8597;');
   document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('sort-asc','sort-desc'));
   document.getElementById('btnResetSort').style.display = 'none';
 }
@@ -2017,6 +2051,48 @@ function confirmarPedido() {
 })();
 
 applySearch();
+
+// ─── PANEL RESIZE ─────────────────────────────────────────────────────────────
+(function initPanelResize() {
+  const panel  = document.getElementById('decisionPanel');
+  const inner  = document.getElementById('panelInner');
+  const handle = document.getElementById('panelResizeHandle');
+  let startX, startW;
+
+  function onStart(e) {
+    if (window.innerWidth <= 900) return;
+    const touch = e.touches ? e.touches[0] : e;
+    startX = touch.clientX;
+    startW = panel.offsetWidth;
+    panel.style.transition = 'none';
+    handle.classList.add('dragging');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    const touch = e.touches ? e.touches[0] : e;
+    const newW = Math.min(640, Math.max(270, startW + (startX - touch.clientX)));
+    panel.style.width = newW + 'px';
+    inner.style.width = newW + 'px';
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function onEnd() {
+    panel.style.transition = '';
+    handle.classList.remove('dragging');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+  }
+
+  handle.addEventListener('mousedown', onStart);
+  handle.addEventListener('touchstart', onStart, { passive: false });
+})();
 </script>
 </body>
 </html>
