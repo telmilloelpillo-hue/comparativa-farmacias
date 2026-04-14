@@ -724,14 +724,14 @@
   </div>
   <div class="topbar-right">
     <button class="btn btn-pedido-empty" id="btnPedido" onclick="openModal()">
-      <span class="btn-text-full">&#128722; Pedido (<span id="pedidoCount">0</span>)</span>
-      <span class="btn-text-short">&#128722; <span id="pedidoCountShort">0</span></span>
-      <span class="btn-icon" style="display:none">&#128722;</span>
+      <span class="btn-text-full">Pedido (<span id="pedidoCount">0</span>)</span>
+      <span class="btn-text-short"><span id="pedidoCountShort">0</span></span>
+      <span class="btn-icon" style="display:none">Ped</span>
     </button>
     <a href="/descargar" class="btn btn-primary">
-      <span class="btn-text-full">&#11015; Descargar PDF</span>
-      <span class="btn-text-short">&#11015; PDF</span>
-      <span class="btn-icon" style="display:none">&#11015;</span>
+      <span class="btn-text-full">Descargar PDF</span>
+      <span class="btn-text-short">PDF</span>
+      <span class="btn-icon" style="display:none">PDF</span>
     </a>
     <a href="/" class="btn btn-ghost">&#10010; Nueva</a>
     <a href="/logout" class="btn btn-ghost">&#8594; Salir</a>
@@ -1004,7 +1004,7 @@
   <div class="step3-nav">
     <button class="btn-step-prev" onclick="goToStep(2)">← Anterior</button>
     <div style="display:flex;gap:0.65rem;align-items:center">
-      <button class="btn-step-prev" id="btnDescargaReparto" onclick="downloadRepartoPDF()">&#11015; Descargar PDF</button>
+      <button class="btn-step-prev" id="btnDescargaReparto" onclick="downloadRepartoPDF()">Descargar PDF</button>
       <button class="btn-confirm" onclick="confirmarPedido()">Confirmar pedido</button>
     </div>
   </div>
@@ -1030,7 +1030,7 @@
       <button class="modal-close" onclick="closeModal()">&#10005;</button>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-primary" id="btnDescargaPedido" onclick="downloadPedidoPDF()">⬇ Guardar PDF</button>
+      <button class="btn btn-primary" id="btnDescargaPedido" onclick="downloadPedidoPDF()">Guardar PDF</button>
       <button class="btn" onclick="window.print()" style="background:white;color:#6b7280;border:1px solid #e5e7eb;font-size:0.8rem">Imprimir</button>
       <button class="btn" id="btnGuardarReparto" onclick="guardarReparto()" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;font-size:0.8rem">Guardar en Reparto</button>
       <span id="repartoSavedMsg" style="display:none;font-size:0.72rem;color:#166534;font-weight:600">Guardado en historial</span>
@@ -1576,7 +1576,7 @@ function downloadPedidoPDF() {
   })
   .catch(() => alert('Error al generar el PDF. Inténtalo de nuevo.'))
   .finally(() => {
-    btn.textContent = '⬇ Guardar PDF';
+    btn.textContent = 'Guardar PDF';
     btn.disabled = false;
   });
 }
@@ -1821,7 +1821,7 @@ function buildStep2Cards() {
           <div class="step2-td-prod-name">${p.description || code}</div>
           <div class="step2-td-prod-code">${code}</div>
         </td>
-        <td class="step2-td-total">${total}</td>
+        <td class="step2-td-total" id="rtotal-${code}">${total}</td>
         <td class="step2-td-input">
           <input type="number" min="0" class="step2-input inp-z"
                  id="ri-${code}-z" value="${alloc.z || ''}"
@@ -1859,6 +1859,8 @@ function onRepartoInput(code) {
   repartoAlloc[code]  = { z: zVal, b: bVal };
   // Update the total to match what the user actually entered
   repartoTotals[code] = zVal + bVal;
+  const totalEl = document.getElementById('rtotal-' + code);
+  if (totalEl) totalEl.textContent = zVal + bVal;
   // Keep manualPedidos in sync so Step 1 table stays updated
   if (zVal > 0) manualPedidos[code + '_z'] = zVal; else delete manualPedidos[code + '_z'];
   if (bVal > 0) manualPedidos[code + '_b'] = bVal; else delete manualPedidos[code + '_b'];
@@ -1946,7 +1948,7 @@ function downloadRepartoPDF() {
     a.click(); URL.revokeObjectURL(url);
   })
   .catch(() => alert('Error al generar el PDF.'))
-  .finally(() => { btn.textContent = '⬇ Descargar PDF'; btn.disabled = false; });
+  .finally(() => { btn.textContent = 'Descargar PDF'; btn.disabled = false; });
 }
 
 function confirmarPedido() {
