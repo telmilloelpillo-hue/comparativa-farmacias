@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Farmacias · Panel de control</title>
+  <title>Farmacias</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,8 +37,8 @@
 
     /* ══ TOPBAR ══════════════════════════════════════════════════════════════ */
     .topbar {
-      background: white;
-      border-bottom: 1px solid var(--border);
+      background: var(--accent);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.18);
       padding: 0 1.5rem;
       height: 52px;
       display: flex;
@@ -53,12 +53,11 @@
     .topbar-brand {
       font-size: 0.88rem;
       font-weight: 700;
-      color: var(--text);
+      color: white;
       letter-spacing: -0.01em;
       white-space: nowrap;
       text-decoration: none;
     }
-    .topbar-brand span { color: var(--accent); }
 
     .topbar-tabs {
       display: flex;
@@ -73,14 +72,14 @@
       padding: 0 1rem;
       font-size: 0.8rem;
       font-weight: 600;
-      color: var(--muted);
+      color: rgba(255,255,255,0.7);
       text-decoration: none;
       border-bottom: 2px solid transparent;
       transition: color 0.15s, border-color 0.15s;
       white-space: nowrap;
     }
-    .tab-link:hover { color: var(--text); }
-    .tab-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-link:hover { color: white; }
+    .tab-link.active { color: white; border-bottom-color: rgba(255,255,255,0.8); }
     .tab-badge {
       display: inline-flex;
       align-items: center;
@@ -93,8 +92,8 @@
       font-weight: 700;
       margin-left: 0.4rem;
     }
-    .tab-badge.badge-pending  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-    .tab-badge.badge-green    { background: #f0fdf4; color: var(--accent); border: 1px solid #d1fae5; }
+    .tab-badge.badge-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .tab-badge.badge-green   { background: rgba(255,255,255,0.2); color: white; }
 
     .topbar-right {
       display: flex;
@@ -106,29 +105,29 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: var(--bg);
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
       border-radius: var(--radius);
       padding: 0.35rem 0.75rem;
       width: 240px;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, background 0.15s;
     }
-    .topbar-search:focus-within { border-color: var(--accent); background: white; }
+    .topbar-search:focus-within { border-color: rgba(255,255,255,0.45); background: rgba(255,255,255,0.18); }
     .topbar-search input {
       background: none; border: none; outline: none;
       font-family: 'Inter', sans-serif;
-      font-size: 0.78rem; color: var(--text); width: 100%;
+      font-size: 0.78rem; color: white; width: 100%;
     }
-    .topbar-search input::placeholder { color: var(--muted); }
-    .search-icon { color: var(--muted); font-size: 0.82rem; flex-shrink: 0; }
+    .topbar-search input::placeholder { color: rgba(255,255,255,0.5); }
+    .search-icon { color: rgba(255,255,255,0.6); font-size: 0.82rem; flex-shrink: 0; }
 
     .topbar-logout {
-      font-size: 0.78rem; font-weight: 600; color: var(--muted);
+      font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.8);
       text-decoration: none; padding: 0.35rem 0.7rem;
-      border: 1px solid var(--border); border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,0.25); border-radius: var(--radius);
       transition: all 0.15s; white-space: nowrap;
     }
-    .topbar-logout:hover { border-color: var(--accent); color: var(--accent); }
+    .topbar-logout:hover { background: rgba(255,255,255,0.12); color: white; border-color: rgba(255,255,255,0.45); }
 
     /* ══ MAIN LAYOUT ═════════════════════════════════════════════════════════ */
     main {
@@ -517,7 +516,7 @@
 
 <!-- ══ TOPBAR ══ -->
 <header class="topbar">
-  <a class="topbar-brand" href="/">Farmacias <span>·</span> Panel</a>
+  <a class="topbar-brand" href="/">Farmacias</a>
 
   <nav class="topbar-tabs">
     <a href="/" class="tab-link active">Comparativa</a>
