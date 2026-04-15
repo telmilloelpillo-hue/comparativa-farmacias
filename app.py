@@ -1,6 +1,12 @@
 from flask import Flask, request, render_template, send_file, session, redirect, url_for, jsonify
 import os, tempfile, uuid, json, threading
 from datetime import datetime
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 from pdf_parser import extract_products, compare_products, detect_lab, extract_situation, detect_pdf_header
 
 try:
