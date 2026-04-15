@@ -662,8 +662,9 @@ function renderTable() {
 function onIvaChange(sel) {
   const idx = parseInt(sel.dataset.idx);
   _lineas[idx].ivaKey = sel.value;
-  _lineas[idx].pvpManual = null; // reset manual on IVA change
+  _lineas[idx].pvpManual = null;
   renderTable();
+  persistLineas();
 }
 
 function onPvpChange(input) {
@@ -674,20 +675,63 @@ function onPvpChange(input) {
     _lineas[idx].pvpManual = val;
   }
   renderTable();
+  persistLineas();
 }
 
 function resetPvp(idx) {
   _lineas[idx].pvpManual = null;
   renderTable();
+  persistLineas();
+}
+
+// ── SESSION PERSISTENCE ───────────────────────────────────────────────────────
+const SESSION_KEY = 'factura_session';
+
+function saveSession(data, provKey, redondeo) {
+  try {
+    const session = {
+      data,
+      provKey,
+      redondeo,
+      lineas: _lineas,
+      fileDataURL: _previewURL ? null : null, // will be set separately
+      fileMime: _previewMime,
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch(e) { /* quota exceeded — ignore */ }
+}
+
+function saveFileToSession(file) {
+  // Read file as base64 data URL for preview persistence
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const existing = JSON.parse(sessionStorage.getItem(SESSION_KEY) || '{}');
+      existing.fileDataURL = e.target.result;
+      existing.fileName = file.name;
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(existing));
+    } catch(e) { /* quota exceeded (large PDF) — preview won't restore, data will */ }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearSession() {
+  sessionStorage.removeItem(SESSION_KEY);
 }
 
 // ── SHOW RESULTS ──────────────────────────────────────────────────────────────
-function showResults(data) {
+function showResults(data, savedLineas, provKey, redondeo) {
   _proveedores = data.proveedores || {};
-  _lineas = (data.lineas || []).map(l => ({ ...l, ivaKey: null, pvpManual: null }));
 
-  const provKey  = document.getElementById('proveedorGroup').querySelector('input:checked')?.value || 'hefame_bida';
-  const redondeo = document.getElementById('redondeoSelect').value;
+  if (savedLineas) {
+    // Restoring from session — use saved lineas (preserves ivaKey + pvpManual edits)
+    _lineas = savedLineas;
+  } else {
+    _lineas = (data.lineas || []).map(l => ({ ...l, ivaKey: null, pvpManual: null }));
+  }
+
+  provKey  = provKey  || document.getElementById('proveedorGroup').querySelector('input:checked')?.value || 'hefame_bida';
+  redondeo = redondeo || document.getElementById('redondeoSelect').value;
 
   document.getElementById('ctrlProveedor').value = provKey;
   document.getElementById('ctrlRedondeo').value  = redondeo;
@@ -712,6 +756,7 @@ document.getElementById('ctrlProveedor').addEventListener('change', renderTable)
 document.getElementById('ctrlRedondeo').addEventListener('change', renderTable);
 
 document.getElementById('btnNueva').addEventListener('click', () => {
+  clearSession();
   // Reset state
   _lineas = [];
   _proveedores = {};
@@ -975,7 +1020,15 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
       document.getElementById('errorBox').classList.add('visible');
       return;
     }
-    showResults(data);
+    const provKey  = document.getElementById('proveedorGroup').querySelector('input:checked')?.value || 'hefame_bida';
+    const redondeo = document.getElementById('redondeoSelect').value;
+    showResults(data, null, provKey, redondeo);
+    // Save to session for page refresh persistence
+    try {
+      const session = { data, lineas: _lineas, provKey, redondeo, fileMime: _previewMime, fileName: _selectedFile?.name || '' };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    } catch(e) {}
+    if (_selectedFile) saveFileToSession(_selectedFile);
   } catch (err) {
     document.getElementById('errorBox').textContent = 'Error de red: ' + err.message;
     document.getElementById('errorBox').classList.add('visible');
@@ -993,6 +1046,48 @@ document.getElementById('proveedorGroup').addEventListener('click', e => {
   opt.classList.add('selected');
   opt.querySelector('input').checked = true;
 });
+
+// Save lineas edits to session after IVA/PVP changes
+function persistLineas() {
+  try {
+    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+    if (session) { session.lineas = _lineas; sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
+  } catch(e) {}
+}
+
+// Persist ctrl changes
+document.getElementById('ctrlProveedor').addEventListener('change', () => {
+  try {
+    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+    if (session) { session.provKey = document.getElementById('ctrlProveedor').value; sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
+  } catch(e) {}
+});
+document.getElementById('ctrlRedondeo').addEventListener('change', () => {
+  try {
+    const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+    if (session) { session.redondeo = document.getElementById('ctrlRedondeo').value; sessionStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
+  } catch(e) {}
+});
+
+// ── RESTORE SESSION ON LOAD ───────────────────────────────────────────────────
+(function restoreSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return;
+    const session = JSON.parse(raw);
+    if (!session?.data?.lineas?.length) return;
+
+    // Restore preview from saved data URL
+    if (session.fileDataURL) {
+      _previewURL  = session.fileDataURL;
+      _previewMime = session.fileMime || '';
+    }
+
+    showResults(session.data, session.lineas, session.provKey, session.redondeo);
+  } catch(e) {
+    sessionStorage.removeItem(SESSION_KEY);
+  }
+})();
 </script>
 </body>
 </html>
