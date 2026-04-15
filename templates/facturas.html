@@ -902,7 +902,10 @@ _previewEl.addEventListener('touchmove', e => {
       e.touches[0].clientY - e.touches[1].clientY
     );
     if (_lastPinchDist > 0) {
-      _zoom = Math.max(0.2, Math.min(6, _zoom * (dist / _lastPinchDist)));
+      const raw = dist / _lastPinchDist;
+      // Dampen sensitivity: interpolate 30% towards raw ratio
+      const damped = 1 + (raw - 1) * 0.3;
+      _zoom = Math.max(0.2, Math.min(6, _zoom * damped));
     }
     _lastPinchDist = dist;
     setTransform();
