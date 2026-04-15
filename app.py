@@ -504,9 +504,7 @@ def leer_factura():
         return jsonify({'error': 'no auth'}), 401
 
     if not _ai_available():
-        k = _get_api_key()
-        import os as _os
-        return jsonify({'error': f'IA no configurada. key={k[:8] if k else "EMPTY"} anthropic={_ANTHROPIC_AVAILABLE} file={__file__}'}), 503
+        return jsonify({'error': 'IA no configurada. Añade ANTHROPIC_API_KEY como variable de entorno.'}), 503
 
     f = request.files.get('file')
     if not f:
@@ -569,7 +567,7 @@ def leer_factura():
             ]
 
         msg = client.messages.create(
-            model='claude-opus-4-6',
+            model='claude-haiku-4-5-20251001',
             max_tokens=8192,
             messages=[{'role': 'user', 'content': content}],
         )
