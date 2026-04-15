@@ -11,9 +11,13 @@ from pdf_parser import extract_products, compare_products, detect_lab, extract_s
 
 try:
     import anthropic as _anthropic
-    _AI_AVAILABLE = bool(os.environ.get('ANTHROPIC_API_KEY'))
+    _ANTHROPIC_AVAILABLE = True
 except ImportError:
-    _AI_AVAILABLE = False
+    _anthropic = None
+    _ANTHROPIC_AVAILABLE = False
+
+def _ai_available():
+    return _ANTHROPIC_AVAILABLE and bool(os.environ.get('ANTHROPIC_API_KEY'))
 
 # ── Facturas: factores PVP por proveedor ──────────────────────────────────────
 _CONFIG_PROVEEDORES = {
@@ -425,7 +429,7 @@ def pregunta():
     if not session.get('authenticated'):
         return jsonify({'error': 'no auth'}), 401
 
-    if not _AI_AVAILABLE:
+    if not _ai_available():
         return jsonify({'answer': 'IA no configurada. Añade ANTHROPIC_API_KEY como variable de entorno.'})
 
     body = request.get_json(silent=True) or {}
@@ -484,7 +488,7 @@ def leer_factura():
     if not session.get('authenticated'):
         return jsonify({'error': 'no auth'}), 401
 
-    if not _AI_AVAILABLE:
+    if not _ai_available():
         return jsonify({'error': 'IA no configurada. Añade ANTHROPIC_API_KEY como variable de entorno.'}), 503
 
     f = request.files.get('file')
