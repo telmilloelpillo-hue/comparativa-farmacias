@@ -504,7 +504,9 @@ def leer_factura():
         return jsonify({'error': 'no auth'}), 401
 
     if not _ai_available():
-        return jsonify({'error': 'IA no configurada. Añade ANTHROPIC_API_KEY como variable de entorno.'}), 503
+        k = _get_api_key()
+        import os as _os
+        return jsonify({'error': f'IA no configurada. key={k[:8] if k else "EMPTY"} anthropic={_ANTHROPIC_AVAILABLE} file={__file__}'}), 503
 
     f = request.files.get('file')
     if not f:
