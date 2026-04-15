@@ -16,8 +16,23 @@ except ImportError:
     _anthropic = None
     _ANTHROPIC_AVAILABLE = False
 
+def _get_api_key():
+    key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if key:
+        return key
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    try:
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('ANTHROPIC_API_KEY='):
+                    return line.split('=', 1)[1].strip()
+    except Exception:
+        pass
+    return ''
+
 def _ai_available():
-    return _ANTHROPIC_AVAILABLE and bool(os.environ.get('ANTHROPIC_API_KEY'))
+    return _ANTHROPIC_AVAILABLE and bool(_get_api_key())
 
 # ── Facturas: factores PVP por proveedor ──────────────────────────────────────
 _CONFIG_PROVEEDORES = {
@@ -465,7 +480,7 @@ def pregunta():
     )
 
     try:
-        client = _anthropic.Anthropic()
+        client = _anthropic.Anthropic(api_key=_get_api_key())
         msg = client.messages.create(
             model='claude-haiku-4-5-20251001',
             max_tokens=350,
@@ -539,7 +554,7 @@ def leer_factura():
     )
 
     try:
-        client = _anthropic.Anthropic()
+        client = _anthropic.Anthropic(api_key=_get_api_key())
         if mime == 'application/pdf':
             content = [
                 {'type': 'document', 'source': {'type': 'base64', 'media_type': 'application/pdf', 'data': b64}},
