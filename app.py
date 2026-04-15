@@ -4,7 +4,7 @@ from datetime import datetime
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 except ImportError:
     pass
 from pdf_parser import extract_products, compare_products, detect_lab, extract_situation, detect_pdf_header
