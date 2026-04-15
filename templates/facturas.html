@@ -9,11 +9,6 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --z:      #dc2626;
-      --z-lt:   #fef2f2;
-      --b:      #1d4ed8;
-      --b-lt:   #eff6ff;
-      --warn:   #f59e0b;
       --bg:     #f7f8fa;
       --surface:#ffffff;
       --border: #e5e7eb;
@@ -47,45 +42,22 @@
       top: 0;
       z-index: 200;
     }
-    .topbar-brand {
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: white;
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-      text-decoration: none;
-    }
-    .topbar-tabs {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      height: 100%;
-    }
+    .topbar-brand { font-size: 0.88rem; font-weight: 700; color: white; letter-spacing: -0.01em; text-decoration: none; }
+    .topbar-tabs { display: flex; align-items: center; gap: 0; height: 100%; }
     .tab-link {
-      display: flex;
-      align-items: center;
-      height: 100%;
-      padding: 0 1rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: rgba(255,255,255,0.7);
-      text-decoration: none;
-      border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
-      white-space: nowrap;
+      display: flex; align-items: center; height: 100%; padding: 0 1rem;
+      font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7);
+      text-decoration: none; border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s; white-space: nowrap;
     }
     .tab-link:hover { color: white; }
     .tab-link.active { color: white; border-bottom-color: rgba(255,255,255,0.8); }
     .topbar-right { margin-left: auto; }
-    .topbar-logout {
-      font-size: 0.75rem;
-      color: rgba(255,255,255,0.65);
-      text-decoration: none;
-    }
+    .topbar-logout { font-size: 0.75rem; color: rgba(255,255,255,0.65); text-decoration: none; }
     .topbar-logout:hover { color: white; }
 
-    /* ══ MAIN LAYOUT ══ */
-    main {
+    /* ══ UPLOAD LAYOUT (estado inicial) ══ */
+    #uploadLayout {
       flex: 1;
       display: grid;
       grid-template-columns: 420px 1fr;
@@ -95,312 +67,266 @@
       margin: 0 auto;
       padding: 1.75rem 1.5rem 3rem;
     }
+    #uploadLayout.hidden { display: none; }
 
-    /* ══ LEFT PANEL ══ */
     .left-panel {
       padding-right: 1.75rem;
       border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 1.25rem;
+    }
+    .right-panel-upload { padding-left: 1.75rem; min-width: 0; }
+
+    /* ══ RESULTS LAYOUT (después de analizar) ══ */
+    #resultsLayout {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+    }
+    #resultsLayout.visible { display: flex; }
+
+    /* ── Controls bar ── */
+    #controlsBar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      padding: 0.85rem 1.5rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 52px;
+      z-index: 100;
+    }
+    .ctrl-label { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+    .ctrl-select {
+      padding: 0.35rem 2rem 0.35rem 0.6rem;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      font-size: 0.76rem; color: var(--text); background: white;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.5rem center; cursor: pointer;
+    }
+    .ctrl-select:focus { outline: none; border-color: var(--accent); }
+    .ctrl-sep { width: 1px; height: 20px; background: var(--border); margin: 0 0.2rem; }
+    .btn-ctrl {
+      padding: 0.38rem 0.9rem;
+      background: white;
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn-ctrl:hover { background: var(--bg); }
+    .btn-ctrl-accent {
+      border-color: var(--accent); color: var(--accent);
+    }
+    .btn-ctrl-accent:hover { background: var(--accent); color: white; }
+
+    .ctrl-meta { font-size: 0.76rem; color: var(--muted); }
+    .ctrl-meta strong { color: var(--text); }
+
+    /* ── Main results area (tabla + preview) ── */
+    #mainArea {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Table section ── */
+    #tableSection {
+      flex: 1;
+      min-width: 0;
+      overflow-y: auto;
+      padding: 1.25rem 1.5rem 3rem;
+    }
+
+    /* ── Resize handle ── */
+    #resizeHandle {
+      width: 5px;
+      background: var(--border);
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background 0.15s;
+      position: relative;
+    }
+    #resizeHandle:hover, #resizeHandle.dragging { background: var(--accent); }
+
+    /* ── Preview panel ── */
+    #previewPanel {
+      width: 380px;
+      min-width: 200px;
+      max-width: 700px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
+      flex-shrink: 0;
+      transition: width 0.2s;
+    }
+    #previewPanel.collapsed { width: 0 !important; min-width: 0; overflow: hidden; border-left: none; }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      background: #f9fafb;
+      flex-shrink: 0;
+    }
+    .preview-title { font-size: 0.76rem; font-weight: 700; color: var(--text); }
+    .btn-collapse {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 1rem; padding: 0.1rem 0.3rem;
+      border-radius: 4px; transition: color 0.15s, background 0.15s;
+      line-height: 1;
+    }
+    .btn-collapse:hover { color: var(--text); background: var(--border); }
+
+    #previewContent {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+      background: #f3f4f6;
+    }
+    #previewContent embed,
+    #previewContent iframe { width: 100%; height: 100%; border: none; }
+    #previewContent img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; }
+    .preview-empty { font-size: 0.78rem; color: var(--muted); text-align: center; }
+
+    /* ── Toggle preview button (en controls bar) ── */
+    #btnTogglePreview {
+      margin-left: auto;
     }
 
     /* ══ CARDS ══ */
-    .dash-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      overflow: hidden;
-    }
-    .dash-card-header {
-      padding: 1rem 1.25rem 0.8rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .dash-card-title {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.01em;
-    }
-    .dash-card-sub {
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-top: 0.18rem;
-    }
+    .dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
+    .dash-card-header { padding: 1rem 1.25rem 0.8rem; border-bottom: 1px solid var(--border); }
+    .dash-card-title { font-size: 0.82rem; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+    .dash-card-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.18rem; }
     .dash-card-body { padding: 1.25rem; }
 
     /* ══ UPLOAD ZONE ══ */
     .drop-zone {
-      border: 2px dashed #d1d5db;
-      border-radius: 10px;
-      padding: 2rem 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-      position: relative;
-      margin-bottom: 1.2rem;
+      border: 2px dashed #d1d5db; border-radius: 10px; padding: 2rem 1rem;
+      text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      position: relative; margin-bottom: 1.2rem;
     }
     .drop-zone.dragover { border-color: var(--accent); background: #f0fdf4; }
     .drop-zone.has-file { border-color: var(--accent); background: #f0fdf4; border-style: solid; }
-    .drop-zone input[type="file"] {
-      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-    }
+    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
     .drop-icon { font-size: 1.8rem; margin-bottom: 0.5rem; }
     .drop-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
     .drop-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
-    .drop-file-name {
-      font-size: 0.76rem; font-weight: 600; color: var(--accent);
-      margin-top: 0.5rem; word-break: break-all;
-    }
+    .drop-file-name { font-size: 0.76rem; font-weight: 600; color: var(--accent); margin-top: 0.5rem; word-break: break-all; }
 
     /* ══ FORM ELEMENTS ══ */
     .form-group { margin-bottom: 1rem; }
     .form-group:last-child { margin-bottom: 0; }
-    .form-label {
-      display: block;
-      font-size: 0.76rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 0.45rem;
-    }
+    .form-label { display: block; font-size: 0.76rem; font-weight: 600; color: var(--text); margin-bottom: 0.45rem; }
     .radio-group { display: flex; gap: 0.75rem; flex-wrap: wrap; }
     .radio-option {
-      display: flex; align-items: center; gap: 0.4rem;
-      cursor: pointer; padding: 0.5rem 0.85rem;
-      border: 1.5px solid var(--border); border-radius: 7px;
+      display: flex; align-items: center; gap: 0.4rem; cursor: pointer;
+      padding: 0.5rem 0.85rem; border: 1.5px solid var(--border); border-radius: 7px;
       font-size: 0.78rem; font-weight: 500; color: var(--text);
-      transition: border-color 0.15s, background 0.15s;
-      user-select: none;
+      transition: border-color 0.15s, background 0.15s; user-select: none;
     }
     .radio-option input { display: none; }
     .radio-option.selected { border-color: var(--accent); background: #f0fdf4; color: var(--accent); }
-    .radio-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      border: 1.5px solid var(--muted); flex-shrink: 0;
-      transition: border-color 0.15s, background 0.15s;
-    }
+    .radio-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--muted); flex-shrink: 0; transition: border-color 0.15s, background 0.15s; }
     .radio-option.selected .radio-dot { border-color: var(--accent); background: var(--accent); }
 
     select {
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      border: 1.5px solid var(--border);
-      border-radius: 7px;
-      font-size: 0.82rem;
-      color: var(--text);
-      background: white;
-      appearance: none;
+      width: 100%; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); border-radius: 7px;
+      font-size: 0.82rem; color: var(--text); background: white; appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-      padding-right: 2rem;
-      cursor: pointer;
+      background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; cursor: pointer;
     }
     select:focus { outline: none; border-color: var(--accent); }
 
-    /* ══ SUBMIT BUTTON ══ */
     .btn-analyze {
-      width: 100%;
-      padding: 0.7rem;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.84rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      margin-top: 1.25rem;
+      width: 100%; padding: 0.7rem; background: var(--accent); color: white;
+      border: none; border-radius: 8px; font-size: 0.84rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; margin-top: 1.25rem;
     }
     .btn-analyze:hover:not(:disabled) { background: var(--accent2); }
     .btn-analyze:disabled { opacity: 0.55; cursor: not-allowed; }
 
-    /* ══ LOADING ══ */
     .analyzing-bar {
-      display: none;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.6rem 0.9rem;
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 8px;
-      margin-top: 0.75rem;
-      font-size: 0.76rem;
-      color: var(--accent);
-      font-weight: 500;
+      display: none; align-items: center; gap: 0.5rem;
+      padding: 0.6rem 0.9rem; background: #f0fdf4; border: 1px solid #bbf7d0;
+      border-radius: 8px; margin-top: 0.75rem; font-size: 0.76rem; color: var(--accent); font-weight: 500;
     }
     .analyzing-bar.visible { display: flex; }
-    .spinner {
-      width: 14px; height: 14px;
-      border: 2px solid #bbf7d0;
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
-    }
+    .spinner { width: 14px; height: 14px; border: 2px solid #bbf7d0; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ══ ERROR BOX ══ */
-    .error-box {
-      display: none;
-      padding: 0.65rem 0.9rem;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-      font-size: 0.76rem;
-      color: #991b1b;
-      margin-top: 0.75rem;
-    }
+    .error-box { display: none; padding: 0.65rem 0.9rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.76rem; color: #991b1b; margin-top: 0.75rem; }
     .error-box.visible { display: block; }
 
-    /* ══ RIGHT PANEL ══ */
-    .right-panel {
-      padding-left: 1.75rem;
-      min-width: 0;
-    }
-
     /* ══ EMPTY STATE ══ */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 320px;
-      color: var(--muted);
-      text-align: center;
-      gap: 0.5rem;
-    }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 320px; color: var(--muted); text-align: center; gap: 0.5rem; }
     .empty-state-icon { font-size: 2.5rem; opacity: 0.4; }
     .empty-state-title { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
     .empty-state-sub { font-size: 0.76rem; }
 
-    /* ══ RESULTS HEADER ══ */
-    .results-header {
-      display: none;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
-    .results-header.visible { display: flex; }
-    .results-meta { display: flex; flex-direction: column; gap: 0.2rem; }
-    .results-proveedor { font-size: 0.76rem; color: var(--muted); }
-    .results-proveedor strong { color: var(--text); }
-    .results-counts { font-size: 0.82rem; font-weight: 700; color: var(--text); }
-
-    /* ══ CONTROLS BAR ══ */
-    .controls-bar {
-      display: none;
-      align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 0.9rem;
-      flex-wrap: wrap;
-    }
-    .controls-bar.visible { display: flex; }
-    .ctrl-label { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
-    .ctrl-select {
-      padding: 0.35rem 2rem 0.35rem 0.6rem;
-      border: 1.5px solid var(--border);
-      border-radius: 6px;
-      font-size: 0.76rem;
-      color: var(--text);
-      background: white;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.5rem center;
-      cursor: pointer;
-    }
-    .ctrl-select:focus { outline: none; border-color: var(--accent); }
-    .btn-export {
-      margin-left: auto;
-      padding: 0.38rem 0.9rem;
-      background: white;
-      border: 1.5px solid var(--accent);
-      color: var(--accent);
-      border-radius: 6px;
-      font-size: 0.76rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-    }
-    .btn-export:hover { background: var(--accent); color: white; }
-
     /* ══ TABLE ══ */
-    .table-wrap {
-      display: none;
-      overflow-x: auto;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-    }
-    .table-wrap.visible { display: block; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.77rem;
-    }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px 10px 0 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.77rem; }
     thead th {
-      background: #f9fafb;
-      padding: 0.55rem 0.75rem;
-      text-align: left;
-      font-size: 0.68rem;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
+      background: #f9fafb; padding: 0.55rem 0.75rem; text-align: left;
+      font-size: 0.68rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
     }
     tbody tr:not(:last-child) td { border-bottom: 1px solid #f3f4f6; }
     tbody tr:hover td { background: #f9fafb; }
-    td {
-      padding: 0.55rem 0.75rem;
-      vertical-align: middle;
-    }
-    .td-cn {
-      font-family: monospace;
-      font-size: 0.72rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .td-nombre { max-width: 260px; }
+    td { padding: 0.5rem 0.75rem; vertical-align: middle; }
+    .td-cn { font-family: monospace; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+    .td-nombre { max-width: 300px; }
     .td-num { text-align: right; white-space: nowrap; }
-    .td-pvp {
-      text-align: right;
-      font-weight: 700;
-      color: var(--accent);
-      white-space: nowrap;
-    }
+    .td-pvp { text-align: right; white-space: nowrap; }
+
     .iva-select {
-      padding: 0.25rem 1.6rem 0.25rem 0.4rem;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      font-size: 0.72rem;
-      color: var(--text);
-      background: white;
-      appearance: none;
+      padding: 0.25rem 1.6rem 0.25rem 0.4rem; border: 1px solid var(--border); border-radius: 5px;
+      font-size: 0.72rem; color: var(--text); background: white; appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.35rem center;
-      cursor: pointer;
+      background-repeat: no-repeat; background-position: right 0.35rem center; cursor: pointer;
     }
     .iva-select:focus { outline: none; border-color: var(--accent); }
 
+    /* PVP editable input */
+    .pvp-cell { display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; }
+    .pvp-input {
+      text-align: right; font-weight: 700; color: var(--accent);
+      width: 70px; border: 1.5px solid transparent; border-radius: 5px;
+      background: transparent; font-size: 0.77rem; font-family: inherit;
+      padding: 0.2rem 0.3rem; transition: border-color 0.15s, background 0.15s;
+    }
+    .pvp-input:hover { border-color: var(--border); background: white; }
+    .pvp-input:focus { outline: none; border-color: var(--accent); background: white; }
+    .pvp-input.pvp-manual { color: #1d4ed8; }
+    .pvp-reset {
+      background: none; border: none; cursor: pointer; color: var(--muted);
+      font-size: 0.75rem; padding: 0.1rem 0.2rem; border-radius: 3px;
+      transition: color 0.15s; line-height: 1; opacity: 0.7;
+    }
+    .pvp-reset:hover { color: #dc2626; opacity: 1; }
+
     /* ══ SUMMARY FOOTER ══ */
     .results-summary {
-      display: none;
-      justify-content: flex-end;
-      gap: 2rem;
-      padding: 0.9rem 0.75rem;
-      background: #f9fafb;
-      border: 1px solid var(--border);
-      border-top: none;
-      border-radius: 0 0 10px 10px;
-      flex-wrap: wrap;
+      display: flex; justify-content: flex-end; gap: 2rem;
+      padding: 0.9rem 0.75rem; background: #f9fafb;
+      border: 1px solid var(--border); border-top: none;
+      border-radius: 0 0 10px 10px; flex-wrap: wrap;
     }
-    .results-summary.visible { display: flex; }
     .summary-item { display: flex; flex-direction: column; align-items: flex-end; }
     .summary-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
     .summary-value { font-size: 0.9rem; font-weight: 700; color: var(--text); }
@@ -408,12 +334,11 @@
 
     /* ══ RESPONSIVE ══ */
     @media (max-width: 900px) {
-      main { grid-template-columns: 1fr; padding: 1.25rem 1rem 3rem; }
+      #uploadLayout { grid-template-columns: 1fr; padding: 1.25rem 1rem 3rem; }
       .left-panel { padding-right: 0; border-right: none; }
-      .right-panel { padding-left: 0; padding-top: 1rem; }
-    }
-    @media (max-width: 600px) {
-      .radio-group { flex-direction: column; }
+      .right-panel-upload { padding-left: 0; padding-top: 1rem; }
+      #previewPanel { display: none !important; }
+      #resizeHandle { display: none !important; }
     }
   </style>
 </head>
@@ -422,22 +347,20 @@
 <!-- ══ TOPBAR ══ -->
 <header class="topbar">
   <a class="topbar-brand" href="/">Farmacias</a>
-
   <nav class="topbar-tabs">
     <a href="/" class="tab-link">Comparativa</a>
     <a href="/encargos" class="tab-link">Encargos</a>
     <a href="/facturas" class="tab-link active">Facturas</a>
   </nav>
-
   <div class="topbar-right">
     <a href="/logout" class="topbar-logout">Cerrar sesión</a>
   </div>
 </header>
 
-<!-- ══ MAIN ══ -->
-<main>
+<!-- ══ UPLOAD LAYOUT (estado inicial) ══ -->
+<div id="uploadLayout">
 
-  <!-- ── LEFT: upload + settings ── -->
+  <!-- Izquierda: upload -->
   <section class="left-panel">
     <div class="dash-card">
       <div class="dash-card-header">
@@ -446,16 +369,14 @@
       </div>
       <div class="dash-card-body">
 
-        <!-- Drop zone -->
         <div class="drop-zone" id="dropZone">
           <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp">
-          <div class="drop-icon">📄</div>
+          <div class="drop-icon" id="dropIcon">📄</div>
           <div class="drop-title" id="dropTitle">Arrastra la factura aquí</div>
           <div class="drop-sub" id="dropSub">PDF, JPG, PNG o WEBP · máx 20 MB</div>
           <div class="drop-file-name" id="dropFileName"></div>
         </div>
 
-        <!-- Proveedor -->
         <div class="form-group">
           <div class="form-label">Tipo de proveedor</div>
           <div class="radio-group" id="proveedorGroup">
@@ -472,7 +393,6 @@
           </div>
         </div>
 
-        <!-- Redondeo -->
         <div class="form-group">
           <label class="form-label" for="redondeoSelect">Redondeo del PVP</label>
           <select id="redondeoSelect">
@@ -483,100 +403,117 @@
           </select>
         </div>
 
-        <!-- Error -->
         <div class="error-box" id="errorBox"></div>
-
-        <!-- Analyzing -->
         <div class="analyzing-bar" id="analyzingBar">
           <div class="spinner"></div>
           Analizando factura con IA…
         </div>
-
-        <!-- Submit -->
         <button class="btn-analyze" id="btnAnalyze" disabled>Analizar factura</button>
 
       </div>
     </div>
   </section>
 
-  <!-- ── RIGHT: results ── -->
-  <section class="right-panel">
-
-    <!-- Empty state -->
-    <div class="empty-state" id="emptyState">
+  <!-- Derecha: estado vacío -->
+  <section class="right-panel-upload">
+    <div class="empty-state">
       <div class="empty-state-icon">🧾</div>
       <div class="empty-state-title">Sin resultados todavía</div>
       <div class="empty-state-sub">Sube una factura y pulsa "Analizar"</div>
     </div>
-
-    <!-- Results header -->
-    <div class="results-header" id="resultsHeader">
-      <div class="results-meta">
-        <div class="results-proveedor" id="resultsProveedor"></div>
-        <div class="results-counts" id="resultsCounts"></div>
-      </div>
-    </div>
-
-    <!-- Controls bar -->
-    <div class="controls-bar" id="controlsBar">
-      <span class="ctrl-label">Proveedor:</span>
-      <select class="ctrl-select" id="ctrlProveedor">
-        <option value="hefame_bida">Hefame / BIDA</option>
-        <option value="laboratorio">Laboratorio</option>
-      </select>
-      <span class="ctrl-label">Redondeo:</span>
-      <select class="ctrl-select" id="ctrlRedondeo">
-        <option value="ninguno">Sin redondeo</option>
-        <option value="fin9550">Fin en ,95/,50</option>
-        <option value="fin95">Fin en ,95</option>
-        <option value="fin90">Fin en ,90</option>
-      </select>
-      <button class="btn-export" id="btnExport">Exportar CSV</button>
-    </div>
-
-    <!-- Table -->
-    <div class="table-wrap" id="tableWrap">
-      <table id="resultTable">
-        <thead>
-          <tr>
-            <th>CN</th>
-            <th>Descripción</th>
-            <th style="text-align:right">Cant.</th>
-            <th style="text-align:right">P.Neto Unit.</th>
-            <th>IVA</th>
-            <th style="text-align:right">PVP</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
-
-    <!-- Summary footer -->
-    <div class="results-summary" id="resultsSummary">
-      <div class="summary-item">
-        <span class="summary-label">Total neto</span>
-        <span class="summary-value" id="summaryNeto">—</span>
-      </div>
-      <div class="summary-item">
-        <span class="summary-label">Total PVP estimado</span>
-        <span class="summary-value accent" id="summaryPVP">—</span>
-      </div>
-    </div>
-
   </section>
-</main>
+
+</div>
+
+<!-- ══ RESULTS LAYOUT (tras analizar) ══ -->
+<div id="resultsLayout">
+
+  <!-- Controls bar sticky -->
+  <div id="controlsBar">
+    <span class="ctrl-label">Proveedor:</span>
+    <select class="ctrl-select" id="ctrlProveedor">
+      <option value="hefame_bida">Hefame / BIDA</option>
+      <option value="laboratorio">Laboratorio</option>
+    </select>
+    <span class="ctrl-label">Redondeo:</span>
+    <select class="ctrl-select" id="ctrlRedondeo">
+      <option value="ninguno">Sin redondeo</option>
+      <option value="fin9550">Fin en ,95/,50</option>
+      <option value="fin95">Fin en ,95</option>
+      <option value="fin90">Fin en ,90</option>
+    </select>
+    <div class="ctrl-sep"></div>
+    <span class="ctrl-meta" id="ctrlMeta"></span>
+    <div class="ctrl-sep"></div>
+    <button class="btn-ctrl" id="btnNueva">Nueva factura</button>
+    <button class="btn-ctrl btn-ctrl-accent" id="btnExport">Exportar CSV</button>
+    <button class="btn-ctrl" id="btnTogglePreview">Ocultar vista previa</button>
+  </div>
+
+  <!-- Main area: tabla + preview -->
+  <div id="mainArea">
+
+    <!-- Tabla -->
+    <div id="tableSection">
+      <div class="table-wrap">
+        <table id="resultTable">
+          <thead>
+            <tr>
+              <th>CN</th>
+              <th>Descripción</th>
+              <th style="text-align:right">Cant.</th>
+              <th style="text-align:right">P.Neto Unit.</th>
+              <th>IVA</th>
+              <th style="text-align:right">PVP</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="results-summary" id="resultsSummary">
+        <div class="summary-item">
+          <span class="summary-label">Líneas</span>
+          <span class="summary-value" id="summaryLineas">—</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Total neto</span>
+          <span class="summary-value" id="summaryNeto">—</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Total PVP estimado</span>
+          <span class="summary-value accent" id="summaryPVP">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drag handle -->
+    <div id="resizeHandle"></div>
+
+    <!-- Preview panel -->
+    <div id="previewPanel">
+      <div class="preview-header">
+        <span class="preview-title">Vista previa</span>
+        <button class="btn-collapse" id="btnCollapse" title="Cerrar">✕</button>
+      </div>
+      <div id="previewContent">
+        <span class="preview-empty">Sin archivo</span>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────────────────
-let _proveedores = {};  // filled from server response
-let _lineas = [];       // current extracted lines with state
-let _rawProveedor = ''; // detected provider name from invoice
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+let _proveedores = {};
+let _lineas = [];
+let _selectedFile = null;
+let _previewURL = null;
+let _previewMime = '';
 
-// ── PVP CALCULATION ──────────────────────────────────────────────────────────
-function calcPVP(precioNeto, ivaKey, proveedorKey, redondeo) {
-  const prov = _proveedores[proveedorKey];
-  if (!prov) return 0;
-  const factor = prov.factores[ivaKey]?.factor ?? 0;
+// ── PVP CALCULATION ───────────────────────────────────────────────────────────
+function calcPVP(precioNeto, ivaKey, provKey, redondeo) {
+  const factor = _proveedores[provKey]?.factores[ivaKey]?.factor ?? 0;
   if (!factor) return 0;
   return redondear(precioNeto * factor, redondeo);
 }
@@ -590,29 +527,20 @@ function redondear(precio, regla) {
     if (cents < 0.65) return entero + 0.50;
     return entero + 0.95;
   }
-  if (regla === 'fin95') {
-    const base = Math.round(precio);
-    return base - 0.05;
-  }
-  if (regla === 'fin90') {
-    const base = Math.round(precio);
-    return base - 0.10;
-  }
+  if (regla === 'fin95') return Math.round(precio) - 0.05;
+  if (regla === 'fin90') return Math.round(precio) - 0.10;
   return Math.round(precio * 100) / 100;
 }
 
-// Map IVA percentage to default key
-function defaultIvaKey(pct, proveedorKey) {
+function defaultIvaKey(pct) {
   if (pct === 4)  return 'iva4';
   if (pct === 5)  return 'iva5';
   if (pct === 21) return 'iva21';
-  if (pct === 10) return 'iva10_nodiet'; // default for 10%
-  return 'iva21';
+  return 'iva10_nodiet';
 }
 
-// Get available IVA options for a provider
-function ivaOptions(proveedorKey) {
-  const prov = _proveedores[proveedorKey];
+function ivaOptions(provKey) {
+  const prov = _proveedores[provKey];
   if (!prov) return [];
   return Object.entries(prov.factores).map(([key, v]) => ({ key, etiqueta: v.etiqueta }));
 }
@@ -621,118 +549,277 @@ function fmt(n) {
   return Number(n).toFixed(2).replace('.', ',') + ' €';
 }
 
-// ── RENDER TABLE ─────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────────────────────
 function renderTable() {
-  const provKey   = document.getElementById('ctrlProveedor').value;
-  const redondeo  = document.getElementById('ctrlRedondeo').value;
-  const tbody     = document.getElementById('tableBody');
-  const opts      = ivaOptions(provKey);
+  const provKey  = document.getElementById('ctrlProveedor').value;
+  const redondeo = document.getElementById('ctrlRedondeo').value;
+  const tbody    = document.getElementById('tableBody');
+  const opts     = ivaOptions(provKey);
 
   tbody.innerHTML = '';
   let totalNeto = 0, totalPVP = 0;
 
   _lineas.forEach((linea, idx) => {
-    const ivaKey = linea.ivaKey || defaultIvaKey(linea.iva_porcentaje, provKey);
-    const pvp    = calcPVP(linea.precio_neto_unitario, ivaKey, provKey, redondeo);
-    const pvpTotal = pvp * linea.cantidad;
+    const ivaKey = linea.ivaKey || defaultIvaKey(linea.iva_porcentaje);
+    const pvpCalc = calcPVP(linea.precio_neto_unitario, ivaKey, provKey, redondeo);
+    const pvpDisplay = (linea.pvpManual !== null && linea.pvpManual !== undefined) ? linea.pvpManual : pvpCalc;
+    const isManual = linea.pvpManual !== null && linea.pvpManual !== undefined;
+
     totalNeto += linea.precio_neto_total ?? (linea.precio_neto_unitario * linea.cantidad);
-    totalPVP  += pvpTotal;
+    totalPVP  += pvpDisplay * linea.cantidad;
 
-    const tr = document.createElement('tr');
-
-    // Build IVA select
     const selectOpts = opts.map(o =>
-      `<option value="${o.key}" ${o.key === ivaKey ? 'selected' : ''}>${o.etiqueta}</option>`
+      `<option value="${o.key}" ${o.key === ivaKey ? 'selected' : ''}>${escHtml(o.etiqueta)}</option>`
     ).join('');
 
+    const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="td-cn">${linea.cn || '—'}</td>
+      <td class="td-cn">${escHtml(linea.cn || '—')}</td>
       <td class="td-nombre">${escHtml(linea.nombre)}</td>
       <td class="td-num">${linea.cantidad}</td>
       <td class="td-num">${fmt(linea.precio_neto_unitario)}</td>
       <td><select class="iva-select" data-idx="${idx}" onchange="onIvaChange(this)">${selectOpts}</select></td>
-      <td class="td-pvp">${fmt(pvp)}</td>
+      <td class="td-pvp">
+        <div class="pvp-cell">
+          <input type="text" class="pvp-input${isManual ? ' pvp-manual' : ''}"
+                 data-idx="${idx}"
+                 value="${pvpDisplay.toFixed(2).replace('.', ',')}"
+                 title="${isManual ? 'Valor manual — click para editar' : 'Click para editar'}"
+                 onchange="onPvpChange(this)"
+                 onfocus="this.select()">
+          ${isManual ? `<button class="pvp-reset" onclick="resetPvp(${idx})" title="Restaurar automático">↺</button>` : ''}
+        </div>
+      </td>
     `;
     tbody.appendChild(tr);
   });
 
-  document.getElementById('summaryNeto').textContent = fmt(totalNeto);
-  document.getElementById('summaryPVP').textContent  = fmt(totalPVP);
+  document.getElementById('summaryLineas').textContent = _lineas.length;
+  document.getElementById('summaryNeto').textContent   = fmt(totalNeto);
+  document.getElementById('summaryPVP').textContent    = fmt(totalPVP);
 }
 
 function onIvaChange(sel) {
   const idx = parseInt(sel.dataset.idx);
   _lineas[idx].ivaKey = sel.value;
+  _lineas[idx].pvpManual = null; // reset manual on IVA change
   renderTable();
 }
 
-function escHtml(str) {
-  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function onPvpChange(input) {
+  const idx = parseInt(input.dataset.idx);
+  const raw = input.value.replace(',', '.').replace(/[^\d.]/g, '');
+  const val = parseFloat(raw);
+  if (!isNaN(val) && val >= 0) {
+    _lineas[idx].pvpManual = val;
+  }
+  renderTable();
 }
 
-// ── SHOW RESULTS ─────────────────────────────────────────────────────────────
+function resetPvp(idx) {
+  _lineas[idx].pvpManual = null;
+  renderTable();
+}
+
+// ── SHOW RESULTS ──────────────────────────────────────────────────────────────
 function showResults(data) {
   _proveedores = data.proveedores || {};
-  _lineas = (data.lineas || []).map(l => ({ ...l, ivaKey: null }));
-  _rawProveedor = data.proveedor || '';
+  _lineas = (data.lineas || []).map(l => ({ ...l, ivaKey: null, pvpManual: null }));
 
-  const provKey = document.getElementById('proveedorGroup').querySelector('input:checked')?.value || 'hefame_bida';
+  const provKey  = document.getElementById('proveedorGroup').querySelector('input:checked')?.value || 'hefame_bida';
+  const redondeo = document.getElementById('redondeoSelect').value;
 
-  // Sync controls with left-panel settings
   document.getElementById('ctrlProveedor').value = provKey;
-  document.getElementById('ctrlRedondeo').value  = document.getElementById('redondeoSelect').value;
+  document.getElementById('ctrlRedondeo').value  = redondeo;
 
-  // Results header
-  const hdr = document.getElementById('resultsHeader');
-  hdr.classList.add('visible');
+  // Meta info
   const meta = [];
   if (data.proveedor)      meta.push(`<strong>${escHtml(data.proveedor)}</strong>`);
   if (data.numero_factura) meta.push(`Nº ${escHtml(data.numero_factura)}`);
   if (data.fecha)          meta.push(escHtml(data.fecha));
-  document.getElementById('resultsProveedor').innerHTML = meta.join(' &middot; ') || '—';
-  document.getElementById('resultsCounts').textContent  = `${_lineas.length} línea${_lineas.length !== 1 ? 's' : ''} extraída${_lineas.length !== 1 ? 's' : ''}`;
+  document.getElementById('ctrlMeta').innerHTML = meta.join(' · ') || '';
 
-  // Show controls + table + summary
-  document.getElementById('controlsBar').classList.add('visible');
-  document.getElementById('tableWrap').classList.add('visible');
-  document.getElementById('resultsSummary').classList.add('visible');
-  document.getElementById('emptyState').style.display = 'none';
+  // Switch layout
+  document.getElementById('uploadLayout').classList.add('hidden');
+  document.getElementById('resultsLayout').classList.add('visible');
 
   renderTable();
+  renderPreview();
 }
 
-// ── CONTROLS CHANGE ───────────────────────────────────────────────────────────
+// ── CONTROLS ──────────────────────────────────────────────────────────────────
 document.getElementById('ctrlProveedor').addEventListener('change', renderTable);
 document.getElementById('ctrlRedondeo').addEventListener('change', renderTable);
 
-// ── EXPORT CSV ───────────────────────────────────────────────────────────────
+document.getElementById('btnNueva').addEventListener('click', () => {
+  // Reset state
+  _lineas = [];
+  _proveedores = {};
+  _selectedFile = null;
+  if (_previewURL) { URL.revokeObjectURL(_previewURL); _previewURL = null; }
+
+  // Reset upload form
+  document.getElementById('dropZone').classList.remove('has-file');
+  document.getElementById('dropIcon').textContent = '📄';
+  document.getElementById('dropTitle').textContent = 'Arrastra la factura aquí';
+  document.getElementById('dropFileName').textContent = '';
+  document.getElementById('btnAnalyze').disabled = true;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('errorBox').classList.remove('visible');
+
+  // Switch back
+  document.getElementById('resultsLayout').classList.remove('visible');
+  document.getElementById('uploadLayout').classList.remove('hidden');
+});
+
+// ── EXPORT CSV ────────────────────────────────────────────────────────────────
 document.getElementById('btnExport').addEventListener('click', () => {
   const provKey  = document.getElementById('ctrlProveedor').value;
   const redondeo = document.getElementById('ctrlRedondeo').value;
 
   const rows = [['CN', 'Descripción', 'Cantidad', 'Precio Neto Unitario', 'IVA', 'PVP']];
   _lineas.forEach(l => {
-    const ivaKey = l.ivaKey || defaultIvaKey(l.iva_porcentaje, provKey);
-    const pvp    = calcPVP(l.precio_neto_unitario, ivaKey, provKey, redondeo);
+    const ivaKey   = l.ivaKey || defaultIvaKey(l.iva_porcentaje);
+    const pvpCalc  = calcPVP(l.precio_neto_unitario, ivaKey, provKey, redondeo);
+    const pvp      = (l.pvpManual !== null && l.pvpManual !== undefined) ? l.pvpManual : pvpCalc;
     const ivaLabel = _proveedores[provKey]?.factores[ivaKey]?.etiqueta || ivaKey;
-    rows.push([
-      l.cn || '',
-      l.nombre,
-      l.cantidad,
-      l.precio_neto_unitario.toFixed(2),
-      ivaLabel,
-      pvp.toFixed(2),
-    ]);
+    rows.push([l.cn || '', l.nombre, l.cantidad, l.precio_neto_unitario.toFixed(2), ivaLabel, pvp.toFixed(2)]);
   });
 
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'factura_pvp.csv';
-  a.click();
+  const a    = document.createElement('a'); a.href = url; a.download = 'factura_pvp.csv'; a.click();
   URL.revokeObjectURL(url);
+});
+
+// ── PREVIEW PANEL ─────────────────────────────────────────────────────────────
+function renderPreview() {
+  const content = document.getElementById('previewContent');
+  if (!_previewURL) { content.innerHTML = '<span class="preview-empty">Sin archivo</span>'; return; }
+  if (_previewMime === 'application/pdf') {
+    content.innerHTML = `<embed src="${_previewURL}#toolbar=0" type="application/pdf" width="100%" height="100%">`;
+  } else {
+    content.innerHTML = `<img src="${_previewURL}" alt="Vista previa">`;
+  }
+}
+
+let _previewOpen = true;
+
+document.getElementById('btnCollapse').addEventListener('click', () => {
+  _previewOpen = false;
+  document.getElementById('previewPanel').classList.add('collapsed');
+  document.getElementById('resizeHandle').style.display = 'none';
+  document.getElementById('btnTogglePreview').textContent = 'Mostrar vista previa';
+});
+
+document.getElementById('btnTogglePreview').addEventListener('click', () => {
+  if (_previewOpen) {
+    _previewOpen = false;
+    document.getElementById('previewPanel').classList.add('collapsed');
+    document.getElementById('resizeHandle').style.display = 'none';
+    document.getElementById('btnTogglePreview').textContent = 'Mostrar vista previa';
+  } else {
+    _previewOpen = true;
+    document.getElementById('previewPanel').classList.remove('collapsed');
+    document.getElementById('resizeHandle').style.display = '';
+    document.getElementById('btnTogglePreview').textContent = 'Ocultar vista previa';
+  }
+});
+
+// ── RESIZE HANDLE ─────────────────────────────────────────────────────────────
+const resizeHandle  = document.getElementById('resizeHandle');
+const previewPanel  = document.getElementById('previewPanel');
+let isResizing = false, startX = 0, startWidth = 0;
+
+resizeHandle.addEventListener('mousedown', e => {
+  isResizing = true;
+  startX = e.clientX;
+  startWidth = previewPanel.offsetWidth;
+  resizeHandle.classList.add('dragging');
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!isResizing) return;
+  const delta = startX - e.clientX;
+  const newW  = Math.max(200, Math.min(700, startWidth + delta));
+  previewPanel.style.width = newW + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  if (isResizing) {
+    isResizing = false;
+    resizeHandle.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
+});
+
+// ── FILE HANDLING ─────────────────────────────────────────────────────────────
+function setFile(file) {
+  if (!file) return;
+  _selectedFile = file;
+  if (_previewURL) URL.revokeObjectURL(_previewURL);
+  _previewURL  = URL.createObjectURL(file);
+  _previewMime = file.type;
+  document.getElementById('dropZone').classList.add('has-file');
+  document.getElementById('dropIcon').textContent = '✅';
+  document.getElementById('dropTitle').textContent = 'Archivo seleccionado';
+  document.getElementById('dropFileName').textContent = file.name;
+  document.getElementById('btnAnalyze').disabled = false;
+  document.getElementById('errorBox').classList.remove('visible');
+}
+
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) { fileInput.files = e.dataTransfer.files; setFile(f); }
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+// ── ANALYZE ───────────────────────────────────────────────────────────────────
+document.getElementById('btnAnalyze').addEventListener('click', async () => {
+  if (!_selectedFile) return;
+  document.getElementById('errorBox').classList.remove('visible');
+  document.getElementById('analyzingBar').classList.add('visible');
+  document.getElementById('btnAnalyze').disabled = true;
+
+  try {
+    const fd = new FormData();
+    fd.append('file', _selectedFile);
+    const resp = await fetch('/leer_factura', { method: 'POST', body: fd });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      document.getElementById('errorBox').textContent = data.error || 'Error desconocido';
+      document.getElementById('errorBox').classList.add('visible');
+      return;
+    }
+    if (!data.lineas || data.lineas.length === 0) {
+      document.getElementById('errorBox').textContent = 'La IA no encontró líneas de producto en este documento.';
+      document.getElementById('errorBox').classList.add('visible');
+      return;
+    }
+    showResults(data);
+  } catch (err) {
+    document.getElementById('errorBox').textContent = 'Error de red: ' + err.message;
+    document.getElementById('errorBox').classList.add('visible');
+  } finally {
+    document.getElementById('analyzingBar').classList.remove('visible');
+    document.getElementById('btnAnalyze').disabled = false;
+  }
 });
 
 // ── PROVEEDOR RADIO ───────────────────────────────────────────────────────────
@@ -742,92 +829,7 @@ document.getElementById('proveedorGroup').addEventListener('click', e => {
   document.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
   opt.classList.add('selected');
   opt.querySelector('input').checked = true;
-  if (_lineas.length > 0) {
-    document.getElementById('ctrlProveedor').value = opt.dataset.value;
-    renderTable();
-  }
 });
-
-// ── REDONDEO CHANGE ───────────────────────────────────────────────────────────
-document.getElementById('redondeoSelect').addEventListener('change', () => {
-  if (_lineas.length > 0) {
-    document.getElementById('ctrlRedondeo').value = document.getElementById('redondeoSelect').value;
-    renderTable();
-  }
-});
-
-// ── FILE HANDLING ─────────────────────────────────────────────────────────────
-let _selectedFile = null;
-
-function setFile(file) {
-  if (!file) return;
-  _selectedFile = file;
-  document.getElementById('dropZone').classList.add('has-file');
-  document.getElementById('dropIcon').textContent = '✅';
-  document.getElementById('dropTitle').textContent = 'Archivo seleccionado';
-  document.getElementById('dropFileName').textContent = file.name;
-  document.getElementById('btnAnalyze').disabled = false;
-  hideError();
-}
-
-const dropZone  = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  const f = e.dataTransfer.files[0];
-  if (f) { fileInput.files = e.dataTransfer.files; setFile(f); }
-});
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) setFile(fileInput.files[0]);
-});
-
-function showError(msg) {
-  const box = document.getElementById('errorBox');
-  box.textContent = msg;
-  box.classList.add('visible');
-}
-function hideError() {
-  document.getElementById('errorBox').classList.remove('visible');
-}
-
-// ── ANALYZE ───────────────────────────────────────────────────────────────────
-document.getElementById('btnAnalyze').addEventListener('click', async () => {
-  if (!_selectedFile) return;
-  hideError();
-  document.getElementById('analyzingBar').classList.add('visible');
-  document.getElementById('btnAnalyze').disabled = true;
-
-  try {
-    const fd = new FormData();
-    fd.append('file', _selectedFile);
-
-    const resp = await fetch('/leer_factura', { method: 'POST', body: fd });
-    const data = await resp.json();
-
-    if (!resp.ok) {
-      showError(data.error || 'Error desconocido');
-      return;
-    }
-    if (!data.lineas || data.lineas.length === 0) {
-      showError('La IA no encontró líneas de producto en este documento.');
-      return;
-    }
-
-    showResults(data);
-  } catch (err) {
-    showError('Error de red: ' + err.message);
-  } finally {
-    document.getElementById('analyzingBar').classList.remove('visible');
-    document.getElementById('btnAnalyze').disabled = false;
-  }
-});
-
-// Fix: the drop icon is inside the drop zone but has no id — add one
-document.querySelector('.drop-icon').id = 'dropIcon';
 </script>
 </body>
 </html>
