@@ -9,6 +9,30 @@ try:
 except ImportError:
     _AI_AVAILABLE = False
 
+# ── Facturas: factores PVP por proveedor ──────────────────────────────────────
+_CONFIG_PROVEEDORES = {
+    'hefame_bida': {
+        'nombre': 'Hefame / BIDA',
+        'factores': {
+            'iva21':        {'etiqueta': 'IVA 21%',            'factor': 1.68},
+            'iva10_diet':   {'etiqueta': 'IVA 10% Dietético',  'factor': 1.3585},
+            'iva10_nodiet': {'etiqueta': 'IVA 10% No Diet.',   'factor': 1.48},
+            'iva5':         {'etiqueta': 'IVA 5%',             'factor': 1.3063},
+            'veterinaria':  {'etiqueta': 'VET',                'factor': 1.48},
+        },
+    },
+    'laboratorio': {
+        'nombre': 'Laboratorio (directo)',
+        'factores': {
+            'iva21':        {'etiqueta': 'IVA 21%',            'factor': 1.8},
+            'iva10_diet':   {'etiqueta': 'IVA 10% Dietético',  'factor': 1.3925},
+            'iva10_nodiet': {'etiqueta': 'IVA 10% No Diet.',   'factor': 1.59},
+            'iva4':         {'etiqueta': 'IVA 4%',             'factor': 1.3933},
+            'veterinaria':  {'etiqueta': 'VET',                'factor': 0},
+        },
+    },
+}
+
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -438,6 +462,102 @@ def pregunta():
             messages=[{'role': 'user', 'content': prompt}]
         )
         return jsonify({'answer': msg.content[0].text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/facturas')
+def facturas():
+    if not session.get('authenticated'):
+        return redirect(url_for('login'))
+    return render_template('facturas.html')
+
+
+@app.route('/leer_factura', methods=['POST'])
+def leer_factura():
+    if not session.get('authenticated'):
+        return jsonify({'error': 'no auth'}), 401
+
+    if not _AI_AVAILABLE:
+        return jsonify({'error': 'IA no configurada. Añade ANTHROPIC_API_KEY como variable de entorno.'}), 503
+
+    f = request.files.get('file')
+    if not f:
+        return jsonify({'error': 'No se recibió ningún archivo'}), 400
+
+    mime = (f.mimetype or '').split(';')[0].strip()
+    allowed = {'application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+    if mime not in allowed:
+        return jsonify({'error': f'Tipo de archivo no soportado: {mime}'}), 400
+
+    data = f.read()
+    if len(data) > MAX_PDF_MB * 1024 * 1024:
+        return jsonify({'error': f'Archivo demasiado grande (máx {MAX_PDF_MB} MB)'}), 413
+
+    import base64 as _b64
+    b64 = _b64.b64encode(data).decode('utf-8')
+
+    prompt = (
+        "Analiza esta factura o albarán de farmacia española y extrae los datos de las líneas de producto.\n\n"
+        "Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin texto adicional, sin markdown):\n"
+        "{\n"
+        '  "proveedor": "nombre del proveedor/laboratorio o null",\n'
+        '  "numero_factura": "número o null",\n'
+        '  "fecha": "DD/MM/YYYY o null",\n'
+        '  "lineas": [\n'
+        "    {\n"
+        '      "cn": "código nacional 6-7 dígitos o null",\n'
+        '      "nombre": "descripción del producto",\n'
+        '      "cantidad": número entero,\n'
+        '      "precio_neto_unitario": número decimal,\n'
+        '      "precio_neto_total": número decimal,\n'
+        '      "iva_porcentaje": 4 o 5 o 10 o 21,\n'
+        '      "recargo": número decimal o 0\n'
+        "    }\n"
+        "  ],\n"
+        '  "total_sin_iva": número decimal o null,\n'
+        '  "total_con_iva": número decimal o null\n'
+        "}\n\n"
+        "REGLAS:\n"
+        "- Incluye SOLO líneas que sean productos vendibles con precio unitario > 0\n"
+        "- NO incluyas: subtotales, descuentos globales, portes, cuotas IVA, líneas sin precio\n"
+        "- precio_neto_unitario: precio unitario ya con descuentos aplicados, SIN IVA\n"
+        "- iva_porcentaje: el % real de IVA de esa línea (4, 5, 10 o 21)\n"
+        "- cantidad mínima 1 si no se especifica\n"
+        "- Números con punto como separador decimal, sin puntos de miles\n"
+        "- Si una línea es ambigua, exclúyela"
+    )
+
+    try:
+        client = _anthropic.Anthropic()
+        if mime == 'application/pdf':
+            content = [
+                {'type': 'document', 'source': {'type': 'base64', 'media_type': 'application/pdf', 'data': b64}},
+                {'type': 'text', 'text': prompt},
+            ]
+        else:
+            content = [
+                {'type': 'image', 'source': {'type': 'base64', 'media_type': mime, 'data': b64}},
+                {'type': 'text', 'text': prompt},
+            ]
+
+        msg = client.messages.create(
+            model='claude-opus-4-6',
+            max_tokens=8192,
+            messages=[{'role': 'user', 'content': content}],
+        )
+
+        raw = msg.content[0].text.strip()
+        # Strip markdown code fences if present
+        if raw.startswith('```'):
+            lines = raw.split('\n')
+            raw = '\n'.join(lines[1:-1] if lines[-1].strip() == '```' else lines[1:])
+        result = json.loads(raw)
+        result['proveedores'] = _CONFIG_PROVEEDORES
+        return jsonify(result)
+
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'No se pudo parsear la respuesta de la IA: {e}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
