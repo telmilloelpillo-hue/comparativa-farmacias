@@ -189,17 +189,57 @@
 
     #previewContent {
       flex: 1;
-      overflow: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.5rem;
-      background: #f3f4f6;
+      overflow: hidden;
+      position: relative;
+      background: #d1d5db;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
     }
-    #previewContent embed,
-    #previewContent iframe { width: 100%; height: 100%; border: none; }
-    #previewContent img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; }
-    .preview-empty { font-size: 0.78rem; color: var(--muted); text-align: center; }
+    #previewContent.grabbing { cursor: grabbing; }
+    #previewInner {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1);
+      transition: none;
+    }
+    #previewInner img {
+      display: block;
+      max-width: 460px;
+      max-height: 640px;
+      border-radius: 4px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      pointer-events: none;
+    }
+    #previewInner iframe {
+      display: block;
+      width: 460px;
+      height: 640px;
+      border: none;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+    .preview-empty {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.78rem; color: #9ca3af; text-align: center;
+    }
+
+    /* zoom controls in preview header */
+    .preview-zoom {
+      display: flex; align-items: center; gap: 0.3rem; margin: 0 0.5rem;
+    }
+    .preview-zoom button {
+      background: var(--border); border: none; border-radius: 4px;
+      width: 22px; height: 22px; cursor: pointer; font-size: 0.9rem; font-weight: 700;
+      color: var(--text); display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .preview-zoom button:hover { background: #d1d5db; }
+    .preview-zoom-label {
+      font-size: 0.7rem; color: var(--muted); min-width: 34px; text-align: center;
+    }
 
     /* ── Toggle preview button (en controls bar) ── */
     #btnTogglePreview {
@@ -493,6 +533,12 @@
     <div id="previewPanel">
       <div class="preview-header">
         <span class="preview-title">Vista previa</span>
+        <div class="preview-zoom">
+          <button onclick="changeZoom(-0.25)" title="Alejar">−</button>
+          <span class="preview-zoom-label" id="zoomLabel">100%</span>
+          <button onclick="changeZoom(+0.25)" title="Acercar">+</button>
+          <button onclick="resetZoomPan()" title="Restablecer">↺</button>
+        </div>
         <button class="btn-collapse" id="btnCollapse" title="Cerrar">✕</button>
       </div>
       <div id="previewContent">
@@ -697,17 +743,124 @@ document.getElementById('btnExport').addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
-// ── PREVIEW PANEL ─────────────────────────────────────────────────────────────
-function renderPreview() {
-  const content = document.getElementById('previewContent');
-  if (!_previewURL) { content.innerHTML = '<span class="preview-empty">Sin archivo</span>'; return; }
-  if (_previewMime === 'application/pdf') {
-    content.innerHTML = `<embed src="${_previewURL}#toolbar=0" type="application/pdf" width="100%" height="100%">`;
-  } else {
-    content.innerHTML = `<img src="${_previewURL}" alt="Vista previa">`;
-  }
+// ── PREVIEW ZOOM / PAN ────────────────────────────────────────────────────────
+let _zoom = 1, _panX = 0, _panY = 0;
+let _panning = false, _panStartX = 0, _panStartY = 0;
+let _lastPinchDist = 0;
+
+function setTransform() {
+  const inner = document.getElementById('previewInner');
+  if (!inner) return;
+  inner.style.transform = `translate(calc(-50% + ${_panX}px), calc(-50% + ${_panY}px)) scale(${_zoom})`;
+  document.getElementById('zoomLabel').textContent = Math.round(_zoom * 100) + '%';
 }
 
+function resetZoomPan() {
+  _zoom = 1; _panX = 0; _panY = 0;
+  setTransform();
+}
+
+function changeZoom(delta) {
+  _zoom = Math.max(0.2, Math.min(6, _zoom + delta));
+  setTransform();
+}
+
+// ── PREVIEW RENDER ────────────────────────────────────────────────────────────
+function renderPreview() {
+  const content = document.getElementById('previewContent');
+  resetZoomPan();
+  content.innerHTML = '';
+
+  if (!_previewURL) {
+    content.innerHTML = '<span class="preview-empty">Sin archivo</span>';
+    return;
+  }
+
+  const inner = document.createElement('div');
+  inner.id = 'previewInner';
+
+  if (_previewMime === 'application/pdf') {
+    const iframe = document.createElement('iframe');
+    iframe.src = _previewURL + '#toolbar=0&navpanes=0';
+    inner.appendChild(iframe);
+  } else {
+    const img = document.createElement('img');
+    img.src = _previewURL;
+    img.alt = 'Vista previa';
+    img.draggable = false;
+    inner.appendChild(img);
+  }
+
+  content.appendChild(inner);
+  setTransform();
+}
+
+// Wheel zoom (aislado — no propaga a la página)
+const _previewEl = document.getElementById('previewContent');
+_previewEl.addEventListener('wheel', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  const factor = e.deltaY < 0 ? 1.12 : 0.89;
+  _zoom = Math.max(0.2, Math.min(6, _zoom * factor));
+  setTransform();
+}, { passive: false });
+
+// Mouse drag
+_previewEl.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  _panning = true;
+  _panStartX = e.clientX - _panX;
+  _panStartY = e.clientY - _panY;
+  _previewEl.classList.add('grabbing');
+  e.preventDefault();
+});
+document.addEventListener('mousemove', e => {
+  if (!_panning) return;
+  _panX = e.clientX - _panStartX;
+  _panY = e.clientY - _panStartY;
+  setTransform();
+});
+document.addEventListener('mouseup', () => {
+  if (_panning) { _panning = false; _previewEl.classList.remove('grabbing'); }
+});
+
+// Touch: pinch zoom + drag
+_previewEl.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    _lastPinchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    _panning = false;
+  } else if (e.touches.length === 1) {
+    _panning = true;
+    _panStartX = e.touches[0].clientX - _panX;
+    _panStartY = e.touches[0].clientY - _panY;
+  }
+}, { passive: true });
+
+_previewEl.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    if (_lastPinchDist > 0) {
+      _zoom = Math.max(0.2, Math.min(6, _zoom * (dist / _lastPinchDist)));
+    }
+    _lastPinchDist = dist;
+    setTransform();
+  } else if (e.touches.length === 1 && _panning) {
+    _panX = e.touches[0].clientX - _panStartX;
+    _panY = e.touches[0].clientY - _panStartY;
+    setTransform();
+  }
+}, { passive: false });
+
+_previewEl.addEventListener('touchend', () => { _panning = false; _lastPinchDist = 0; });
+
+// ── PREVIEW TOGGLE / COLLAPSE ─────────────────────────────────────────────────
 let _previewOpen = true;
 
 document.getElementById('btnCollapse').addEventListener('click', () => {
