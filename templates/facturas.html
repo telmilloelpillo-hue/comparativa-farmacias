@@ -23,7 +23,8 @@
       font-family: 'Inter', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
     }
@@ -59,6 +60,7 @@
     /* ══ UPLOAD LAYOUT (estado inicial) ══ */
     #uploadLayout {
       flex: 1;
+      overflow-y: auto;
       display: grid;
       grid-template-columns: 420px 1fr;
       gap: 0;
@@ -66,6 +68,7 @@
       width: 100%;
       margin: 0 auto;
       padding: 1.75rem 1.5rem 3rem;
+      align-content: start;
     }
     #uploadLayout.hidden { display: none; }
 
@@ -79,8 +82,9 @@
     /* ══ RESULTS LAYOUT (después de analizar) ══ */
     #resultsLayout {
       display: none;
-      flex: 1;
       flex-direction: column;
+      height: calc(100vh - 52px); /* topbar height */
+      overflow: hidden;
     }
     #resultsLayout.visible { display: flex; }
 
@@ -90,11 +94,10 @@
       align-items: center;
       gap: 0.6rem;
       flex-wrap: wrap;
-      padding: 0.85rem 1.5rem;
+      padding: 0.7rem 1.5rem;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 52px;
+      flex-shrink: 0;
       z-index: 100;
     }
     .ctrl-label { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
@@ -134,6 +137,7 @@
       flex: 1;
       display: flex;
       overflow: hidden;
+      min-height: 0; /* critical for flex children to respect overflow */
     }
 
     /* ── Table section ── */
@@ -141,7 +145,10 @@
       flex: 1;
       min-width: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 1.25rem 1.5rem 3rem;
+      /* isolated scroll — wheel events stay here */
+      overscroll-behavior: contain;
     }
 
     /* ── Resize handle ── */
@@ -165,9 +172,10 @@
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
-      transition: width 0.2s;
+      overflow: hidden;
+      min-height: 0;
     }
-    #previewPanel.collapsed { width: 0 !important; min-width: 0; overflow: hidden; border-left: none; }
+    #previewPanel.collapsed { width: 0 !important; min-width: 0; border-left: none; }
 
     .preview-header {
       display: flex;
@@ -195,6 +203,8 @@
       cursor: grab;
       touch-action: none;
       user-select: none;
+      min-height: 0;
+      overscroll-behavior: contain;
     }
     #previewContent.grabbing { cursor: grabbing; }
     #previewInner {
