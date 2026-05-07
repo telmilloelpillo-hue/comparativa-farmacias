@@ -10,7 +10,7 @@
           {
             "id": "21d1d63664319d7d",
             "type": "tabs",
-            "dimension": 57.27181544633901,
+            "dimension": 57.271815446339026,
             "children": [
               {
                 "id": "e0b0e5a561226a29",
@@ -68,7 +68,7 @@
                   },
                   "pinned": true,
                   "icon": "terminal",
-                  "title": "Terminal: ✳ Claude Code"
+                  "title": "Terminal: zsh"
                 }
               }
             ]
