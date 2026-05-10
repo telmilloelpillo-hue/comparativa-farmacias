@@ -580,9 +580,11 @@ def extract_situation(pdf_path):
 
                 # Buscar código de 6 caracteres alfanumérico en la franja detectada
                 code = None
+                code_x1_actual = None   # borde derecho del token del código
                 for w in row:
                     if re.match(r'^[0-9A-Z]{6}$', w['text']) and c['code_x0'] <= w['x0'] <= c['code_x1']:
                         code = w['text']
+                        code_x1_actual = w.get('x1', w['x0'] + 35)
                         break
 
                 if not code:
@@ -607,10 +609,12 @@ def extract_situation(pdf_path):
                             caducidad = w['text']
                             break
 
-                # Descripción: texto entre código y stock
+                # Descripción: todo lo que está entre el borde derecho del código
+                # y el inicio de stock (independiente de desc_x0 detectado)
+                desc_start = code_x1_actual + 2
                 description = ' '.join(
                     w['text'] for w in row
-                    if c['desc_x0'] <= w['x0'] < c['desc_x1'] and w['text'] != code
+                    if w['x0'] > desc_start and w['x0'] < c['stock_x0']
                 )
 
                 # Look-ahead: concatenar líneas de continuación sin código propio
@@ -625,7 +629,7 @@ def extract_situation(pdf_path):
                         break
                     continuation = ' '.join(
                         w['text'] for w in next_row
-                        if c['desc_x0'] <= w['x0'] < c['desc_x1']
+                        if w['x0'] > desc_start and w['x0'] < c['stock_x0']
                     ).strip()
                     if not continuation:
                         break
