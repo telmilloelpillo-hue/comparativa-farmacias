@@ -79,7 +79,9 @@ def _month_value(row_chars, target_x, window=10, cutoff_x=0):
     if not candidates:
         return 0
     best = min(candidates, key=lambda t: t[0])[1]
-    return int(''.join(c['text'] for c in best))
+    val = int(''.join(c['text'] for c in best))
+    # A year-like value (≥1900) can never be a valid monthly sale count
+    return 0 if val >= 1900 else val
 
 
 def _year_from_row(row_chars, yr_x0=YEAR_X0, yr_x1=YEAR_X1):
@@ -110,9 +112,9 @@ def _detect_columns(page):
 
     month_hits = {}
     for w in words:
-        txt = w['text'].strip()
+        txt = w['text'].strip().lower().rstrip('.')
         for i, m in enumerate(_MONTH_NAMES):
-            if txt == m:
+            if txt == m.lower():
                 month_hits[i] = w
                 break
 
@@ -452,12 +454,14 @@ def extract_situation(pdf_path):
                     i += 1
                     continue
 
-                # Stock: entero en la franja x ≈ 410–445
+                # Stock: entero en la franja x ≈ 410–445 (valores ≥1900 son años, ignorar)
                 stock = 0
                 for w in row:
                     if STOCK_X0 <= w['x0'] <= STOCK_X1:
                         if re.match(r'^\d+$', w['text']):
-                            stock = int(w['text'])
+                            v = int(w['text'])
+                            if v < 1900:
+                                stock = v
                             break
 
                 # Caducidad: patrón MM/YYYY en x ≈ 535–600
@@ -591,6 +595,11 @@ def compare_products(products1, products2,
             description = sit2[code].get('description', '')
         else:
             continue
+
+        # Use situation-report description as fallback for empty ventas descriptions
+        if not description:
+            description = (sit1.get(code, {}).get('description', '')
+                           or sit2.get(code, {}).get('description', ''))
 
         warnings = []
         if p1 and p1.get('warnings'):
