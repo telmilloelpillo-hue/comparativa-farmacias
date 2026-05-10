@@ -580,7 +580,7 @@ def extract_situation(pdf_path):
 
                 # Buscar código de 6 caracteres alfanumérico en la franja detectada
                 code = None
-                code_x1_actual = None   # borde derecho del token del código
+                code_x1_actual = None
                 for w in row:
                     if re.match(r'^[0-9A-Z]{6}$', w['text']) and c['code_x0'] <= w['x0'] <= c['code_x1']:
                         code = w['text']
@@ -591,15 +591,44 @@ def extract_situation(pdf_path):
                     i += 1
                     continue
 
-                # Stock: entero en la franja detectada (valores ≥1900 son años, ignorar)
+                # Palabras a la derecha del código, ordenadas por x0
+                after_code = [w for w in row if w['x0'] > code_x1_actual + 1]
+                after_code.sort(key=lambda w: w['x0'])
+
+                # ── Detección semántica del stock ──────────────────────────────
+                # El stock es el primer entero < 1900 que va seguido de un PVP
+                # decimal (p.ej. "14,50"). Así la descripción queda como todo
+                # lo que hay ANTES de ese entero, sin depender de posiciones X.
                 stock = 0
-                for w in row:
-                    if c['stock_x0'] <= w['x0'] <= c['stock_x1']:
-                        if re.match(r'^\d+$', w['text']):
-                            v = int(w['text'])
-                            if v < 1900:
-                                stock = v
+                stock_sem_idx = None
+                for idx, w in enumerate(after_code):
+                    if re.match(r'^\d+$', w['text']):
+                        v = int(w['text'])
+                        if v >= 1900:
+                            continue
+                        next_tokens = after_code[idx + 1: idx + 3]
+                        if any(re.match(r'^\d+[,\.]\d{2}$', nw['text']) for nw in next_tokens):
+                            stock = v
+                            stock_sem_idx = idx
                             break
+
+                # Descripción: todo antes del stock detectado semánticamente
+                if stock_sem_idx is not None:
+                    description = ' '.join(w['text'] for w in after_code[:stock_sem_idx])
+                else:
+                    # Fallback posicional: usar stock_x0 detectado/default
+                    description = ' '.join(
+                        w['text'] for w in after_code
+                        if w['x0'] < c['stock_x0']
+                    )
+                    # Fallback posicional para stock
+                    for w in row:
+                        if c['stock_x0'] <= w['x0'] <= c['stock_x1']:
+                            if re.match(r'^\d+$', w['text']):
+                                v = int(w['text'])
+                                if v < 1900:
+                                    stock = v
+                                break
 
                 # Caducidad: patrón MM/YYYY en la franja detectada
                 caducidad = ''
@@ -609,15 +638,8 @@ def extract_situation(pdf_path):
                             caducidad = w['text']
                             break
 
-                # Descripción: todo lo que está entre el borde derecho del código
-                # y el inicio de stock (independiente de desc_x0 detectado)
-                desc_start = code_x1_actual + 2
-                description = ' '.join(
-                    w['text'] for w in row
-                    if w['x0'] > desc_start and w['x0'] < c['stock_x0']
-                )
-
                 # Look-ahead: concatenar líneas de continuación sin código propio
+                # (productos con descripción en varias filas)
                 j = i + 1
                 while j < len(sorted_ys):
                     next_row = sorted(rows_dict[sorted_ys[j]], key=lambda w: w['x0'])
@@ -627,9 +649,25 @@ def extract_situation(pdf_path):
                     )
                     if has_code:
                         break
+                    # Detectar si la siguiente fila es la de stock (int seguido de decimal)
+                    # → si lo es, parar el look-ahead
+                    nr_sorted = sorted(next_row, key=lambda w: w['x0'])
+                    is_stock_row = False
+                    for idx, w in enumerate(nr_sorted):
+                        if re.match(r'^\d+$', w['text']) and int(w['text']) < 1900:
+                            next_tok = nr_sorted[idx + 1: idx + 3]
+                            if any(re.match(r'^\d+[,\.]\d{2}$', nw['text']) for nw in next_tok):
+                                is_stock_row = True
+                                # Extraer stock de esta fila si aún no se tiene
+                                if not stock:
+                                    stock = int(w['text'])
+                                break
+                    if is_stock_row:
+                        j += 1
+                        break
                     continuation = ' '.join(
                         w['text'] for w in next_row
-                        if w['x0'] > desc_start and w['x0'] < c['stock_x0']
+                        if w['x0'] > code_x1_actual + 1 and w['x0'] < c['stock_x0']
                     ).strip()
                     if not continuation:
                         break
