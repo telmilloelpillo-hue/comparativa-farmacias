@@ -24,28 +24,58 @@ X_TOL    = 1.2
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
-def _digits_at(row_chars, x_anchor, max_digits=3, tol=X_TOL):
-    result = []
-    for d in range(max_digits):
-        target = x_anchor - d * DIGIT_W
-        tight  = tol if d == 0 else 0.5
-        found  = [c for c in row_chars
-                  if c['text'].isdigit()
-                  and abs(c['x0'] - target) <= tight]
-        if found:
-            best = min(found, key=lambda c: abs(c['x0'] - target))
-            result.append(best['text'])
+def _char_clusters(row_chars, max_gap=7.0):
+    """Group digit chars into word-like clusters based on X proximity."""
+    digits = sorted([c for c in row_chars if c['text'].isdigit()],
+                    key=lambda c: c['x0'])
+    if not digits:
+        return []
+    groups = [[digits[0]]]
+    for c in digits[1:]:
+        if c['x0'] - groups[-1][-1]['x0'] <= max_gap:
+            groups[-1].append(c)
         else:
-            break
-    result.reverse()
-    return int(''.join(result)) if result else 0
+            groups.append([c])
+    return groups
 
 
-def _month_value(row_chars, target_x, window=6):
-    digits = [c['text'] for c in sorted(row_chars, key=lambda c: c['x0'])
-              if c['text'].isdigit()
-              and (target_x - window) <= c['x0'] <= (target_x + 2)]
-    return int(''.join(digits)) if digits else 0
+def _digits_at(row_chars, x_anchor, max_digits=3, tol=X_TOL):
+    """Read integer ending at x_anchor using cluster-based approach."""
+    clusters = _char_clusters(row_chars)
+    if not clusters:
+        return 0
+    # Find cluster whose rightmost char ends near x_anchor
+    best_cluster = None
+    best_dist = float('inf')
+    for grp in clusters:
+        right_x = grp[-1]['x0']
+        dist = abs(right_x - x_anchor)
+        if dist <= max(tol * 2, DIGIT_W) and dist < best_dist:
+            best_dist = dist
+            best_cluster = grp
+    if best_cluster is None:
+        return 0
+    # Take at most max_digits chars from the cluster
+    chars = best_cluster[-max_digits:]
+    return int(''.join(c['text'] for c in chars))
+
+
+def _month_value(row_chars, target_x, window=10):
+    """Return integer at target_x using cluster proximity — avoids mixing adjacent numbers."""
+    clusters = _char_clusters(row_chars)
+    if not clusters:
+        return 0
+    # Score each cluster by distance from its center to target_x
+    candidates = []
+    for grp in clusters:
+        center = (grp[0]['x0'] + grp[-1]['x0']) / 2
+        dist = abs(center - target_x)
+        if dist <= window:
+            candidates.append((dist, grp))
+    if not candidates:
+        return 0
+    best = min(candidates, key=lambda t: t[0])[1]
+    return int(''.join(c['text'] for c in best))
 
 
 def _year_from_row(row_chars):
