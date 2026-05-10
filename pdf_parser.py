@@ -490,7 +490,7 @@ def extract_products(pdf_path, on_page=None):
 
 # ─── Informe de situación (stock parado) ───────────────────────────────────────
 
-def _detect_situation_columns(words):
+def _detect_situation_columns(words):  # kept for potential future use
     """
     Detecta posiciones X de columnas del Informe de Situación buscando
     palabras de cabecera ('Código', 'Stock', 'Caducidad').
@@ -544,37 +544,21 @@ def _detect_situation_columns(words):
 
 def extract_situation(pdf_path):
     """
-    Extrae productos del "Informe de situación" usando posiciones X detectadas
-    dinámicamente desde la cabecera (Código, Descripción, Stock, Caducidad).
-    Si no hay cabecera detectable, usa rangos amplios por defecto.
-
+    Extrae productos del "Informe de situación" (stock parado).
     Devuelve dict: { código: { 'stock': int, 'caducidad': str, 'description': str } }
     """
-    # Rangos de fallback (amplios para cubrir variaciones de layout)
-    _DEFAULTS = {
-        'code_x0': 30, 'code_x1': 110,
-        'desc_x0': 100, 'desc_x1': 420,
-        'stock_x0': 400, 'stock_x1': 460,
-        'caducidad_x0': 520, 'caducidad_x1': 620,
-    }
+    STOCK_X0,     STOCK_X1     = 410, 445
+    CADUCIDAD_X0, CADUCIDAD_X1 = 535, 600
 
     products = {}
 
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            words = page.extract_words(x_tolerance=4, y_tolerance=4)
+            words    = page.extract_words(x_tolerance=4, y_tolerance=4)
             raw_text = page.extract_text() or ''
             if not words:
                 continue
 
-            cols_detected = _detect_situation_columns(words)
-            _log.warning('SITUATION page=%d cols=%s', page.page_number,
-                         'detected' if cols_detected else 'FALLBACK-defaults')
-
-            # Detectar columnas desde cabecera; si no, usar defaults
-            c = cols_detected or _DEFAULTS
-
-            # Agrupar palabras por fila (Y)
             rows_dict = defaultdict(list)
             for w in words:
                 y = round(w['top'] / 2) * 2
@@ -583,115 +567,64 @@ def extract_situation(pdf_path):
             sorted_ys = sorted(rows_dict.keys())
             i = 0
             while i < len(sorted_ys):
-                y = sorted_ys[i]
+                y   = sorted_ys[i]
                 row = sorted(rows_dict[y], key=lambda w: w['x0'])
 
-                # Buscar código de 6 caracteres alfanumérico en la franja detectada
+                # Código: 6 chars alfanuméricos en x ≈ 30–110
                 code = None
-                code_x1_actual = None
                 for w in row:
-                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and c['code_x0'] <= w['x0'] <= c['code_x1']:
+                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and 30 <= w['x0'] <= 110:
                         code = w['text']
-                        code_x1_actual = w.get('x1', w['x0'] + 35)
                         break
-
                 if not code:
                     i += 1
                     continue
 
-                # Palabras a la derecha del código, ordenadas por x0
-                after_code = [w for w in row if w['x0'] > code_x1_actual + 1]
-                after_code.sort(key=lambda w: w['x0'])
-
-                # ── Detección semántica del stock ──────────────────────────────
-                # El stock es el primer entero < 1900 que va seguido de un PVP
-                # decimal (p.ej. "14,50"). Así la descripción queda como todo
-                # lo que hay ANTES de ese entero, sin depender de posiciones X.
+                # Stock: entero < 1900 en x ≈ 410–445
                 stock = 0
-                stock_sem_idx = None
-                for idx, w in enumerate(after_code):
-                    if re.match(r'^\d+$', w['text']):
-                        v = int(w['text'])
-                        if v >= 1900:
-                            continue
-                        next_tokens = after_code[idx + 1: idx + 3]
-                        if any(re.match(r'^\d+[,\.]\d{2}$', nw['text']) for nw in next_tokens):
-                            stock = v
-                            stock_sem_idx = idx
-                            break
+                for w in row:
+                    if STOCK_X0 <= w['x0'] <= STOCK_X1:
+                        if re.match(r'^\d+$', w['text']):
+                            v = int(w['text'])
+                            if v < 1900:
+                                stock = v
+                        break
 
-                # Descripción: todo antes del stock detectado semánticamente
-                if stock_sem_idx is not None:
-                    description = ' '.join(w['text'] for w in after_code[:stock_sem_idx])
-                else:
-                    # Fallback posicional: usar stock_x0 detectado/default
-                    description = ' '.join(
-                        w['text'] for w in after_code
-                        if w['x0'] < c['stock_x0']
-                    )
-                    # Fallback posicional para stock
-                    for w in row:
-                        if c['stock_x0'] <= w['x0'] <= c['stock_x1']:
-                            if re.match(r'^\d+$', w['text']):
-                                v = int(w['text'])
-                                if v < 1900:
-                                    stock = v
-                                break
-
-                # Caducidad: patrón MM/YYYY en la franja detectada
+                # Caducidad: MM/YYYY en x ≈ 535–600
                 caducidad = ''
                 for w in row:
-                    if c['caducidad_x0'] <= w['x0'] <= c['caducidad_x1']:
+                    if CADUCIDAD_X0 <= w['x0'] <= CADUCIDAD_X1:
                         if re.match(r'^\d{2}/\d{4}$', w['text']):
                             caducidad = w['text']
-                            break
+                        break
 
-                # Look-ahead: concatenar líneas de continuación sin código propio
-                # (productos con descripción en varias filas)
+                # Descripción: palabras entre x=70 y STOCK_X0, sin el código
+                description = ' '.join(
+                    w['text'] for w in row
+                    if 70 <= w['x0'] < STOCK_X0 and w['text'] != code
+                )
+
+                # Look-ahead: líneas de continuación hasta el siguiente código
                 j = i + 1
                 while j < len(sorted_ys):
                     next_row = sorted(rows_dict[sorted_ys[j]], key=lambda w: w['x0'])
-                    has_code = any(
-                        re.match(r'^[0-9A-Z]{6}$', w['text']) and c['code_x0'] <= w['x0'] <= c['code_x1']
-                        for w in next_row
-                    )
-                    if has_code:
+                    if any(re.match(r'^[0-9A-Z]{6}$', w['text']) and 30 <= w['x0'] <= 110
+                           for w in next_row):
                         break
-                    # Detectar si la siguiente fila es la de stock (int seguido de decimal)
-                    # → si lo es, parar el look-ahead
-                    nr_sorted = sorted(next_row, key=lambda w: w['x0'])
-                    is_stock_row = False
-                    for idx, w in enumerate(nr_sorted):
-                        if re.match(r'^\d+$', w['text']) and int(w['text']) < 1900:
-                            next_tok = nr_sorted[idx + 1: idx + 3]
-                            if any(re.match(r'^\d+[,\.]\d{2}$', nw['text']) for nw in next_tok):
-                                is_stock_row = True
-                                # Extraer stock de esta fila si aún no se tiene
-                                if not stock:
-                                    stock = int(w['text'])
-                                break
-                    if is_stock_row:
-                        j += 1
-                        break
-                    continuation = ' '.join(
+                    cont = ' '.join(
                         w['text'] for w in next_row
-                        if w['x0'] > code_x1_actual + 1 and w['x0'] < c['stock_x0']
+                        if 70 <= w['x0'] < STOCK_X0
                     ).strip()
-                    if not continuation:
+                    if not cont:
                         break
-                    description = re.sub(r'  +', ' ', (description + ' ' + continuation).strip())
+                    description = re.sub(r'  +', ' ', (description + ' ' + cont).strip())
                     j += 1
 
                 description = re.sub(r'  +', ' ', description).strip()
 
-                # ── Fallback extract_text() si descripción vacía ───────────
+                # Fallback: texto plano si la descripción quedó vacía
                 if not description:
                     description = _desc_from_raw_text(raw_text, code)
-                    if description:
-                        _log.warning('SITUATION code=%s desc recovered via extract_text()', code)
-
-                _log.warning('SITUATION code=%s stock=%d desc=%r after_code_count=%d',
-                             code, stock, description[:40] if description else '', len(after_code))
 
                 products[code] = {
                     'stock':       stock,
