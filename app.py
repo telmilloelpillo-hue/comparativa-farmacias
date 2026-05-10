@@ -218,18 +218,18 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
 
     try:
         with app.app_context():
-            # Orden fijo: Zarzuelo = columna izquierda (1), Barris = columna derecha (2)
-            n1l, n2l = name1.lower(), name2.lower()
-            if 'barris' in n1l or 'zarzuelo' in n2l:
-                path1, path2       = path2, path1
-                path_sit1, path_sit2 = path_sit2, path_sit1
-                name1, name2       = name2, name1
-                has_sit1, has_sit2 = has_sit2, has_sit1
-
             # Rangos dinámicos según si hay situación
             n_extra = (1 if has_sit1 else 0) + (1 if has_sit2 else 0)
             pct_pdf1_end  = 42 if n_extra == 0 else (35 if n_extra == 1 else 28)
             pct_pdf2_end  = 72 if n_extra == 0 else (58 if n_extra == 1 else 52)
+
+            # Orden fijo: Zarzuelo = columna izquierda (1), Barris = columna derecha (2)
+            n1l, n2l = name1.lower(), name2.lower()
+            if 'barris' in n1l or 'zarzuelo' in n2l:
+                path1, path2         = path2, path1
+                path_sit1, path_sit2 = path_sit2, path_sit1
+                name1, name2         = name2, name1
+                has_sit1, has_sit2   = has_sit2, has_sit1
 
             upd(2, 'Detectando laboratorio…')
             lab1 = detect_lab(path1)
