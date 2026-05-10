@@ -237,6 +237,8 @@
   },
   "active": "e0b0e5a561226a29",
   "lastOpenFiles": [
+    "__pycache__/invoice_ocr.cpython-314.pyc",
+    "invoice_ocr.py",
     "docs/Skills Matt Pocock.md",
     "docs/PDF_PARSER.md",
     "docs/Reportes PDF.md",
@@ -251,7 +253,6 @@
     "scripts/__pycache__",
     "pedidos",
     "scripts/report_builder.py",
-    "scripts/chart_builder.py",
     "venv/lib/python3.14/site-packages/kaleido-1.3.0.dist-info/licenses/LICENSE.md",
     "venv/lib/python3.14/site-packages/choreographer-1.3.0.dist-info/licenses/LICENSE.md",
     "venv/lib/python3.14/site-packages/plotly/figure_factory/README.md",
@@ -272,7 +273,6 @@
     "docs/Frontend Templates.md",
     "docs/Sesion y Auth.md",
     "docs/Datos Proveedores.md",
-    "docs/Config y Deploy.md",
     "Sin título.canvas"
   ]
 }
