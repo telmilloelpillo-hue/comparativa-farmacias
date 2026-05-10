@@ -356,6 +356,32 @@ def extract_situation(pdf_path):
                     description = re.sub(r'  +', ' ', (description + ' ' + continuation).strip())
                     j += 1
 
+                # Backward scan: si la descripción está vacía, buscar en filas anteriores.
+                # Patrón DISNA: el código está en la última fila del bloque, la descripción
+                # está en las filas previas sin código propio.
+                if not description:
+                    back_parts = []
+                    k = i - 1
+                    while k >= 0 and len(back_parts) < 5:
+                        prev_row = sorted(rows_dict[sorted_ys[k]], key=lambda w: w['x0'])
+                        has_prev_code = any(
+                            re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80
+                            for w in prev_row
+                        )
+                        if has_prev_code:
+                            break
+                        prev_desc = ' '.join(
+                            w['text'] for w in prev_row
+                            if 80 <= w['x0'] < STOCK_X0
+                        ).strip()
+                        if prev_desc:
+                            back_parts.insert(0, prev_desc)
+                            k -= 1
+                        else:
+                            break
+                    if back_parts:
+                        description = ' '.join(back_parts)
+
                 description = re.sub(r'  +', ' ', description).strip()
 
                 products[code] = {
