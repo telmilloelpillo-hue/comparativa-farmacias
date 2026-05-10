@@ -2,6 +2,7 @@
 tags: [feature, reportlab, pdf, reportes]
 ---
 
+
 # Reportes PDF
 
 ## Dos tipos de PDF en el proyecto

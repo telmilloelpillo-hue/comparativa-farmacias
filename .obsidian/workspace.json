@@ -16,10 +16,14 @@
                 "id": "e0b0e5a561226a29",
                 "type": "leaf",
                 "state": {
-                  "type": "graph",
-                  "state": {},
-                  "icon": "lucide-git-fork",
-                  "title": "Vista gráfica"
+                  "type": "markdown",
+                  "state": {
+                    "file": "docs/Reportes PDF.md",
+                    "mode": "source",
+                    "source": false
+                  },
+                  "icon": "lucide-file",
+                  "title": "Reportes PDF"
                 }
               }
             ]
