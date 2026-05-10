@@ -351,12 +351,12 @@ def resultado():
         return redirect(url_for('index'))
     with open(json_path, encoding='utf-8') as f:
         data = json.load(f)
-    return render_template('comparativa.html', **data)
+    return render_template('comparativa.html', comp_token=token, **data)
 
 
 @app.route('/descargar')
 def descargar():
-    token = session.get('comp_token')
+    token = request.args.get('token') or session.get('comp_token')
     if not token:
         return redirect(url_for('index'))
     pdf_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.pdf')
