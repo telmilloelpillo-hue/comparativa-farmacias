@@ -48,10 +48,10 @@ def preprocess_image(image_bytes: bytes) -> bytes:
     if img is None:
         return image_bytes
 
-    # 1 — Resize: max 3000 px en lado mayor para no saturar la API
+    # 1 — Resize: max 1500 px (suficiente para OCR; 3000px hacía timeout en Render)
     h, w = img.shape[:2]
-    if max(h, w) > 3000:
-        scale = 3000 / max(h, w)
+    if max(h, w) > 1500:
+        scale = 1500 / max(h, w)
         img = cv2.resize(img, (int(w * scale), int(h * scale)),
                          interpolation=cv2.INTER_AREA)
 
@@ -64,10 +64,8 @@ def preprocess_image(image_bytes: bytes) -> bytes:
     # 4 — Deskew (corrección de inclinación de texto)
     img = _deskew(img)
 
-    # 5 — Eliminación de ruido (preserva bordes de caracteres)
-    img = cv2.fastNlMeansDenoisingColored(img, None, h=8, hColor=8,
-                                          templateWindowSize=7,
-                                          searchWindowSize=21)
+    # 5 — Suavizado ligero (fastNlMeansDenoisingColored es demasiado lento en prod)
+    img = cv2.GaussianBlur(img, (3, 3), 0)
 
     # 6 — Mejora de contraste adaptativa (CLAHE en canal L del espacio LAB)
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)

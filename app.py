@@ -565,7 +565,7 @@ def _read_env_file() -> dict:
 
 @app.errorhandler(413)
 def too_large(e):
-    return f'El PDF es demasiado grande. Máximo {MAX_PDF_MB}MB por archivo.', 413
+    return jsonify({'error': f'El archivo es demasiado grande. Máximo {MAX_PDF_MB} MB.'}), 413
 
 
 # ── Generación del PDF ─────────────────────────────────────────────────────────
