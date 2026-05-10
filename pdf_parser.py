@@ -4,11 +4,8 @@ pdf_parser.py — Parser universal para PDFs de estadísticas de ventas (Farmaci
 
 import pdfplumber
 import re
-import logging
 from collections import defaultdict
 from datetime import date as _date
-
-_log = logging.getLogger('pdf_parser')
 
 # ─── Posiciones X fijas del layout ────────────────────────────────────────────
 
@@ -82,9 +79,7 @@ def _month_value(row_chars, target_x, window=10, cutoff_x=0):
     if not candidates:
         return 0
     best = min(candidates, key=lambda t: t[0])[1]
-    val = int(''.join(c['text'] for c in best))
-    # A year-like value (≥1900) can never be a valid monthly sale count
-    return 0 if val >= 1900 else val
+    return int(''.join(c['text'] for c in best))
 
 
 def _year_from_row(row_chars, yr_x0=YEAR_X0, yr_x1=YEAR_X1):
@@ -115,9 +110,9 @@ def _detect_columns(page):
 
     month_hits = {}
     for w in words:
-        txt = w['text'].strip().lower().rstrip('.')
+        txt = w['text'].strip()
         for i, m in enumerate(_MONTH_NAMES):
-            if txt == m.lower():
+            if txt == m:
                 month_hits[i] = w
                 break
 
@@ -172,75 +167,6 @@ def _month_cutoff(row_chars, year_x1):
     if not alpha_after_year:
         return year_x1 + 2
     return max(alpha_after_year) + 4
-
-
-def _detect_columns_from_data(rows_dict):
-    """
-    Fallback de detección cuando la cabecera no tiene 'Ene/Feb/Mar...'.
-    Escanea filas de productos (código 6 chars) buscando el cluster '20XX'
-    como ancla del año, luego infiere el resto de columnas por posición relativa.
-
-    Retorna dict con mismas claves que _detect_columns(), o None si insuficiente.
-    """
-    year_xs = []
-    right_xs = []   # X de clusters a la derecha del año → candidatos a meses
-    left_xs  = []   # X de clusters a la izquierda del año → candidatos a stock/smin
-
-    rows_checked = 0
-    for y in sorted(rows_dict.keys()):
-        row = rows_dict[y]
-        code_chars = sorted([c for c in row if 20 <= c['x0'] < 60],
-                            key=lambda c: c['x0'])
-        code = ''.join(c['text'] for c in code_chars).strip()
-        if not re.match(r'^[0-9A-Z]{6}$', code):
-            continue
-
-        clusters = _char_clusters(row)
-        for grp in clusters:
-            txt = ''.join(c['text'] for c in grp)
-            if re.match(r'^20\d{2}$', txt):
-                cx = (grp[0]['x0'] + grp[-1]['x0']) / 2
-                year_xs.append(cx)
-                for g2 in clusters:
-                    g2_cx = (g2[0]['x0'] + g2[-1]['x0']) / 2
-                    if g2_cx > cx + 25:
-                        right_xs.append(g2_cx)
-                    elif cx - 90 < g2_cx < cx - 5:
-                        left_xs.append(g2_cx)
-                break
-
-        rows_checked += 1
-        if rows_checked >= 10:
-            break
-
-    if len(year_xs) < 3 or not right_xs:
-        return None
-
-    yr_center = sorted(year_xs)[len(year_xs) // 2]
-    yr_x0 = yr_center - 10
-    yr_x1 = yr_center + 10
-
-    # Distribución uniforme de 12 meses entre el primer y último cluster derecho
-    right_sorted = sorted(set(right_xs))
-    r_min = right_sorted[0]
-    r_max = right_sorted[-1]
-    if r_max - r_min < 50:
-        return None   # zona demasiado estrecha para 12 meses
-    step = (r_max - r_min) / 11
-    month_xs = [r_min + i * step for i in range(12)]
-
-    left_sorted = sorted(set(left_xs))
-    stock_x = left_sorted[-2] if len(left_sorted) >= 2 else yr_x0 - 40
-    smin_x  = left_sorted[-1] if len(left_sorted) >= 1 else yr_x0 - 20
-
-    return {
-        'stock':   stock_x,
-        'smin':    smin_x,
-        'year_x0': yr_x0,
-        'year_x1': yr_x1,
-        'total':   yr_x1 + 30,
-        'months':  month_xs,
-    }
 
 
 def _detect_years_global(all_rows):
@@ -305,16 +231,13 @@ def extract_products(pdf_path, on_page=None):
             if on_page:
                 on_page(page_idx + 1, total_pages)
 
-            # Detectar posiciones de columnas en 3 niveles:
-            # 1) cabecera de página (más fiable), 2) inferencia desde datos (robusto),
-            # 3) posiciones hardcoded (último recurso, puede fallar en formatos nuevos).
-            _cols = (_detect_columns(page)
-                     or _detect_columns_from_data(rows)
-                     or {
-                         'stock': STOCK_X, 'smin': SMIN_X,
-                         'year_x0': YEAR_X0, 'year_x1': YEAR_X1,
-                         'total': TOTAL_X, 'months': MONTH_X,
-                     })
+            # Auto-detectar posiciones de columnas desde la cabecera de esta página.
+            # Si no se detectan (p.ej. página sin cabecera), se usan los valores fijos.
+            _cols = _detect_columns(page) or {
+                'stock': STOCK_X, 'smin': SMIN_X,
+                'year_x0': YEAR_X0, 'year_x1': YEAR_X1,
+                'total': TOTAL_X, 'months': MONTH_X,
+            }
             p_stock_x  = _cols['stock']
             p_smin_x   = _cols['smin']
             p_yr_x0    = _cols['year_x0']
@@ -443,16 +366,6 @@ def extract_products(pdf_path, on_page=None):
                 total_current = sum(months_current)
                 total_prev    = sum(months_prev)
 
-                # Capa 3: si el total parece un año, algún mes fue mal leído.
-                # Eliminar valores ≥ 500 en meses individuales (ninguna farmacia
-                # pequeña vende 500 uds de un producto en un solo mes).
-                if total_current >= 1500:
-                    months_current = [m if m < 500 else 0 for m in months_current]
-                    total_current  = sum(months_current)
-                if total_prev >= 1500:
-                    months_prev = [m if m < 500 else 0 for m in months_prev]
-                    total_prev  = sum(months_prev)
-
                 last_month_idx = max(
                     (idx for idx, v in enumerate(months_current) if v > 0), default=-1
                 )
@@ -490,75 +403,33 @@ def extract_products(pdf_path, on_page=None):
 
 # ─── Informe de situación (stock parado) ───────────────────────────────────────
 
-def _detect_situation_columns(words):  # kept for potential future use
-    """
-    Detecta posiciones X de columnas del Informe de Situación buscando
-    palabras de cabecera ('Código', 'Stock', 'Caducidad').
-    Devuelve dict con rangos x0/x1 por columna, o None si no encuentra cabecera.
-    """
-    _HEADER_KEYS = {
-        'código': 'code', 'codigo': 'code',
-        'descripción': 'desc', 'descripcion': 'desc',
-        'stock': 'stock',
-        'caducidad': 'caducidad',
-    }
-
-    # Encontrar la fila de cabecera buscando 'Código'/'codigo'
-    header_y = None
-    for w in words:
-        norm = w['text'].lower().strip().rstrip(':')
-        if norm in ('código', 'codigo'):
-            header_y = w['top']
-            break
-
-    if header_y is None:
-        return None
-
-    # Recoger todas las palabras en esa fila (±6px)
-    header_row = [w for w in words if abs(w['top'] - header_y) <= 6]
-    cols = {}
-    for w in header_row:
-        norm = w['text'].lower().strip().rstrip(':')
-        if norm in _HEADER_KEYS:
-            cols[_HEADER_KEYS[norm]] = w['x0']
-
-    if 'code' not in cols:
-        return None
-
-    code_x   = cols['code']
-    desc_x   = cols.get('desc',      code_x + 40)
-    stock_x  = cols.get('stock',     code_x + 350)
-    cad_x    = cols.get('caducidad', code_x + 470)
-
-    return {
-        'code_x0':      code_x - 5,
-        'code_x1':      code_x + 38,
-        'desc_x0':      desc_x,
-        'desc_x1':      stock_x - 5,
-        'stock_x0':     stock_x - 10,
-        'stock_x1':     stock_x + 40,
-        'caducidad_x0': cad_x - 10,
-        'caducidad_x1': cad_x + 90,
-    }
-
-
 def extract_situation(pdf_path):
     """
-    Extrae productos del "Informe de situación" (stock parado).
-    Devuelve dict: { código: { 'stock': int, 'caducidad': str, 'description': str } }
+    Extrae productos del "Informe de situación" usando posiciones X fijas.
+
+    Estructura del informe (x fijas detectadas empíricamente):
+      Alm.      : x ≈ 29
+      Código    : x ≈ 58
+      Descripción: x ≈ 109–420
+      Stock     : x ≈ 420–440  ← entero en esta franja
+      PVP       : x ≈ 450–480  ← decimal con coma (12,95)
+      Caducidad : x ≈ 540–570  ← patrón MM/YYYY
+
+    Devuelve dict: { código: { 'stock': int, 'caducidad': str } }
     """
-    STOCK_X0,     STOCK_X1     = 410, 445
+    # Rangos X para cada columna
+    STOCK_X0, STOCK_X1    = 410, 445
     CADUCIDAD_X0, CADUCIDAD_X1 = 535, 600
 
     products = {}
 
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            words    = page.extract_words(x_tolerance=4, y_tolerance=4)
-            raw_text = page.extract_text() or ''
+            words = page.extract_words(x_tolerance=4, y_tolerance=4)
             if not words:
                 continue
 
+            # Agrupar palabras por fila (Y)
             rows_dict = defaultdict(list)
             for w in words:
                 y = round(w['top'] / 2) * 2
@@ -567,64 +438,62 @@ def extract_situation(pdf_path):
             sorted_ys = sorted(rows_dict.keys())
             i = 0
             while i < len(sorted_ys):
-                y   = sorted_ys[i]
+                y = sorted_ys[i]
                 row = sorted(rows_dict[y], key=lambda w: w['x0'])
 
-                # Código: 6 chars alfanuméricos en x ≈ 30–110
+                # Buscar código de 6 caracteres alfanumérico
                 code = None
                 for w in row:
-                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and 30 <= w['x0'] <= 110:
+                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80:
                         code = w['text']
                         break
+
                 if not code:
                     i += 1
                     continue
 
-                # Stock: entero < 1900 en x ≈ 410–445
+                # Stock: entero en la franja x ≈ 410–445
                 stock = 0
                 for w in row:
                     if STOCK_X0 <= w['x0'] <= STOCK_X1:
                         if re.match(r'^\d+$', w['text']):
-                            v = int(w['text'])
-                            if v < 1900:
-                                stock = v
-                        break
+                            stock = int(w['text'])
+                            break
 
-                # Caducidad: MM/YYYY en x ≈ 535–600
+                # Caducidad: patrón MM/YYYY en x ≈ 535–600
                 caducidad = ''
                 for w in row:
                     if CADUCIDAD_X0 <= w['x0'] <= CADUCIDAD_X1:
                         if re.match(r'^\d{2}/\d{4}$', w['text']):
                             caducidad = w['text']
-                        break
+                            break
 
-                # Descripción: palabras entre x=70 y STOCK_X0, sin el código
+                # Descripción: texto entre el código (x≈80) y el stock (x≈410)
                 description = ' '.join(
                     w['text'] for w in row
-                    if 70 <= w['x0'] < STOCK_X0 and w['text'] != code
+                    if 80 <= w['x0'] < STOCK_X0 and w['text'] != code
                 )
 
-                # Look-ahead: líneas de continuación hasta el siguiente código
+                # Look-ahead: concatenar líneas de continuación sin código propio
                 j = i + 1
                 while j < len(sorted_ys):
                     next_row = sorted(rows_dict[sorted_ys[j]], key=lambda w: w['x0'])
-                    if any(re.match(r'^[0-9A-Z]{6}$', w['text']) and 30 <= w['x0'] <= 110
-                           for w in next_row):
+                    has_code = any(
+                        re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80
+                        for w in next_row
+                    )
+                    if has_code:
                         break
-                    cont = ' '.join(
+                    continuation = ' '.join(
                         w['text'] for w in next_row
-                        if 70 <= w['x0'] < STOCK_X0
+                        if 80 <= w['x0'] < STOCK_X0
                     ).strip()
-                    if not cont:
+                    if not continuation:
                         break
-                    description = re.sub(r'  +', ' ', (description + ' ' + cont).strip())
+                    description = re.sub(r'  +', ' ', (description + ' ' + continuation).strip())
                     j += 1
 
                 description = re.sub(r'  +', ' ', description).strip()
-
-                # Fallback: texto plano si la descripción quedó vacía
-                if not description:
-                    description = _desc_from_raw_text(raw_text, code)
 
                 products[code] = {
                     'stock':       stock,
@@ -636,109 +505,6 @@ def extract_situation(pdf_path):
     return products
 
 
-def _desc_from_raw_text(page_text, code):
-    """
-    Extrae descripción de un código usando el texto plano de la página
-    (extract_text), sin depender de posiciones X. Útil cuando extract_words
-    falla en agrupar caracteres del PDF de Pierre Fabre u otros labs.
-    """
-    for line in page_text.splitlines():
-        # Buscar línea que contenga el código como token aislado
-        if not re.search(r'(?<!\w)' + re.escape(code) + r'(?!\w)', line):
-            continue
-        idx = line.find(code)
-        after = line[idx + len(code):].strip()
-        parts = after.split()
-        desc_parts = []
-        for k, part in enumerate(parts):
-            if re.match(r'^\d+$', part):
-                v = int(part)
-                if v < 1900:
-                    # Stock: seguido de precio decimal
-                    remaining = ' '.join(parts[k:])
-                    if re.search(r'\d+[,\.]\d{2}', remaining[len(part):]):
-                        break
-            desc_parts.append(part)
-        result = ' '.join(desc_parts).strip()
-        if result:
-            return result
-    return ''
-
-
-# ─── Diagnóstico de formato PDF ───────────────────────────────────────────────
-
-def diagnose_pdf(pdf_path, max_products=5):
-    """
-    Imprime la estructura interna de un PDF de estadísticas para depurar
-    formatos nuevos. Muestra posiciones X de cabeceras, año detectado y
-    primeros productos con sus clusters de dígitos.
-
-    Uso: python3 -c "from pdf_parser import diagnose_pdf; diagnose_pdf('ruta.pdf')"
-    """
-    import sys
-    out = []
-
-    with pdfplumber.open(pdf_path) as pdf:
-        for page_idx, page in enumerate(pdf.pages):
-            out.append(f'\n=== PÁGINA {page_idx + 1} ===')
-
-            # Detección de columnas por cabecera
-            cols = _detect_columns(page)
-            if cols:
-                out.append(f'  _detect_columns → OK')
-                out.append(f'    stock={cols["stock"]:.1f}  smin={cols["smin"]:.1f}'
-                           f'  year=[{cols["year_x0"]:.1f}-{cols["year_x1"]:.1f}]'
-                           f'  total={cols["total"]:.1f}')
-                out.append(f'    months (12): {[f"{x:.0f}" for x in cols["months"]]}')
-            else:
-                out.append(f'  _detect_columns → None (no header found)')
-
-            # Cabecera bruta: palabras en las primeras 5 líneas
-            words = page.extract_words(x_tolerance=3, y_tolerance=3) or []
-            if words:
-                top_y = min(w['top'] for w in words)
-                header_words = [w for w in words if w['top'] < top_y + 40]
-                out.append(f'  Header words: {[(w["text"], round(w["x0"])) for w in header_words[:20]]}')
-
-            # Primeros productos con clusters
-            rows = defaultdict(list)
-            for c in page.chars:
-                y = round(c['top'] / 2) * 2
-                rows[y].append(c)
-
-            found = 0
-            for y in sorted(rows.keys()):
-                row = rows[y]
-                code_chars = sorted([c for c in row if 20 <= c['x0'] < 60],
-                                    key=lambda c: c['x0'])
-                code = ''.join(c['text'] for c in code_chars).strip()
-                if not re.match(r'^[0-9A-Z]{6}$', code):
-                    continue
-
-                clusters = _char_clusters(row)
-                cluster_info = [(int(''.join(c['text'] for c in g)),
-                                 round((g[0]['x0'] + g[-1]['x0']) / 2))
-                                for g in clusters]
-                yr = _year_from_row(row)
-                out.append(f'  {code}  yr={yr}  clusters={cluster_info}')
-                found += 1
-                if found >= max_products:
-                    break
-
-            if found == 0:
-                out.append('  (sin productos en esta página)')
-
-            # Inferencia desde datos
-            data_cols = _detect_columns_from_data(rows)
-            if data_cols:
-                out.append(f'  _detect_columns_from_data → OK')
-                out.append(f'    year=[{data_cols["year_x0"]:.1f}-{data_cols["year_x1"]:.1f}]'
-                           f'  months: {[f"{x:.0f}" for x in data_cols["months"]]}')
-            else:
-                out.append(f'  _detect_columns_from_data → None')
-
-    print('\n'.join(out))
-    return '\n'.join(out)
 
 
 
@@ -825,11 +591,6 @@ def compare_products(products1, products2,
             description = sit2[code].get('description', '')
         else:
             continue
-
-        # Use situation-report description as fallback for empty ventas descriptions
-        if not description:
-            description = (sit1.get(code, {}).get('description', '')
-                           or sit2.get(code, {}).get('description', ''))
 
         warnings = []
         if p1 and p1.get('warnings'):

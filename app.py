@@ -1,8 +1,6 @@
 from flask import Flask, request, render_template, send_file, session, redirect, url_for, jsonify
-import os, tempfile, uuid, json, threading, logging
+import os, tempfile, uuid, json, threading
 from datetime import datetime
-
-logging.basicConfig(level=logging.WARNING)
 
 try:
     from dotenv import load_dotenv
