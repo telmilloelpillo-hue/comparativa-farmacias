@@ -60,15 +60,19 @@ def _digits_at(row_chars, x_anchor, max_digits=3, tol=X_TOL):
     return int(''.join(c['text'] for c in chars))
 
 
-def _month_value(row_chars, target_x, window=10):
-    """Return integer at target_x using cluster proximity — avoids mixing adjacent numbers."""
+def _month_value(row_chars, target_x, window=10, cutoff_x=0):
+    """
+    Return integer at target_x using cluster proximity.
+    cutoff_x: clusters with center < cutoff_x are ignored (description zone filter).
+    """
     clusters = _char_clusters(row_chars)
     if not clusters:
         return 0
-    # Score each cluster by distance from its center to target_x
     candidates = []
     for grp in clusters:
         center = (grp[0]['x0'] + grp[-1]['x0']) / 2
+        if center < cutoff_x:
+            continue
         dist = abs(center - target_x)
         if dist <= window:
             candidates.append((dist, grp))
@@ -78,14 +82,91 @@ def _month_value(row_chars, target_x, window=10):
     return int(''.join(c['text'] for c in best))
 
 
-def _year_from_row(row_chars):
+def _year_from_row(row_chars, yr_x0=YEAR_X0, yr_x1=YEAR_X1):
     zone = sorted(
-        [c for c in row_chars if YEAR_X0 - 1 <= c['x0'] <= YEAR_X1 + 1],
+        [c for c in row_chars if yr_x0 - 1 <= c['x0'] <= yr_x1 + 1],
         key=lambda c: c['x0']
     )
     text = ''.join(c['text'] for c in zone)
     m = re.search(r'(20\d{2})', text)
     return int(m.group(1)) if m else None
+
+
+# ─── Auto-detección de columnas ───────────────────────────────────────────────
+
+_MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+                'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+
+def _detect_columns(page):
+    """
+    Auto-detecta posiciones X desde la fila de cabecera 'Ene Feb Mar...'.
+    Devuelve dict {stock, smin, year_x0, year_x1, total, months[12]} o None.
+    """
+    try:
+        words = page.extract_words(x_tolerance=3, y_tolerance=3)
+    except Exception:
+        return None
+
+    month_hits = {}
+    for w in words:
+        txt = w['text'].strip()
+        for i, m in enumerate(_MONTH_NAMES):
+            if txt == m:
+                month_hits[i] = w
+                break
+
+    if len(month_hits) < 6:
+        return None
+
+    month_xs = [None] * 12
+    for i, w in month_hits.items():
+        month_xs[i] = (w['x0'] + w['x1']) / 2
+
+    known = sorted((i, x) for i, x in enumerate(month_xs) if x is not None)
+    if len(known) >= 2:
+        step = (known[-1][1] - known[0][1]) / max(known[-1][0] - known[0][0], 1)
+        for i in range(12):
+            if month_xs[i] is None:
+                month_xs[i] = known[0][1] + (i - known[0][0]) * step
+
+    ref_top = next(iter(month_hits.values()))['top']
+    header_words = [w for w in words if abs(w['top'] - ref_top) <= 5]
+
+    cols = {
+        'stock':   STOCK_X,
+        'smin':    SMIN_X,
+        'year_x0': YEAR_X0,
+        'year_x1': YEAR_X1,
+        'total':   TOTAL_X,
+        'months':  month_xs,
+    }
+    for w in header_words:
+        t, tl = w['text'].strip(), w['text'].strip().lower()
+        cx = (w['x0'] + w['x1']) / 2
+        if tl in ('stock', 'stk'):
+            cols['stock'] = cx
+        elif tl.startswith('s.m') or tl.startswith('smi'):
+            cols['smin'] = cx
+        elif 'ñ' in tl or tl in ('ano', 'año'):
+            cols['year_x0'] = w['x0']
+            cols['year_x1'] = w['x1']
+        elif tl == 'total':
+            cols['total'] = cx
+    return cols
+
+
+def _month_cutoff(row_chars, year_x1):
+    """
+    Devuelve la X mínima válida para leer valores de mes en una fila con año.
+    Excluye texto de descripción como '400 ML' buscando el carácter alfabético
+    más a la derecha después de la zona del año y añadiendo un margen.
+    """
+    alpha_after_year = [c['x0'] for c in row_chars
+                        if c['text'].isalpha() and c['x0'] > year_x1]
+    if not alpha_after_year:
+        return year_x1 + 2
+    return max(alpha_after_year) + 4
 
 
 def _detect_years_global(all_rows):
@@ -133,22 +214,36 @@ def extract_products(pdf_path, on_page=None):
 
     with pdfplumber.open(pdf_path) as pdf:
         all_rows = []
-        pages_rows = []
+        pages_data = []  # list of (page_object, rows_dict)
 
         for page in pdf.pages:
             rows = defaultdict(list)
             for c in page.chars:
                 y = round(c['top'] / 2) * 2
                 rows[y].append(c)
-            pages_rows.append(rows)
+            pages_data.append((page, rows))
             all_rows.extend(rows.values())
 
         year_current, year_prev = _detect_years_global(all_rows)
-        total_pages = len(pages_rows)
+        total_pages = len(pages_data)
 
-        for page_idx, rows in enumerate(pages_rows):
+        for page_idx, (page, rows) in enumerate(pages_data):
             if on_page:
                 on_page(page_idx + 1, total_pages)
+
+            # Auto-detectar posiciones de columnas desde la cabecera de esta página.
+            # Si no se detectan (p.ej. página sin cabecera), se usan los valores fijos.
+            _cols = _detect_columns(page) or {
+                'stock': STOCK_X, 'smin': SMIN_X,
+                'year_x0': YEAR_X0, 'year_x1': YEAR_X1,
+                'total': TOTAL_X, 'months': MONTH_X,
+            }
+            p_stock_x  = _cols['stock']
+            p_smin_x   = _cols['smin']
+            p_yr_x0    = _cols['year_x0']
+            p_yr_x1    = _cols['year_x1']
+            p_months   = _cols['months']
+
             sorted_ys = sorted(rows.keys())
 
             for i, y in enumerate(sorted_ys):
@@ -163,7 +258,7 @@ def extract_products(pdf_path, on_page=None):
                 if not re.match(r'^[0-9A-Z]{6}$', code):
                     continue
 
-                yr_this_row = _year_from_row(row)
+                yr_this_row = _year_from_row(row, p_yr_x0, p_yr_x1)
                 is_pattern_a = (yr_this_row is not None)
 
                 description = _extract_description(row)
@@ -180,7 +275,7 @@ def extract_products(pdf_path, on_page=None):
                     ).strip()
                     if re.match(r'^[0-9A-Z]{6}$', next_code):
                         break
-                    next_yr = _year_from_row(next_row)
+                    next_yr = _year_from_row(next_row, p_yr_x0, p_yr_x1)
                     if next_yr is not None:
                         # Primera fila de datos: puede tener texto de descripción
                         # en la misma línea (p.ej. "0,12% 250 ML" + "2026 1 0...")
@@ -207,7 +302,7 @@ def extract_products(pdf_path, on_page=None):
                         c['text'] for c in sorted(prev_code_chars, key=lambda c: c['x0'])
                     ).strip()
                     if not re.match(r'^[0-9A-Z]{6}$', prev_code):
-                        if _year_from_row(prev_row) is None:
+                        if _year_from_row(prev_row, p_yr_x0, p_yr_x1) is None:
                             prev_desc = _extract_description(prev_row)
                             # Solo aceptar texto en mayúsculas (excluye cabeceras
                             # de página/columna que tienen minúsculas)
@@ -215,8 +310,8 @@ def extract_products(pdf_path, on_page=None):
                                 description = re.sub(r'  +', ' ',
                                                      (prev_desc + ' ' + description).strip())
 
-                stock = _digits_at(row, STOCK_X)
-                smin  = _digits_at(row, SMIN_X)
+                stock = _digits_at(row, p_stock_x)
+                smin  = _digits_at(row, p_smin_x)
 
                 zone_letters = [c for c in row
                                 if 200 <= c['x0'] < 255
@@ -227,11 +322,13 @@ def extract_products(pdf_path, on_page=None):
                 months_prev    = [0] * 12
 
                 if not is_pattern_a:
-                    months_current = [_month_value(row, mx) for mx in MONTH_X]
+                    months_current = [_month_value(row, mx) for mx in p_months]
                 elif yr_this_row == year_current:
-                    months_current = [_month_value(row, mx) for mx in MONTH_X]
-                    stock = _digits_at(row, STOCK_X)
-                    smin  = _digits_at(row, SMIN_X)
+                    cutoff = _month_cutoff(row, p_yr_x1)
+                    months_current = [_month_value(row, mx, cutoff_x=cutoff)
+                                      for mx in p_months]
+                    stock = _digits_at(row, p_stock_x)
+                    smin  = _digits_at(row, p_smin_x)
 
                 for j in range(i + 1, min(i + 8, len(sorted_ys))):
                     y2 = sorted_ys[j]
@@ -243,16 +340,18 @@ def extract_products(pdf_path, on_page=None):
                     if re.match(r'^[0-9A-Z]{6}$', code2) and code2 != code:
                         break
 
-                    yr2 = _year_from_row(row2)
+                    yr2 = _year_from_row(row2, p_yr_x0, p_yr_x1)
                     if yr2 is None:
                         continue
 
-                    months2 = [_month_value(row2, mx) for mx in MONTH_X]
+                    cutoff2 = _month_cutoff(row2, p_yr_x1)
+                    months2 = [_month_value(row2, mx, cutoff_x=cutoff2)
+                               for mx in p_months]
 
                     if yr2 == year_current and yr_this_row != year_current:
                         months_current = months2
-                        stock = _digits_at(row2, STOCK_X)
-                        smin  = _digits_at(row2, SMIN_X)
+                        stock = _digits_at(row2, p_stock_x)
+                        smin  = _digits_at(row2, p_smin_x)
                     elif yr2 == year_prev:
                         months_prev = months2
 
