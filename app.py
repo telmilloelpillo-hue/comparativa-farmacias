@@ -218,18 +218,6 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
 
     try:
         with app.app_context():
-            # Garantizar orden fijo: Zarzuelo = izquierda (name1), Barris = derecha (name2).
-            # Se detecta desde la cabecera real del PDF para no depender del orden de subida.
-            try:
-                ph1 = detect_pdf_header(path1).get('pharmacy', '').lower()
-            except Exception:
-                ph1 = name1.lower()
-            if 'barris' in ph1:
-                path1, path2 = path2, path1
-                path_sit1, path_sit2 = path_sit2, path_sit1
-                has_sit1, has_sit2 = has_sit2, has_sit1
-                name1, name2 = name2, name1
-
             # Rangos dinámicos según si hay situación
             n_extra = (1 if has_sit1 else 0) + (1 if has_sit2 else 0)
             pct_pdf1_end  = 42 if n_extra == 0 else (35 if n_extra == 1 else 28)
@@ -363,12 +351,12 @@ def resultado():
         return redirect(url_for('index'))
     with open(json_path, encoding='utf-8') as f:
         data = json.load(f)
-    return render_template('comparativa.html', comp_token=token, **data)
+    return render_template('comparativa.html', **data)
 
 
 @app.route('/descargar')
 def descargar():
-    token = request.args.get('token') or session.get('comp_token')
+    token = session.get('comp_token')
     if not token:
         return redirect(url_for('index'))
     pdf_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.pdf')
@@ -449,66 +437,6 @@ def pedido_file(pdf_id):
 @app.route('/encargos')
 def encargos():
     return render_template('encargos.html')
-
-
-# ── Dashboard visual (plotly) ──────────────────────────────────────────────────
-@app.route('/dashboard')
-def dashboard():
-    if not session.get('authenticated'):
-        return redirect(url_for('login'))
-    token = session.get('comp_token')
-    if not token:
-        return redirect(url_for('index'))
-    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
-    if not os.path.exists(json_path):
-        return redirect(url_for('index'))
-    try:
-        with open(json_path, encoding='utf-8') as f:
-            data = json.load(f)
-        from scripts.stats import build_dataframe
-        from scripts.chart_builder import build_dashboard_html
-        name1 = data.get('name1', 'Farmacia 1')
-        name2 = data.get('name2', 'Farmacia 2')
-        df = build_dataframe(data['results'], name1, name2)
-        out = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            'charts', f'dashboard_{token}.html',
-        )
-        build_dashboard_html(df, out)
-        return send_file(out, mimetype='text/html')
-    except Exception as e:
-        return f'Error generando dashboard: {e}', 500
-
-
-# ── Informe PDF ejecutivo ──────────────────────────────────────────────────────
-@app.route('/informe')
-def informe():
-    if not session.get('authenticated'):
-        return redirect(url_for('login'))
-    token = session.get('comp_token')
-    if not token:
-        return redirect(url_for('index'))
-    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
-    if not os.path.exists(json_path):
-        return redirect(url_for('index'))
-    try:
-        with open(json_path, encoding='utf-8') as f:
-            data = json.load(f)
-        from scripts.stats import build_dataframe
-        from scripts.report_builder import build_report
-        name1 = data.get('name1', 'Farmacia 1')
-        name2 = data.get('name2', 'Farmacia 2')
-        df = build_dataframe(data['results'], name1, name2)
-        out = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            'reports', f'informe_{token}.pdf',
-        )
-        build_report(df, out, include_charts=True)
-        return send_file(out, mimetype='application/pdf',
-                         as_attachment=True,
-                         download_name=f'informe_{name1}_{name2}.pdf')
-    except Exception as e:
-        return f'Error generando informe: {e}', 500
 
 
 @app.route('/pregunta', methods=['POST'])
@@ -594,7 +522,9 @@ def leer_factura():
     import base64 as _b64
     b64 = _b64.b64encode(data).decode('utf-8')
 
-    json_schema = (
+    prompt = (
+        "Analiza esta factura o albarán de farmacia española y extrae los datos de las líneas de producto.\n\n"
+        "Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin texto adicional, sin markdown):\n"
         "{\n"
         '  "proveedor": "nombre del proveedor/laboratorio o null",\n'
         '  "numero_factura": "número o null",\n'
@@ -620,58 +550,11 @@ def leer_factura():
         "- iva_porcentaje: el % real de IVA de esa línea (4, 5, 10 o 21)\n"
         "- cantidad mínima 1 si no se especifica\n"
         "- Números con punto como separador decimal, sin puntos de miles\n"
-        "- Si una línea es ambigua, exclúyela\n"
-        "- IMPORTANTE: cada línea de producto es INDEPENDIENTE; no mezcles la descripción de una línea con la siguiente\n"
-        "- En tablas, cada fila es un producto distinto; respeta los saltos de fila\n"
-        "- Si la descripción ocupa dos renglones en el PDF, únelos en un solo campo 'nombre'"
+        "- Si una línea es ambigua, exclúyela"
     )
 
-    extracted_text = None
-    if mime == 'application/pdf':
-        try:
-            import io as _io
-            import pdfplumber as _pdfplumber
-            with _pdfplumber.open(_io.BytesIO(data)) as pdf:
-                parts = []
-                for i, page in enumerate(pdf.pages):
-                    tables = page.extract_tables({
-                        'vertical_strategy': 'lines',
-                        'horizontal_strategy': 'lines',
-                    })
-                    if not tables:
-                        tables = page.extract_tables()
-                    if tables:
-                        for table in tables:
-                            rows = []
-                            for row in table:
-                                cells = [str(c).strip() if c is not None else '' for c in row]
-                                rows.append(' | '.join(cells))
-                            parts.append('\n'.join(rows))
-                    else:
-                        text = page.extract_text(layout=True) or page.extract_text() or ''
-                        if text.strip():
-                            parts.append(text)
-                extracted_text = '\n\n--- PÁGINA ---\n\n'.join(parts).strip()
-        except Exception:
-            extracted_text = None
-
-    if extracted_text and len(extracted_text) > 80:
-        prompt = (
-            "A continuación tienes el texto extraído de una factura o albarán de farmacia española.\n"
-            "El texto fue extraído automáticamente de un PDF, por lo que puede haber saltos de línea en medio de descripciones.\n\n"
-            "Extrae los datos de las líneas de producto y devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta "
-            "(sin texto adicional, sin markdown):\n"
-            + json_schema
-            + "\n\nTEXTO EXTRAÍDO DEL PDF:\n"
-            + extracted_text
-        )
-        content = [{'type': 'text', 'text': prompt}]
-    else:
-        prompt = (
-            "Analiza esta factura o albarán de farmacia española y extrae los datos de las líneas de producto.\n\n"
-            "Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin texto adicional, sin markdown):\n"
-            + json_schema
-        )
+    try:
+        client = _anthropic.Anthropic(api_key=_get_api_key())
         if mime == 'application/pdf':
             content = [
                 {'type': 'document', 'source': {'type': 'base64', 'media_type': 'application/pdf', 'data': b64}},
@@ -682,9 +565,6 @@ def leer_factura():
                 {'type': 'image', 'source': {'type': 'base64', 'media_type': mime, 'data': b64}},
                 {'type': 'text', 'text': prompt},
             ]
-
-    try:
-        client = _anthropic.Anthropic(api_key=_get_api_key())
 
         msg = client.messages.create(
             model='claude-haiku-4-5-20251001',

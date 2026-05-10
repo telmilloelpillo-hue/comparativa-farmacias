@@ -5,8 +5,3 @@ pdfplumber
 reportlab
 gunicorn
 anthropic
-
-# Análisis de datos y visualización
-pandas
-plotly
-kaleido
