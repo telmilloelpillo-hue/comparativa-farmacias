@@ -527,65 +527,17 @@ def leer_factura():
     if len(data) > MAX_PDF_MB * 1024 * 1024:
         return jsonify({'error': f'Archivo demasiado grande (máx {MAX_PDF_MB} MB)'}), 413
 
-    import base64 as _b64
-    b64 = _b64.b64encode(data).decode('utf-8')
-
-    prompt = (
-        "Analiza esta factura o albarán de farmacia española y extrae los datos de las líneas de producto.\n\n"
-        "Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin texto adicional, sin markdown):\n"
-        "{\n"
-        '  "proveedor": "nombre del proveedor/laboratorio o null",\n'
-        '  "numero_factura": "número o null",\n'
-        '  "fecha": "DD/MM/YYYY o null",\n'
-        '  "lineas": [\n'
-        "    {\n"
-        '      "cn": "código nacional 6-7 dígitos o null",\n'
-        '      "nombre": "descripción del producto",\n'
-        '      "cantidad": número entero,\n'
-        '      "precio_neto_unitario": número decimal,\n'
-        '      "precio_neto_total": número decimal,\n'
-        '      "iva_porcentaje": 4 o 5 o 10 o 21,\n'
-        '      "recargo": número decimal o 0\n'
-        "    }\n"
-        "  ],\n"
-        '  "total_sin_iva": número decimal o null,\n'
-        '  "total_con_iva": número decimal o null\n'
-        "}\n\n"
-        "REGLAS:\n"
-        "- Incluye SOLO líneas que sean productos vendibles con precio unitario > 0\n"
-        "- NO incluyas: subtotales, descuentos globales, portes, cuotas IVA, líneas sin precio\n"
-        "- precio_neto_unitario: precio unitario ya con descuentos aplicados, SIN IVA\n"
-        "- iva_porcentaje: el % real de IVA de esa línea (4, 5, 10 o 21)\n"
-        "- cantidad mínima 1 si no se especifica\n"
-        "- Números con punto como separador decimal, sin puntos de miles\n"
-        "- Si una línea es ambigua, exclúyela"
-    )
-
     try:
-        client = _anthropic.Anthropic(api_key=_get_api_key())
-        if mime == 'application/pdf':
-            content = [
-                {'type': 'document', 'source': {'type': 'base64', 'media_type': 'application/pdf', 'data': b64}},
-                {'type': 'text', 'text': prompt},
-            ]
-        else:
-            content = [
-                {'type': 'image', 'source': {'type': 'base64', 'media_type': mime, 'data': b64}},
-                {'type': 'text', 'text': prompt},
-            ]
-
-        msg = client.messages.create(
-            model='claude-haiku-4-5-20251001',
-            max_tokens=8192,
-            messages=[{'role': 'user', 'content': content}],
+        from invoice_ocr import process_invoice
+        qwen_key      = os.environ.get('QWEN_API_KEY') or _read_env_file().get('QWEN_API_KEY')
+        qwen_endpoint = os.environ.get('QWEN_ENDPOINT')   # opcional, por defecto Together.ai
+        result = process_invoice(
+            file_bytes    = data,
+            mime          = mime,
+            anthropic_key = _get_api_key(),
+            qwen_key      = qwen_key,
+            qwen_endpoint = qwen_endpoint,
         )
-
-        raw = msg.content[0].text.strip()
-        # Strip markdown code fences if present
-        if raw.startswith('```'):
-            lines = raw.split('\n')
-            raw = '\n'.join(lines[1:-1] if lines[-1].strip() == '```' else lines[1:])
-        result = json.loads(raw)
         result['proveedores'] = _CONFIG_PROVEEDORES
         return jsonify(result)
 
@@ -593,6 +545,22 @@ def leer_factura():
         return jsonify({'error': f'No se pudo parsear la respuesta de la IA: {e}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+def _read_env_file() -> dict:
+    """Lee variables del .env local (solo dev)."""
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    result = {}
+    try:
+        with open(env_path) as fh:
+            for line in fh:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    k, _, v = line.partition('=')
+                    result[k.strip()] = v.strip()
+    except FileNotFoundError:
+        pass
+    return result
 
 
 @app.errorhandler(413)
