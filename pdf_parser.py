@@ -487,23 +487,73 @@ def extract_products(pdf_path, on_page=None):
 
 # ─── Informe de situación (stock parado) ───────────────────────────────────────
 
+def _detect_situation_columns(words):
+    """
+    Detecta posiciones X de columnas del Informe de Situación buscando
+    palabras de cabecera ('Código', 'Stock', 'Caducidad').
+    Devuelve dict con rangos x0/x1 por columna, o None si no encuentra cabecera.
+    """
+    _HEADER_KEYS = {
+        'código': 'code', 'codigo': 'code',
+        'descripción': 'desc', 'descripcion': 'desc',
+        'stock': 'stock',
+        'caducidad': 'caducidad',
+    }
+
+    # Encontrar la fila de cabecera buscando 'Código'/'codigo'
+    header_y = None
+    for w in words:
+        norm = w['text'].lower().strip().rstrip(':')
+        if norm in ('código', 'codigo'):
+            header_y = w['top']
+            break
+
+    if header_y is None:
+        return None
+
+    # Recoger todas las palabras en esa fila (±6px)
+    header_row = [w for w in words if abs(w['top'] - header_y) <= 6]
+    cols = {}
+    for w in header_row:
+        norm = w['text'].lower().strip().rstrip(':')
+        if norm in _HEADER_KEYS:
+            cols[_HEADER_KEYS[norm]] = w['x0']
+
+    if 'code' not in cols:
+        return None
+
+    code_x   = cols['code']
+    desc_x   = cols.get('desc',      code_x + 40)
+    stock_x  = cols.get('stock',     code_x + 350)
+    cad_x    = cols.get('caducidad', code_x + 470)
+
+    return {
+        'code_x0':      code_x - 5,
+        'code_x1':      code_x + 38,
+        'desc_x0':      desc_x,
+        'desc_x1':      stock_x - 5,
+        'stock_x0':     stock_x - 10,
+        'stock_x1':     stock_x + 40,
+        'caducidad_x0': cad_x - 10,
+        'caducidad_x1': cad_x + 90,
+    }
+
+
 def extract_situation(pdf_path):
     """
-    Extrae productos del "Informe de situación" usando posiciones X fijas.
+    Extrae productos del "Informe de situación" usando posiciones X detectadas
+    dinámicamente desde la cabecera (Código, Descripción, Stock, Caducidad).
+    Si no hay cabecera detectable, usa rangos amplios por defecto.
 
-    Estructura del informe (x fijas detectadas empíricamente):
-      Alm.      : x ≈ 29
-      Código    : x ≈ 58
-      Descripción: x ≈ 109–420
-      Stock     : x ≈ 420–440  ← entero en esta franja
-      PVP       : x ≈ 450–480  ← decimal con coma (12,95)
-      Caducidad : x ≈ 540–570  ← patrón MM/YYYY
-
-    Devuelve dict: { código: { 'stock': int, 'caducidad': str } }
+    Devuelve dict: { código: { 'stock': int, 'caducidad': str, 'description': str } }
     """
-    # Rangos X para cada columna
-    STOCK_X0, STOCK_X1    = 410, 445
-    CADUCIDAD_X0, CADUCIDAD_X1 = 535, 600
+    # Rangos de fallback (amplios para cubrir variaciones de layout)
+    _DEFAULTS = {
+        'code_x0': 30, 'code_x1': 110,
+        'desc_x0': 100, 'desc_x1': 420,
+        'stock_x0': 400, 'stock_x1': 460,
+        'caducidad_x0': 520, 'caducidad_x1': 620,
+    }
 
     products = {}
 
@@ -512,6 +562,9 @@ def extract_situation(pdf_path):
             words = page.extract_words(x_tolerance=4, y_tolerance=4)
             if not words:
                 continue
+
+            # Detectar columnas desde cabecera; si no, usar defaults
+            c = _detect_situation_columns(words) or _DEFAULTS
 
             # Agrupar palabras por fila (Y)
             rows_dict = defaultdict(list)
@@ -525,10 +578,10 @@ def extract_situation(pdf_path):
                 y = sorted_ys[i]
                 row = sorted(rows_dict[y], key=lambda w: w['x0'])
 
-                # Buscar código de 6 caracteres alfanumérico
+                # Buscar código de 6 caracteres alfanumérico en la franja detectada
                 code = None
                 for w in row:
-                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80:
+                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and c['code_x0'] <= w['x0'] <= c['code_x1']:
                         code = w['text']
                         break
 
@@ -536,28 +589,28 @@ def extract_situation(pdf_path):
                     i += 1
                     continue
 
-                # Stock: entero en la franja x ≈ 410–445 (valores ≥1900 son años, ignorar)
+                # Stock: entero en la franja detectada (valores ≥1900 son años, ignorar)
                 stock = 0
                 for w in row:
-                    if STOCK_X0 <= w['x0'] <= STOCK_X1:
+                    if c['stock_x0'] <= w['x0'] <= c['stock_x1']:
                         if re.match(r'^\d+$', w['text']):
                             v = int(w['text'])
                             if v < 1900:
                                 stock = v
                             break
 
-                # Caducidad: patrón MM/YYYY en x ≈ 535–600
+                # Caducidad: patrón MM/YYYY en la franja detectada
                 caducidad = ''
                 for w in row:
-                    if CADUCIDAD_X0 <= w['x0'] <= CADUCIDAD_X1:
+                    if c['caducidad_x0'] <= w['x0'] <= c['caducidad_x1']:
                         if re.match(r'^\d{2}/\d{4}$', w['text']):
                             caducidad = w['text']
                             break
 
-                # Descripción: texto entre el código (x≈80) y el stock (x≈410)
+                # Descripción: texto entre código y stock
                 description = ' '.join(
                     w['text'] for w in row
-                    if 80 <= w['x0'] < STOCK_X0 and w['text'] != code
+                    if c['desc_x0'] <= w['x0'] < c['desc_x1'] and w['text'] != code
                 )
 
                 # Look-ahead: concatenar líneas de continuación sin código propio
@@ -565,14 +618,14 @@ def extract_situation(pdf_path):
                 while j < len(sorted_ys):
                     next_row = sorted(rows_dict[sorted_ys[j]], key=lambda w: w['x0'])
                     has_code = any(
-                        re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80
+                        re.match(r'^[0-9A-Z]{6}$', w['text']) and c['code_x0'] <= w['x0'] <= c['code_x1']
                         for w in next_row
                     )
                     if has_code:
                         break
                     continuation = ' '.join(
                         w['text'] for w in next_row
-                        if 80 <= w['x0'] < STOCK_X0
+                        if c['desc_x0'] <= w['x0'] < c['desc_x1']
                     ).strip()
                     if not continuation:
                         break

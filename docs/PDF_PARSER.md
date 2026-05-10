@@ -66,6 +66,11 @@ en la franja X del stock (410–445 px).
    sube hasta 5 filas recogiendo descripciones sin código propio.
 2. El PDF no tiene descripción en la hoja de ventas → se usa la descripción del
    informe de situación como fallback (`compare_products`).
+3. **`extract_situation` no encuentra el producto** porque la columna Código está
+   en una posición X distinta a los rangos hardcodeados.
+   **Fix**: `_detect_situation_columns(words)` detecta las posiciones X de
+   "Código", "Descripción", "Stock", "Caducidad" desde la cabecera de cada página.
+   Si no encuentra cabecera, usa rangos amplios de fallback (código: x=30–110).
 
 ### Pedido = ~500 (ej: 506, 507, 528)
 **Causa derivada**: si total_current = 2027, entonces
