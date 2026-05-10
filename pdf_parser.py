@@ -4,8 +4,11 @@ pdf_parser.py — Parser universal para PDFs de estadísticas de ventas (Farmaci
 
 import pdfplumber
 import re
+import logging
 from collections import defaultdict
 from datetime import date as _date
+
+_log = logging.getLogger('pdf_parser')
 
 # ─── Posiciones X fijas del layout ────────────────────────────────────────────
 
@@ -560,11 +563,16 @@ def extract_situation(pdf_path):
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
             words = page.extract_words(x_tolerance=4, y_tolerance=4)
+            raw_text = page.extract_text() or ''
             if not words:
                 continue
 
+            cols_detected = _detect_situation_columns(words)
+            _log.warning('SITUATION page=%d cols=%s', page.page_number,
+                         'detected' if cols_detected else 'FALLBACK-defaults')
+
             # Detectar columnas desde cabecera; si no, usar defaults
-            c = _detect_situation_columns(words) or _DEFAULTS
+            c = cols_detected or _DEFAULTS
 
             # Agrupar palabras por fila (Y)
             rows_dict = defaultdict(list)
@@ -676,6 +684,15 @@ def extract_situation(pdf_path):
 
                 description = re.sub(r'  +', ' ', description).strip()
 
+                # ── Fallback extract_text() si descripción vacía ───────────
+                if not description:
+                    description = _desc_from_raw_text(raw_text, code)
+                    if description:
+                        _log.warning('SITUATION code=%s desc recovered via extract_text()', code)
+
+                _log.warning('SITUATION code=%s stock=%d desc=%r after_code_count=%d',
+                             code, stock, description[:40] if description else '', len(after_code))
+
                 products[code] = {
                     'stock':       stock,
                     'caducidad':   caducidad,
@@ -684,6 +701,35 @@ def extract_situation(pdf_path):
                 i = j
 
     return products
+
+
+def _desc_from_raw_text(page_text, code):
+    """
+    Extrae descripción de un código usando el texto plano de la página
+    (extract_text), sin depender de posiciones X. Útil cuando extract_words
+    falla en agrupar caracteres del PDF de Pierre Fabre u otros labs.
+    """
+    for line in page_text.splitlines():
+        # Buscar línea que contenga el código como token aislado
+        if not re.search(r'(?<!\w)' + re.escape(code) + r'(?!\w)', line):
+            continue
+        idx = line.find(code)
+        after = line[idx + len(code):].strip()
+        parts = after.split()
+        desc_parts = []
+        for k, part in enumerate(parts):
+            if re.match(r'^\d+$', part):
+                v = int(part)
+                if v < 1900:
+                    # Stock: seguido de precio decimal
+                    remaining = ' '.join(parts[k:])
+                    if re.search(r'\d+[,\.]\d{2}', remaining[len(part):]):
+                        break
+            desc_parts.append(part)
+        result = ' '.join(desc_parts).strip()
+        if result:
+            return result
+    return ''
 
 
 # ─── Diagnóstico de formato PDF ───────────────────────────────────────────────
