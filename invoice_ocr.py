@@ -233,26 +233,31 @@ _INVOICE_PROMPT = (
     '  "fecha": "DD/MM/YYYY o null",\n'
     '  "lineas": [\n'
     "    {\n"
-    '      "cn": "código nacional 6-7 dígitos o null",\n'
-    '      "nombre": "descripción del producto",\n'
+    '      "cn": "código del producto EXACTAMENTE como aparece en el documento — puede ser alfanumérico: P0018200, 221193.3, 221724.T, 221194, etc. — NUNCA inventes ni normalices el código — null si no hay código",\n'
+    '      "nombre": "descripción completa del producto",\n'
     '      "cantidad": número entero,\n'
-    '      "precio_neto_unitario": número decimal,\n'
-    '      "precio_neto_total": número decimal,\n'
-    '      "iva_porcentaje": 4 o 5 o 10 o 21,\n'
-    '      "recargo": número decimal o 0\n'
+    '      "precio_neto_unitario": número decimal (ver REGLAS),\n'
+    '      "precio_neto_total": número decimal o null,\n'
+    '      "iva_porcentaje": 4 o 5 o 10 o 21 o 0,\n'
+    '      "recargo": número decimal o 0,\n'
+    '      "sin_valor_comercial": true si el precio aparece como "S/VALOR COMERCIAL", false en caso contrario\n'
     "    }\n"
     "  ],\n"
     '  "total_sin_iva": número decimal o null,\n'
     '  "total_con_iva": número decimal o null\n'
     "}\n\n"
-    "REGLAS:\n"
-    "- Incluye SOLO líneas que sean productos vendibles con precio unitario > 0\n"
-    "- NO incluyas: subtotales, descuentos globales, portes, cuotas IVA, líneas sin precio\n"
-    "- precio_neto_unitario: precio unitario ya con descuentos aplicados, SIN IVA\n"
-    "- iva_porcentaje: el % real de IVA de esa línea (4, 5, 10 o 21)\n"
+    "REGLAS CRÍTICAS:\n"
+    "- cn: copia el código EXACTAMENTE como aparece en el documento. Si tiene letras, puntos o prefijos (P00, KL...) consérvelos tal cual. NUNCA inventes un formato de 7 dígitos si no es lo que aparece\n"
+    "- Incluye TODAS las líneas de producto, incluyendo gratuitas ('S/VALOR COMERCIAL', material promocional, expositores, displays)\n"
+    "- Para líneas con 'S/VALOR COMERCIAL': precio_neto_unitario = 0, sin_valor_comercial = true, iva_porcentaje = 0\n"
+    "- precio_neto_unitario: usa el COSTE UNITARIO (precio tras todos los descuentos aplicados). "
+    "En albaranes Pierre Fabre, Almirall y similares existe columna 'COSTE UNITARIO' — usa ESE valor, NO el 'PRECIO UNID' bruto previo al descuento. "
+    "Si solo aparece un precio y hay descuento explícito, calcula: precio_neto = precio_bruto × (1 - descuento/100)\n"
+    "- precio_neto_total = precio_neto_unitario × cantidad\n"
+    "- iva_porcentaje: % real de IVA de la línea (4, 5, 10 o 21). Para artículos sin valor comercial: 0\n"
     "- cantidad mínima 1 si no se especifica\n"
     "- Números con punto como separador decimal, sin puntos de miles\n"
-    "- Si una línea es ambigua, exclúyela"
+    "- NO incluyas: subtotales de sección, líneas de IVA, portes, cabeceras de tabla"
 )
 
 
