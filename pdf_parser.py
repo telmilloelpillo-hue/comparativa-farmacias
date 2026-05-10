@@ -171,6 +171,75 @@ def _month_cutoff(row_chars, year_x1):
     return max(alpha_after_year) + 4
 
 
+def _detect_columns_from_data(rows_dict):
+    """
+    Fallback de detección cuando la cabecera no tiene 'Ene/Feb/Mar...'.
+    Escanea filas de productos (código 6 chars) buscando el cluster '20XX'
+    como ancla del año, luego infiere el resto de columnas por posición relativa.
+
+    Retorna dict con mismas claves que _detect_columns(), o None si insuficiente.
+    """
+    year_xs = []
+    right_xs = []   # X de clusters a la derecha del año → candidatos a meses
+    left_xs  = []   # X de clusters a la izquierda del año → candidatos a stock/smin
+
+    rows_checked = 0
+    for y in sorted(rows_dict.keys()):
+        row = rows_dict[y]
+        code_chars = sorted([c for c in row if 20 <= c['x0'] < 60],
+                            key=lambda c: c['x0'])
+        code = ''.join(c['text'] for c in code_chars).strip()
+        if not re.match(r'^[0-9A-Z]{6}$', code):
+            continue
+
+        clusters = _char_clusters(row)
+        for grp in clusters:
+            txt = ''.join(c['text'] for c in grp)
+            if re.match(r'^20\d{2}$', txt):
+                cx = (grp[0]['x0'] + grp[-1]['x0']) / 2
+                year_xs.append(cx)
+                for g2 in clusters:
+                    g2_cx = (g2[0]['x0'] + g2[-1]['x0']) / 2
+                    if g2_cx > cx + 25:
+                        right_xs.append(g2_cx)
+                    elif cx - 90 < g2_cx < cx - 5:
+                        left_xs.append(g2_cx)
+                break
+
+        rows_checked += 1
+        if rows_checked >= 10:
+            break
+
+    if len(year_xs) < 3 or not right_xs:
+        return None
+
+    yr_center = sorted(year_xs)[len(year_xs) // 2]
+    yr_x0 = yr_center - 10
+    yr_x1 = yr_center + 10
+
+    # Distribución uniforme de 12 meses entre el primer y último cluster derecho
+    right_sorted = sorted(set(right_xs))
+    r_min = right_sorted[0]
+    r_max = right_sorted[-1]
+    if r_max - r_min < 50:
+        return None   # zona demasiado estrecha para 12 meses
+    step = (r_max - r_min) / 11
+    month_xs = [r_min + i * step for i in range(12)]
+
+    left_sorted = sorted(set(left_xs))
+    stock_x = left_sorted[-2] if len(left_sorted) >= 2 else yr_x0 - 40
+    smin_x  = left_sorted[-1] if len(left_sorted) >= 1 else yr_x0 - 20
+
+    return {
+        'stock':   stock_x,
+        'smin':    smin_x,
+        'year_x0': yr_x0,
+        'year_x1': yr_x1,
+        'total':   yr_x1 + 30,
+        'months':  month_xs,
+    }
+
+
 def _detect_years_global(all_rows):
     years = set()
     for row_chars in all_rows:
@@ -233,13 +302,16 @@ def extract_products(pdf_path, on_page=None):
             if on_page:
                 on_page(page_idx + 1, total_pages)
 
-            # Auto-detectar posiciones de columnas desde la cabecera de esta página.
-            # Si no se detectan (p.ej. página sin cabecera), se usan los valores fijos.
-            _cols = _detect_columns(page) or {
-                'stock': STOCK_X, 'smin': SMIN_X,
-                'year_x0': YEAR_X0, 'year_x1': YEAR_X1,
-                'total': TOTAL_X, 'months': MONTH_X,
-            }
+            # Detectar posiciones de columnas en 3 niveles:
+            # 1) cabecera de página (más fiable), 2) inferencia desde datos (robusto),
+            # 3) posiciones hardcoded (último recurso, puede fallar en formatos nuevos).
+            _cols = (_detect_columns(page)
+                     or _detect_columns_from_data(rows)
+                     or {
+                         'stock': STOCK_X, 'smin': SMIN_X,
+                         'year_x0': YEAR_X0, 'year_x1': YEAR_X1,
+                         'total': TOTAL_X, 'months': MONTH_X,
+                     })
             p_stock_x  = _cols['stock']
             p_smin_x   = _cols['smin']
             p_yr_x0    = _cols['year_x0']
@@ -367,6 +439,16 @@ def extract_products(pdf_path, on_page=None):
 
                 total_current = sum(months_current)
                 total_prev    = sum(months_prev)
+
+                # Capa 3: si el total parece un año, algún mes fue mal leído.
+                # Eliminar valores ≥ 500 en meses individuales (ninguna farmacia
+                # pequeña vende 500 uds de un producto en un solo mes).
+                if total_current >= 1500:
+                    months_current = [m if m < 500 else 0 for m in months_current]
+                    total_current  = sum(months_current)
+                if total_prev >= 1500:
+                    months_prev = [m if m < 500 else 0 for m in months_prev]
+                    total_prev  = sum(months_prev)
 
                 last_month_idx = max(
                     (idx for idx, v in enumerate(months_current) if v > 0), default=-1
@@ -509,6 +591,80 @@ def extract_situation(pdf_path):
     return products
 
 
+# ─── Diagnóstico de formato PDF ───────────────────────────────────────────────
+
+def diagnose_pdf(pdf_path, max_products=5):
+    """
+    Imprime la estructura interna de un PDF de estadísticas para depurar
+    formatos nuevos. Muestra posiciones X de cabeceras, año detectado y
+    primeros productos con sus clusters de dígitos.
+
+    Uso: python3 -c "from pdf_parser import diagnose_pdf; diagnose_pdf('ruta.pdf')"
+    """
+    import sys
+    out = []
+
+    with pdfplumber.open(pdf_path) as pdf:
+        for page_idx, page in enumerate(pdf.pages):
+            out.append(f'\n=== PÁGINA {page_idx + 1} ===')
+
+            # Detección de columnas por cabecera
+            cols = _detect_columns(page)
+            if cols:
+                out.append(f'  _detect_columns → OK')
+                out.append(f'    stock={cols["stock"]:.1f}  smin={cols["smin"]:.1f}'
+                           f'  year=[{cols["year_x0"]:.1f}-{cols["year_x1"]:.1f}]'
+                           f'  total={cols["total"]:.1f}')
+                out.append(f'    months (12): {[f"{x:.0f}" for x in cols["months"]]}')
+            else:
+                out.append(f'  _detect_columns → None (no header found)')
+
+            # Cabecera bruta: palabras en las primeras 5 líneas
+            words = page.extract_words(x_tolerance=3, y_tolerance=3) or []
+            if words:
+                top_y = min(w['top'] for w in words)
+                header_words = [w for w in words if w['top'] < top_y + 40]
+                out.append(f'  Header words: {[(w["text"], round(w["x0"])) for w in header_words[:20]]}')
+
+            # Primeros productos con clusters
+            rows = defaultdict(list)
+            for c in page.chars:
+                y = round(c['top'] / 2) * 2
+                rows[y].append(c)
+
+            found = 0
+            for y in sorted(rows.keys()):
+                row = rows[y]
+                code_chars = sorted([c for c in row if 20 <= c['x0'] < 60],
+                                    key=lambda c: c['x0'])
+                code = ''.join(c['text'] for c in code_chars).strip()
+                if not re.match(r'^[0-9A-Z]{6}$', code):
+                    continue
+
+                clusters = _char_clusters(row)
+                cluster_info = [(int(''.join(c['text'] for c in g)),
+                                 round((g[0]['x0'] + g[-1]['x0']) / 2))
+                                for g in clusters]
+                yr = _year_from_row(row)
+                out.append(f'  {code}  yr={yr}  clusters={cluster_info}')
+                found += 1
+                if found >= max_products:
+                    break
+
+            if found == 0:
+                out.append('  (sin productos en esta página)')
+
+            # Inferencia desde datos
+            data_cols = _detect_columns_from_data(rows)
+            if data_cols:
+                out.append(f'  _detect_columns_from_data → OK')
+                out.append(f'    year=[{data_cols["year_x0"]:.1f}-{data_cols["year_x1"]:.1f}]'
+                           f'  months: {[f"{x:.0f}" for x in data_cols["months"]]}')
+            else:
+                out.append(f'  _detect_columns_from_data → None')
+
+    print('\n'.join(out))
+    return '\n'.join(out)
 
 
 
