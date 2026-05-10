@@ -218,6 +218,18 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
 
     try:
         with app.app_context():
+            # Garantizar orden fijo: Zarzuelo = izquierda (name1), Barris = derecha (name2).
+            # Se detecta desde la cabecera real del PDF para no depender del orden de subida.
+            try:
+                ph1 = detect_pdf_header(path1).get('pharmacy', '').lower()
+            except Exception:
+                ph1 = name1.lower()
+            if 'barris' in ph1:
+                path1, path2 = path2, path1
+                path_sit1, path_sit2 = path_sit2, path_sit1
+                has_sit1, has_sit2 = has_sit2, has_sit1
+                name1, name2 = name2, name1
+
             # Rangos dinámicos según si hay situación
             n_extra = (1 if has_sit1 else 0) + (1 if has_sit2 else 0)
             pct_pdf1_end  = 42 if n_extra == 0 else (35 if n_extra == 1 else 28)

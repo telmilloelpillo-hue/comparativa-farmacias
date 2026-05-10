@@ -186,7 +186,7 @@ def _detect_years_global(all_rows):
 
 def _extract_description(row_chars):
     desc_chars = [c for c in sorted(row_chars, key=lambda c: c['x0'])
-                  if 70 <= c['x0'] < 315]
+                  if 63 <= c['x0'] < 315]
     tokens = []
     for c in desc_chars:
         if c['text'].isdigit():
@@ -291,24 +291,32 @@ def extract_products(pdf_path, on_page=None):
                                          (description + ' ' + continuation).strip())
                     j += 1
 
-                # Backward: si la fila anterior al código no tiene código propio
-                # ni datos de año y contiene texto en MAYÚSCULAS, es la primera
-                # línea del nombre (el código del PDF se alinea a la última línea
-                # cuando la descripción ocupa varias filas).
-                if i > 0:
-                    prev_row = rows[sorted_ys[i - 1]]
+                # Backward: subir hasta 5 filas antes del código buscando líneas de
+                # descripción. Cada farmacia imprime el código al lado de la ÚLTIMA
+                # línea de descripción, por lo que las líneas anteriores quedan sin
+                # código y deben recogerse hacia atrás.
+                back_descs = []
+                k = i - 1
+                while k >= 0 and len(back_descs) < 5:
+                    prev_row = rows[sorted_ys[k]]
                     prev_code_chars = [c for c in prev_row if 20 <= c['x0'] < 60]
                     prev_code = ''.join(
                         c['text'] for c in sorted(prev_code_chars, key=lambda c: c['x0'])
                     ).strip()
-                    if not re.match(r'^[0-9A-Z]{6}$', prev_code):
-                        if _year_from_row(prev_row, p_yr_x0, p_yr_x1) is None:
-                            prev_desc = _extract_description(prev_row)
-                            # Solo aceptar texto en mayúsculas (excluye cabeceras
-                            # de página/columna que tienen minúsculas)
-                            if prev_desc and not re.search(r'[a-z]', prev_desc):
-                                description = re.sub(r'  +', ' ',
-                                                     (prev_desc + ' ' + description).strip())
+                    if re.match(r'^[0-9A-Z]{6}$', prev_code):
+                        break  # Código de otro producto
+                    if _year_from_row(prev_row, p_yr_x0, p_yr_x1) is not None:
+                        break  # Fila de datos del año del producto anterior
+                    prev_desc = _extract_description(prev_row)
+                    # Excluir cabeceras de página (contienen minúsculas: fecha, "Pág.")
+                    if prev_desc and not re.search(r'[a-z]', prev_desc):
+                        back_descs.insert(0, prev_desc)
+                        k -= 1
+                    else:
+                        break
+                if back_descs:
+                    description = re.sub(r'  +', ' ',
+                                         (' '.join(back_descs) + ' ' + description).strip())
 
                 stock = _digits_at(row, p_stock_x)
                 smin  = _digits_at(row, p_smin_x)
