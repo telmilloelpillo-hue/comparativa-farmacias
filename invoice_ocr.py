@@ -189,6 +189,30 @@ def run_paddleocr(image_bytes: bytes) -> str:
         os.unlink(tmp_path)
 
 
+def run_paddleocr_boxes(image_bytes: bytes) -> list:
+    """
+    Variante de run_paddleocr que devuelve (bbox, (text, conf)) en lugar de
+    texto plano. Necesario para que invoice_structure.py pueda reconstruir la
+    tabla con coordenadas + texto.
+    """
+    if not _PADDLE_OK:
+        return []
+    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+        tmp.write(image_bytes)
+        tmp_path = tmp.name
+    try:
+        result = _get_paddle().ocr(tmp_path, cls=True)
+        if result and result[0]:
+            return [(box, (text, conf))
+                    for box, (text, conf) in result[0]
+                    if conf >= 0.5]
+        return []
+    except Exception:
+        return []
+    finally:
+        os.unlink(tmp_path)
+
+
 # ─── PDF → imagen primera página ─────────────────────────────────────────────
 
 def pdf_first_page_image(pdf_bytes: bytes, dpi: int = 150) -> bytes:
@@ -378,6 +402,18 @@ def process_invoice(file_bytes: bytes, mime: str,
         preprocessed = True
         # PaddleOCR sobre imagen preprocesada
         ocr_text = run_paddleocr(image_bytes)
+
+    # Análisis estructural (FASES 1–8 de invoice_structure) — siempre opcional
+    try:
+        from invoice_structure import analyze_document as _analyze_struct
+        _paddle_boxes = (run_paddleocr_boxes(image_bytes)
+                         if _PADDLE_OK and not is_pdf else [])
+        _struct = _analyze_struct(image_bytes, _paddle_boxes or None)
+        if _struct.prompt_context:
+            ocr_text = (_struct.prompt_context
+                        + ('\n\n' + ocr_text if ocr_text else ''))
+    except Exception:
+        pass  # nunca bloquea el pipeline principal
 
     # Semántica: Qwen2-VL o Claude
     if qwen_key and image_bytes and not (is_pdf and not preprocessed):
