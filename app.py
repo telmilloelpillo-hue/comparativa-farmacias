@@ -522,9 +522,7 @@ def leer_factura():
     import base64 as _b64
     b64 = _b64.b64encode(data).decode('utf-8')
 
-    prompt = (
-        "Analiza esta factura o albarán de farmacia española y extrae los datos de las líneas de producto.\n\n"
-        "Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin texto adicional, sin markdown):\n"
+    json_schema = (
         "{\n"
         '  "proveedor": "nombre del proveedor/laboratorio o null",\n'
         '  "numero_factura": "número o null",\n'
@@ -550,11 +548,58 @@ def leer_factura():
         "- iva_porcentaje: el % real de IVA de esa línea (4, 5, 10 o 21)\n"
         "- cantidad mínima 1 si no se especifica\n"
         "- Números con punto como separador decimal, sin puntos de miles\n"
-        "- Si una línea es ambigua, exclúyela"
+        "- Si una línea es ambigua, exclúyela\n"
+        "- IMPORTANTE: cada línea de producto es INDEPENDIENTE; no mezcles la descripción de una línea con la siguiente\n"
+        "- En tablas, cada fila es un producto distinto; respeta los saltos de fila\n"
+        "- Si la descripción ocupa dos renglones en el PDF, únelos en un solo campo 'nombre'"
     )
 
-    try:
-        client = _anthropic.Anthropic(api_key=_get_api_key())
+    extracted_text = None
+    if mime == 'application/pdf':
+        try:
+            import io as _io
+            import pdfplumber as _pdfplumber
+            with _pdfplumber.open(_io.BytesIO(data)) as pdf:
+                parts = []
+                for i, page in enumerate(pdf.pages):
+                    tables = page.extract_tables({
+                        'vertical_strategy': 'lines',
+                        'horizontal_strategy': 'lines',
+                    })
+                    if not tables:
+                        tables = page.extract_tables()
+                    if tables:
+                        for table in tables:
+                            rows = []
+                            for row in table:
+                                cells = [str(c).strip() if c is not None else '' for c in row]
+                                rows.append(' | '.join(cells))
+                            parts.append('\n'.join(rows))
+                    else:
+                        text = page.extract_text(layout=True) or page.extract_text() or ''
+                        if text.strip():
+                            parts.append(text)
+                extracted_text = '\n\n--- PÁGINA ---\n\n'.join(parts).strip()
+        except Exception:
+            extracted_text = None
+
+    if extracted_text and len(extracted_text) > 80:
+        prompt = (
+            "A continuación tienes el texto extraído de una factura o albarán de farmacia española.\n"
+            "El texto fue extraído automáticamente de un PDF, por lo que puede haber saltos de línea en medio de descripciones.\n\n"
+            "Extrae los datos de las líneas de producto y devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta "
+            "(sin texto adicional, sin markdown):\n"
+            + json_schema
+            + "\n\nTEXTO EXTRAÍDO DEL PDF:\n"
+            + extracted_text
+        )
+        content = [{'type': 'text', 'text': prompt}]
+    else:
+        prompt = (
+            "Analiza esta factura o albarán de farmacia española y extrae los datos de las líneas de producto.\n\n"
+            "Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin texto adicional, sin markdown):\n"
+            + json_schema
+        )
         if mime == 'application/pdf':
             content = [
                 {'type': 'document', 'source': {'type': 'base64', 'media_type': 'application/pdf', 'data': b64}},
@@ -565,6 +610,9 @@ def leer_factura():
                 {'type': 'image', 'source': {'type': 'base64', 'media_type': mime, 'data': b64}},
                 {'type': 'text', 'text': prompt},
             ]
+
+    try:
+        client = _anthropic.Anthropic(api_key=_get_api_key())
 
         msg = client.messages.create(
             model='claude-haiku-4-5-20251001',
