@@ -26,6 +26,23 @@ App Flask para gestión de dos farmacias (Barris y Zarzuelo). Tres features prin
 | `Procfile` | `web: gunicorn app:app` |
 | `.env` | `ANTHROPIC_API_KEY=sk-ant-...` (no en git) |
 
+## Stack de análisis y visualización
+| Librería | Rol |
+|---|---|
+| `pandas` | DataFrames de ventas, KPIs, stats mensuales |
+| `plotly` | Gráficos interactivos HTML + PNG (para PDF) |
+| `kaleido` | Exportación PNG de plotly (necesario para /informe) |
+| `reportlab` | PDF de pedido (ya existía) + PDF ejecutivo nuevo |
+
+```
+scripts/stats.py          → build_dataframe(), kpis(), top_products(), monthly_totals()
+scripts/chart_builder.py  → sales_comparison_bar(), monthly_trend(), build_dashboard_html()
+scripts/report_builder.py → build_report() con gráficos incrustados
+charts/                   → HTML interactivos (no en git)
+reports/                  → PDFs ejecutivos (no en git)
+exports/                  → uso futuro (no en git)
+```
+
 ## Rutas Flask (`app.py`)
 ```
 GET  /              → index.html (selector de feature)
@@ -38,6 +55,8 @@ POST /generar_pedido → genera PDF de pedido
 GET  /pedido_file/<id> → descarga PDF pedido
 GET  /encargos      → encargos.html
 POST /pregunta      → pregunta IA sobre un producto concreto (haiku, max 350 tokens)
+GET  /dashboard     → HTML interactivo plotly (requiere comp_token en session)
+GET  /informe       → descarga PDF ejecutivo con gráficos (requiere comp_token en session)
 GET  /facturas      → facturas.html
 POST /leer_factura  → sube factura → pdfplumber extrae → haiku parsea → JSON
 GET/POST /login     → auth por contraseña

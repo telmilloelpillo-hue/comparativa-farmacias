@@ -439,6 +439,66 @@ def encargos():
     return render_template('encargos.html')
 
 
+# ── Dashboard visual (plotly) ──────────────────────────────────────────────────
+@app.route('/dashboard')
+def dashboard():
+    if not session.get('authenticated'):
+        return redirect(url_for('login'))
+    token = session.get('comp_token')
+    if not token:
+        return redirect(url_for('index'))
+    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+    if not os.path.exists(json_path):
+        return redirect(url_for('index'))
+    try:
+        with open(json_path, encoding='utf-8') as f:
+            data = json.load(f)
+        from scripts.stats import build_dataframe
+        from scripts.chart_builder import build_dashboard_html
+        name1 = data.get('name1', 'Farmacia 1')
+        name2 = data.get('name2', 'Farmacia 2')
+        df = build_dataframe(data['results'], name1, name2)
+        out = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'charts', f'dashboard_{token}.html',
+        )
+        build_dashboard_html(df, out)
+        return send_file(out, mimetype='text/html')
+    except Exception as e:
+        return f'Error generando dashboard: {e}', 500
+
+
+# ── Informe PDF ejecutivo ──────────────────────────────────────────────────────
+@app.route('/informe')
+def informe():
+    if not session.get('authenticated'):
+        return redirect(url_for('login'))
+    token = session.get('comp_token')
+    if not token:
+        return redirect(url_for('index'))
+    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+    if not os.path.exists(json_path):
+        return redirect(url_for('index'))
+    try:
+        with open(json_path, encoding='utf-8') as f:
+            data = json.load(f)
+        from scripts.stats import build_dataframe
+        from scripts.report_builder import build_report
+        name1 = data.get('name1', 'Farmacia 1')
+        name2 = data.get('name2', 'Farmacia 2')
+        df = build_dataframe(data['results'], name1, name2)
+        out = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            'reports', f'informe_{token}.pdf',
+        )
+        build_report(df, out, include_charts=True)
+        return send_file(out, mimetype='application/pdf',
+                         as_attachment=True,
+                         download_name=f'informe_{name1}_{name2}.pdf')
+    except Exception as e:
+        return f'Error generando informe: {e}', 500
+
+
 @app.route('/pregunta', methods=['POST'])
 def pregunta():
     if not session.get('authenticated'):

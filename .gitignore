@@ -2,3 +2,11 @@ venv/
 __pycache__/
 *.pyc
 .env
+
+# Generados en runtime (no versionar)
+charts/*.html
+reports/*.pdf
+exports/*
+!charts/.gitkeep
+!reports/.gitkeep
+!exports/.gitkeep
