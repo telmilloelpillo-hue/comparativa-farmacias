@@ -766,31 +766,41 @@ function clearSlot(key) {
 
 function assignFile(file, detectedType, detectedPharmacy) {
   const ventas = detectedType !== 'situacion';
+  const ph = detectedPharmacy.toLowerCase();
   let target = null;
   if (ventas) {
-    if (slots.pdf1.pharmacy && slots.pdf1.pharmacy.toLowerCase() === detectedPharmacy.toLowerCase()) {
+    // Orden fijo: Zarzuelo → slot 1 (izquierda), Barris → slot 2 (derecha)
+    if (ph.includes('zarzuelo')) {
       target = 'pdf1';
-    } else if (slots.pdf2.pharmacy && slots.pdf2.pharmacy.toLowerCase() === detectedPharmacy.toLowerCase()) {
+    } else if (ph.includes('barris')) {
+      target = 'pdf2';
+    } else if (slots.pdf1.pharmacy && slots.pdf1.pharmacy.toLowerCase() === ph) {
+      target = 'pdf1';
+    } else if (slots.pdf2.pharmacy && slots.pdf2.pharmacy.toLowerCase() === ph) {
       target = 'pdf2';
     } else if (!slots.pdf1.file) {
       target = 'pdf1';
-    } else if (!slots.pdf2.file) {
-      target = 'pdf2';
     } else {
-      target = 'pdf1';
+      target = 'pdf2';
     }
   } else {
-    const p = detectedPharmacy.toLowerCase();
-    const p1 = (slots.pdf1.pharmacy || '').toLowerCase();
-    const p2 = (slots.pdf2.pharmacy || '').toLowerCase();
-    if (p1 && (p.includes(p1.slice(0, 5)) || p1.includes(p.slice(0, 5)))) {
+    // Situación: misma lógica de orden fijo
+    if (ph.includes('zarzuelo')) {
       target = 'sit1';
-    } else if (p2 && (p.includes(p2.slice(0, 5)) || p2.includes(p.slice(0, 5)))) {
+    } else if (ph.includes('barris')) {
       target = 'sit2';
-    } else if (!slots.sit1.file) {
-      target = 'sit1';
     } else {
-      target = 'sit2';
+      const p1 = (slots.pdf1.pharmacy || '').toLowerCase();
+      const p2 = (slots.pdf2.pharmacy || '').toLowerCase();
+      if (p1 && (ph.includes(p1.slice(0, 5)) || p1.includes(ph.slice(0, 5)))) {
+        target = 'sit1';
+      } else if (p2 && (ph.includes(p2.slice(0, 5)) || p2.includes(ph.slice(0, 5)))) {
+        target = 'sit2';
+      } else if (!slots.sit1.file) {
+        target = 'sit1';
+      } else {
+        target = 'sit2';
+      }
     }
   }
   slots[target] = { pharmacy: detectedPharmacy, file };
