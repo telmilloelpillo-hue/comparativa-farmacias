@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Facturas · Farmacias</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:     #f7f8fa;
+      --bg:     #EAF1EC;
       --surface:#ffffff;
       --border: #e5e7eb;
       --text:   #111827;
       --muted:  #6b7280;
-      --accent: #166534;
-      --accent2:#14532d;
+      --accent: #155A3C;
+      --accent2:#0f3d28;
       --radius: 8px;
     }
 
@@ -31,8 +31,9 @@
 
     /* ══ TOPBAR ══ */
     .topbar {
-      background: var(--accent);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
       padding: 0 1.5rem;
       height: 52px;
       display: flex;
@@ -43,19 +44,19 @@
       top: 0;
       z-index: 200;
     }
-    .topbar-brand { font-size: 0.88rem; font-weight: 700; color: white; letter-spacing: -0.01em; text-decoration: none; }
+    .topbar-brand { font-size: 0.88rem; font-weight: 700; color: var(--accent); letter-spacing: -0.01em; text-decoration: none; }
     .topbar-tabs { display: flex; align-items: center; gap: 0; height: 100%; }
     .tab-link {
       display: flex; align-items: center; height: 100%; padding: 0 1rem;
-      font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7);
+      font-size: 0.8rem; font-weight: 600; color: var(--muted);
       text-decoration: none; border-bottom: 2px solid transparent;
       transition: color 0.15s, border-color 0.15s; white-space: nowrap;
     }
-    .tab-link:hover { color: white; }
-    .tab-link.active { color: white; border-bottom-color: rgba(255,255,255,0.8); }
-    .topbar-right { margin-left: auto; }
-    .topbar-logout { font-size: 0.75rem; color: rgba(255,255,255,0.65); text-decoration: none; }
-    .topbar-logout:hover { color: white; }
+    .tab-link:hover { color: var(--accent); }
+    .tab-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
+    .topbar-logout { font-size: 0.75rem; color: var(--muted); text-decoration: none; padding: 0.35rem 0.7rem; border: 1px solid var(--border); border-radius: var(--radius); transition: all 0.15s; }
+    .topbar-logout:hover { color: var(--accent); border-color: var(--accent); background: var(--bg); }
 
     /* ══ UPLOAD LAYOUT (estado inicial) ══ */
     #uploadLayout {
@@ -339,7 +340,7 @@
     tbody tr:not(:last-child) td { border-bottom: 1px solid #f3f4f6; }
     tbody tr:hover td { background: #f9fafb; }
     td { padding: 0.5rem 0.75rem; vertical-align: middle; }
-    .td-cn { font-family: monospace; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+    .td-cn { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
     .td-nombre { max-width: 300px; }
     .td-num { text-align: right; white-space: nowrap; }
     .td-pvp { text-align: right; white-space: nowrap; }

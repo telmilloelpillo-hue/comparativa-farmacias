@@ -4,25 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Comparativa · {{ lab }} · {{ name1 }} vs {{ name2 }}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --z:       #dc2626;
-      --z-light: #fef2f2;
-      --z-mid:   #fca5a5;
-      --b:       #1d4ed8;
+      --z:       #C2410C;
+      --z-light: #fff7ed;
+      --z-mid:   #fed7aa;
+      --b:       #1E3A8A;
       --b-light: #eff6ff;
-      --b-mid:   #93c5fd;
+      --b-mid:   #bfdbfe;
       --parado:  #fef3c7;
       --pedido:  #dcfce7;
       --warn:    #fef9c3;
-      --bg:      #f0fdf4;
-      --border:  #d1fae5;
-      --text:    #14532d;
-      --muted:   #4b7c5e;
-      --accent:  #166534;
+      --bg:      #EAF1EC;
+      --border:  #d1d5db;
+      --text:    #111827;
+      --muted:   #6b7280;
+      --accent:  #155A3C;
       --radius:  8px;
       --panel-w: 390px;
     }
@@ -43,18 +43,18 @@
 
     /* ── TOP BAR ── */
     .topbar {
-      background: var(--accent); color: white;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
       padding: 0 1.5rem; height: 52px;
       display: flex; align-items: center; justify-content: space-between;
       flex-shrink: 0; z-index: 200;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-      /* iOS Safari: always visible */
       position: sticky; top: 0;
     }
     .topbar-left { display: flex; align-items: center; gap: 1rem; }
-    .topbar-logo { font-size: 0.85rem; font-weight: 700; color: white; text-decoration: none; letter-spacing: -0.01em; }
-    .topbar-sep  { color: rgba(255,255,255,0.25); }
-    .topbar-title{ font-size: 0.8rem; color: rgba(255,255,255,0.65); }
+    .topbar-logo { font-size: 0.85rem; font-weight: 700; color: var(--accent); text-decoration: none; letter-spacing: -0.01em; }
+    .topbar-sep  { color: #d1d5db; }
+    .topbar-title{ font-size: 0.8rem; color: var(--muted); }
     .topbar-right{ display: flex; align-items: center; gap: 0.6rem; }
 
     .btn {
@@ -64,13 +64,13 @@
       cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
       white-space: nowrap; letter-spacing: 0.01em;
     }
-    .btn-primary { background: #166534; color: white; box-shadow: 0 1px 2px rgba(22,101,52,0.3); }
-    .btn-primary:hover { background: #14532d; }
-    .btn-ghost   { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.15); }
-    .btn-ghost:hover { background: rgba(255,255,255,0.18); }
+    .btn-primary { background: var(--accent); color: white; box-shadow: 0 1px 2px rgba(21,90,60,0.25); }
+    .btn-primary:hover { background: #0f3d28; }
+    .btn-ghost   { background: transparent; color: var(--muted); border: 1px solid #d1d5db; }
+    .btn-ghost:hover { background: var(--bg); color: var(--accent); border-color: var(--accent); }
     .btn-pedido  { background: #16a34a; color: white; }
     .btn-pedido:hover { background: #15803d; }
-    .btn-pedido-empty { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.1); cursor: default; }
+    .btn-pedido-empty { background: #f3f4f6; color: #d1d5db; border: 1px solid #e5e7eb; cursor: default; }
 
     /* ── HEADER CARD ── */
     .header-card {
@@ -128,7 +128,7 @@
       font-family: 'Inter', sans-serif; font-size: 0.82rem; color: var(--text);
       background: var(--bg); outline: none; transition: border-color 0.15s;
     }
-    .search-input:focus { border-color: #166534; background: white; }
+    .search-input:focus { border-color: #155A3C; background: white; }
     .search-input::placeholder { color: var(--muted); }
     .result-count { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
     .result-count strong { color: var(--text); }
@@ -140,7 +140,7 @@
       cursor: pointer; border: 1px solid var(--border); background: white; color: var(--muted);
       transition: all 0.15s;
     }
-    .bar-btn:hover { border-color: #166534; color: #166534; }
+    .bar-btn:hover { border-color: #155A3C; color: #155A3C; }
     .hint-text { font-size: 0.68rem; color: #94a3b8; white-space: nowrap; }
 
     /* ── LAYOUT ── */
@@ -187,7 +187,7 @@
     /* Color overrides — must come AFTER position rules so background isn't reset */
     th.th-z    { background: var(--z); }
     th.th-b    { background: var(--b); }
-    th.th-meta { background: #14532d; }
+    th.th-meta { background: #155A3C; }
 
     /* Sticky left columns: higher z-index so they overlay both rows and data cells */
     th.sticky-col   { position: sticky; left: 0;    z-index: 40; }
@@ -238,7 +238,7 @@
     tbody tr.row-selected td { background-color: #e8f5e9 !important; }
     tbody tr.row-selected td.sticky-col,
     tbody tr.row-selected td.sticky-col-2 { background-color: #e8f5e9 !important; }
-    tbody tr.row-selected td:first-child { border-left: 3px solid #166534; }
+    tbody tr.row-selected td:first-child { border-left: 3px solid #155A3C; }
     tbody tr:hover:not(.row-selected) td { background: #dcfce7 !important; }
     tbody tr:hover:not(.row-selected) td.sticky-col,
     tbody tr:hover:not(.row-selected) td.sticky-col-2 { background: #dcfce7 !important; }
@@ -248,10 +248,10 @@
       vertical-align: middle; border-right: 1px solid var(--border);
     }
     td.td-desc { text-align: left; white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
-    td.td-code { font-family: monospace; font-size: 0.72rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
+    td.td-code { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
 
     td.cell-parado { }
-    td.cell-pedido { background: var(--pedido) !important; font-weight: 700; color: #14532d; }
+    td.cell-pedido { background: var(--pedido) !important; font-weight: 700; color: #155A3C; }
     td.cell-muted  { color: #bbb; }
 
     .no-results { display: none; text-align: center; padding: 3rem; color: var(--muted); font-size: 0.88rem; }
@@ -302,7 +302,7 @@
       background: #f0fdf4; flex-shrink: 0;
     }
     .panel-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
-    .panel-code { font-family: monospace; font-size: 0.7rem; color: var(--muted); font-weight: 700; letter-spacing: 0.05em; }
+    .panel-code { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); font-weight: 700; letter-spacing: 0.05em; }
     .panel-desc { font-size: 0.8rem; font-weight: 600; color: var(--text); line-height: 1.4; margin-top: 0.2rem; flex: 1; }
     .panel-close {
       background: none; border: 1px solid var(--border); border-radius: 5px;
@@ -319,7 +319,7 @@
       color: var(--muted); cursor: pointer; text-align: center;
       border-bottom: 2px solid transparent; transition: all 0.15s; user-select: none;
     }
-    .panel-tab.active { color: #166534; border-bottom-color: #166534; }
+    .panel-tab.active { color: #155A3C; border-bottom-color: #155A3C; }
     .panel-tab:hover  { color: var(--text); }
 
     /* CRITICAL: panel body scrolls */
@@ -383,7 +383,7 @@
       font-family: 'Inter', sans-serif; font-size: 0.8rem; color: var(--text);
       background: var(--bg); outline: none; transition: border-color 0.15s;
     }
-    .reparto-search:focus { border-color: #166534; background: white; }
+    .reparto-search:focus { border-color: #155A3C; background: white; }
     .reparto-search::placeholder { color: var(--muted); }
 
     .reparto-entry {
@@ -399,7 +399,7 @@
     .reparto-date { font-size: 0.7rem; font-weight: 700; color: var(--text); }
     .reparto-badge-recent {
       font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.05em; color: #166534; background: #dcfce7;
+      letter-spacing: 0.05em; color: #155A3C; background: #dcfce7;
       padding: 0.1rem 0.45rem; border-radius: 999px;
     }
     .reparto-prod-row {
@@ -409,7 +409,7 @@
       font-size: 0.72rem;
     }
     .reparto-prod-name { color: var(--text); font-weight: 500; }
-    .reparto-prod-code { font-family: monospace; font-size: 0.65rem; color: var(--muted); }
+    .reparto-prod-code { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted); }
     .reparto-num {
       text-align: center; font-weight: 700; min-width: 28px;
       font-size: 0.78rem;
@@ -444,11 +444,11 @@
     }
     .pedido-input:focus { border-color: #3b82f6; }
     .pedido-save-btn {
-      padding: 0.55rem 1rem; background: #166534; color: white;
+      padding: 0.55rem 1rem; background: #155A3C; color: white;
       border: none; border-radius: 7px; font-family: 'Inter', sans-serif;
       font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
     }
-    .pedido-save-btn:hover { background: #14532d; }
+    .pedido-save-btn:hover { background: #0f3d28; }
     .pedido-clear-btn {
       padding: 0.55rem 0.65rem; background: none; color: #dc2626;
       border: 1px solid #fecaca; border-radius: 7px; font-size: 0.75rem;
@@ -637,7 +637,7 @@
       font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
       cursor: pointer; transition: background 0.15s; white-space: nowrap;
     }
-    .btn-step-next:hover    { background: #14532d; }
+    .btn-step-next:hover    { background: #0f3d28; }
     .btn-step-next:disabled { background: #d1fae5; color: #86efac; cursor: default; }
     .btn-step-prev {
       padding: 0.38rem 0.85rem; background: white; color: var(--muted);
@@ -662,7 +662,7 @@
       border-radius: 10px; padding: 1rem 1.25rem;
     }
     .reparto-card-name  { font-size: 0.88rem; font-weight: 700; color: var(--text); }
-    .reparto-card-meta  { font-family: monospace; font-size: 0.7rem; color: var(--muted); font-weight: 700; margin-top: 0.1rem; }
+    .reparto-card-meta  { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); font-weight: 700; margin-top: 0.1rem; }
     .reparto-card-total { font-size: 0.72rem; font-weight: 600; color: var(--accent); margin-top: 0.3rem; }
     .reparto-card-divider { height: 1px; background: var(--border); margin: 0.75rem 0 0; }
     .reparto-card-inputs {
@@ -718,7 +718,7 @@
       font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 700;
       cursor: pointer; transition: background 0.15s; letter-spacing: 0.01em;
     }
-    .btn-confirm:hover { background: #14532d; }
+    .btn-confirm:hover { background: #0f3d28; }
 
     /* ── QUICK ADD PEDIDO ── */
     td[id^="pedido"] {
@@ -754,7 +754,7 @@
     .step2-table tbody tr:nth-child(even) td { background: #f9fafb; }
     .step2-table tbody td { padding: 0.55rem 1rem; vertical-align: middle; font-size: 0.78rem; }
     .step2-td-prod-name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
-    .step2-td-prod-code { font-family: monospace; font-size: 0.65rem; color: var(--muted); font-weight: 700; margin-top: 0.1rem; }
+    .step2-td-prod-code { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted); font-weight: 700; margin-top: 0.1rem; }
     .step2-td-total { text-align: center; font-weight: 700; color: var(--accent); font-size: 0.88rem; }
     .step2-td-input { text-align: center; }
     .step2-input {
@@ -1093,8 +1093,8 @@
     <div class="modal-actions">
       <button class="btn btn-primary" id="btnDescargaPedido" onclick="downloadPedidoPDF()">Guardar PDF</button>
       <button class="btn" onclick="window.print()" style="background:white;color:#6b7280;border:1px solid #e5e7eb;font-size:0.8rem">Imprimir</button>
-      <button class="btn" id="btnGuardarReparto" onclick="guardarReparto()" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;font-size:0.8rem">Guardar en Reparto</button>
-      <span id="repartoSavedMsg" style="display:none;font-size:0.72rem;color:#166534;font-weight:600">Guardado en historial</span>
+      <button class="btn" id="btnGuardarReparto" onclick="guardarReparto()" style="background:#eff6ff;color:#1E3A8A;border:1px solid #bfdbfe;font-size:0.8rem">Guardar en Reparto</button>
+      <span id="repartoSavedMsg" style="display:none;font-size:0.72rem;color:#155A3C;font-weight:600">Guardado en historial</span>
     </div>
     <div class="modal-body">
       <table class="pedido-table" id="pedidoTable">
@@ -1592,7 +1592,7 @@ function openModal() {
 
   document.getElementById('pedidoTableBody').innerHTML = rows.map(r =>
     `<tr>
-      <td style="font-family:monospace;font-size:0.75rem;color:var(--muted);font-weight:700">${r.code}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted);font-weight:700">${r.code}</td>
       <td style="text-align:left">${r.desc}</td>
       <td>${r.qz > 0 ? r.qz : '—'}</td>
       <td>${r.qb > 0 ? r.qb : '—'}</td>
@@ -1901,7 +1901,7 @@ function buildStep2Cards() {
       <thead><tr>
         <th>Producto</th>
         <th>Total</th>
-        <th style="color:#fca5a5">${NAME1}</th>
+        <th style="color:#fed7aa">${NAME1}</th>
         <th style="color:#93c5fd">${NAME2}</th>
         <th></th>
       </tr></thead>

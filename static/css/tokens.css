@@ -1,0 +1,47 @@
+/* Design tokens — Farmacias Barris & Zarzuelo */
+:root {
+  /* Brand */
+  --brand-900: #0f3d28;
+  --brand-800: #125233;
+  --brand-700: #155A3C;
+  --brand-600: #166534;
+  --brand-500: #16a34a;
+  --brand-100: #dcfce7;
+  --brand-50:  #f0fdf4;
+
+  /* Pharmacy identity */
+  --z:        #C2410C;   /* Zarzuelo — terracotta */
+  --z-dark:   #9a3412;
+  --z-light:  #fff7ed;
+  --z-mid:    #fed7aa;
+  --b:        #1E3A8A;   /* Barris — cobalt */
+  --b-dark:   #1e3a8a;
+  --b-light:  #eff6ff;
+  --b-mid:    #bfdbfe;
+
+  /* Surface */
+  --bg:       #EAF1EC;
+  --surface:  #ffffff;
+  --border:   #d1d5db;
+  --border-light: #e5e7eb;
+
+  /* Text */
+  --text:     #111827;
+  --muted:    #6b7280;
+  --subtle:   #9ca3af;
+
+  /* Semantic */
+  --warn:     #f59e0b;
+  --warn-bg:  #fffbeb;
+  --danger:   #dc2626;
+  --danger-bg:#fef2f2;
+
+  /* Layout */
+  --radius:   8px;
+  --radius-lg:12px;
+
+  /* Topbar */
+  --topbar-h: 52px;
+  --topbar-bg:#ffffff;
+  --topbar-border: #e5e7eb;
+}

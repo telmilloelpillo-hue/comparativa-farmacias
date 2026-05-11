@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Acceso · Comparativa de Farmacias</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: #0f172a;
+      background: #155A3C;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -24,7 +24,7 @@
       padding: 2.5rem 2rem;
       width: 100%;
       max-width: 380px;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.25);
     }
 
     .logo {
@@ -33,22 +33,27 @@
     }
     .logo-icon {
       width: 52px; height: 52px;
-      background: #1e293b;
+      background: #155A3C;
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.5rem;
       margin: 0 auto 1rem;
+    }
+    .logo-monogram {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -0.04em;
     }
     .logo h1 {
       font-size: 1.05rem;
       font-weight: 700;
-      color: #1e293b;
+      color: #111827;
       letter-spacing: -0.02em;
     }
     .logo p {
-      color: #94a3b8;
+      color: #9ca3af;
       font-size: 0.78rem;
       margin-top: 0.3rem;
       text-transform: uppercase;
@@ -91,15 +96,15 @@
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     input[type="password"]:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+      border-color: #155A3C;
+      box-shadow: 0 0 0 3px rgba(21,90,60,0.12);
       background: white;
     }
 
     button {
       width: 100%;
       padding: 0.75rem;
-      background: #1e293b;
+      background: #155A3C;
       color: white;
       border: none;
       border-radius: 8px;
@@ -111,7 +116,7 @@
       transition: background 0.15s, box-shadow 0.15s;
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
-    button:hover { background: #334155; }
+    button:hover { background: #0f3d28; }
 
     .card-footer {
       margin-top: 1.5rem;
@@ -124,7 +129,7 @@
 <body>
   <div class="card">
     <div class="logo">
-      <div class="logo-icon">💊</div>
+      <div class="logo-icon"><span class="logo-monogram">FB</span></div>
       <h1>Comparativa de Farmacias</h1>
       <p>Acceso restringido</p>
     </div>
