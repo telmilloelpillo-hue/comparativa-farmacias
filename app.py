@@ -458,6 +458,8 @@ def plantilla_anotacion():
     _generate_plantilla_pdf(
         data['results'], tmp.name,
         data['name1'], data['name2'], data['lab'],
+        has_sit1=data.get('has_sit1', False),
+        has_sit2=data.get('has_sit2', False),
     )
 
     from datetime import date as _date
@@ -1045,8 +1047,11 @@ def _build_logistics_table(results, name1, name2,
     return elements
 
 
-def _generate_plantilla_pdf(results, output_path, name1, name2, lab):
-    """PDF plantilla A4 con columna verde vacía para anotar cantidades con Apple Pencil."""
+def _generate_plantilla_pdf(results, output_path, name1, name2, lab,
+                            has_sit1=False, has_sit2=False):
+    """PDF plantilla landscape con columna verde vacía para anotar con Apple Pencil.
+    Incluye todas las columnas: Stock, S.min, V.año actual, V.año prev, S.365 (si hay sit.), Pedido.
+    """
     from datetime import date as _date
 
     MESES = ['enero','febrero','marzo','abril','mayo','junio',
@@ -1054,32 +1059,31 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab):
     hoy = _date.today()
     fecha_str = f'{hoy.day} de {MESES[hoy.month-1]} de {hoy.year}'
 
+    show_s365 = has_sit1 or has_sit2
+
     C_GREEN_DARK  = colors.HexColor('#14532d')
     C_GREEN_COL   = colors.HexColor('#d1fae5')
     C_GREEN_LIGHT = colors.HexColor('#f0fdf4')
     C_BORDER      = colors.HexColor('#bbdec9')
     C_MUTED       = colors.HexColor('#4b7c5e')
-    C_ANCHOR      = colors.HexColor('#b0c4b8')   # código de ancla en col verde (muy tenue)
     C_Z_HDR       = colors.HexColor('#C2410C')
     C_B_HDR       = colors.HexColor('#1E3A8A')
+    C_DIVIDER     = colors.HexColor('#6b7280')
 
     doc = SimpleDocTemplate(
         output_path,
-        pagesize=A4,
+        pagesize=landscape(A4),
         leftMargin=1.3*cm, rightMargin=1.3*cm,
-        topMargin=1.3*cm, bottomMargin=1.3*cm,
+        topMargin=1.2*cm, bottomMargin=1.2*cm,
     )
     styles = getSampleStyleSheet()
 
     title_st = ParagraphStyle('pt', parent=styles['Normal'],
-        fontName='Helvetica-Bold', fontSize=12,
+        fontName='Helvetica-Bold', fontSize=11,
         textColor=C_GREEN_DARK, spaceAfter=1)
     sub_st = ParagraphStyle('ps', parent=styles['Normal'],
-        fontName='Helvetica', fontSize=7.5,
-        textColor=C_MUTED, spaceAfter=3)
-    instr_st = ParagraphStyle('pi', parent=styles['Normal'],
         fontName='Helvetica', fontSize=7,
-        textColor=colors.HexColor('#374151'), spaceAfter=10)
+        textColor=C_MUTED, spaceAfter=8)
     desc_st = ParagraphStyle('pd', parent=styles['Normal'],
         fontName='Helvetica', fontSize=7, leading=8.5)
     hdr_c_st = ParagraphStyle('hc', parent=styles['Normal'],
@@ -1088,9 +1092,6 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab):
     hdr_l_st = ParagraphStyle('hl', parent=styles['Normal'],
         fontName='Helvetica-Bold', fontSize=6.5,
         textColor=colors.white)
-    anchor_st = ParagraphStyle('anc', parent=styles['Normal'],
-        fontName='Courier', fontSize=5, leading=6,
-        textColor=C_ANCHOR, alignment=1)
 
     story = [
         Paragraph(f'PLANTILLA DE PEDIDO — {lab.upper()}', title_st),
@@ -1102,32 +1103,71 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab):
         ),
     ]
 
-    yr_cur = results[0]['year_current'] if results else hoy.year
+    yr_cur  = results[0]['year_current'] if results else hoy.year
+    yr_prev = results[0]['year_prev']    if results else hoy.year - 1
 
-    # Anchos (A4 usable ~183mm): verde | cód | desc | st1 | v1 | ped1 | st2 | v2 | ped2
-    col_widths = [1.6*cm, 1.8*cm, 6.2*cm, 1.1*cm, 1.1*cm, 1.1*cm, 1.1*cm, 1.1*cm, 1.1*cm]
-    # Total ≈ 16.2cm ✓
+    # ── Anchos de columna (landscape A4 usable ≈ 27.1cm) ──────────────────────
+    # verde | cód | desc | st1 | smin1 | vcur1 | vprev1 | [s365_1] | ped1
+    #                    | st2 | smin2 | vcur2 | vprev2 | [s365_2] | ped2
+    if show_s365:
+        # 15 columnas totales
+        col_widths = [
+            1.7*cm, 1.8*cm, 5.8*cm,
+            1.0*cm, 1.0*cm, 1.1*cm, 1.1*cm, 1.0*cm, 1.1*cm,
+            1.0*cm, 1.0*cm, 1.1*cm, 1.1*cm, 1.0*cm, 1.1*cm,
+        ]
+        # Total ≈ 1.7+1.8+5.8 + 2×(1.0+1.0+1.1+1.1+1.0+1.1) = 9.3 + 2×6.3 = 21.9cm ✓
+        n_farm = 6   # columnas por farmacia (incluye s365)
+        farm1_end = 3 + n_farm - 1   # col 8
+        farm2_end = 3 + 2*n_farm - 1 # col 14
+        divider_after = farm1_end     # separador vertical entre farmacias
+    else:
+        # 13 columnas totales
+        col_widths = [
+            1.7*cm, 1.8*cm, 6.4*cm,
+            1.0*cm, 1.0*cm, 1.2*cm, 1.2*cm, 1.2*cm,
+            1.0*cm, 1.0*cm, 1.2*cm, 1.2*cm, 1.2*cm,
+        ]
+        # Total ≈ 1.7+1.8+6.4 + 2×(1.0+1.0+1.2+1.2+1.2) = 9.9 + 2×5.6 = 21.1cm ✓
+        n_farm = 5
+        farm1_end = 3 + n_farm - 1   # col 7
+        farm2_end = 3 + 2*n_farm - 1 # col 12
+        divider_after = farm1_end
 
-    # Fila 0: cabecera de farmacia (con spans)
-    farm_row = [
-        Paragraph('', hdr_c_st),
-        Paragraph('', hdr_c_st),
-        Paragraph('', hdr_c_st),
-        Paragraph(f'← {name1}', hdr_c_st), '', '',
-        Paragraph(f'← {name2}', hdr_c_st), '', '',
-    ]
-    # Fila 1: cabecera de columnas
-    col_row = [
-        Paragraph('Cantidad', hdr_l_st),
-        Paragraph('Código', hdr_l_st),
-        Paragraph('Descripción', hdr_l_st),
-        Paragraph('Stock', hdr_c_st),
-        Paragraph(f'V.{yr_cur}', hdr_c_st),
-        Paragraph('Ped.', hdr_c_st),
-        Paragraph('Stock', hdr_c_st),
-        Paragraph(f'V.{yr_cur}', hdr_c_st),
-        Paragraph('Ped.', hdr_c_st),
-    ]
+    farm1_start = 3
+    farm2_start = farm1_end + 1
+    n_cols_total = 3 + 2 * n_farm   # 15 o 13
+
+    # ── Fila 0: cabecera de farmacia ───────────────────────────────────────────
+    farm_row = (['', '', '']
+                + [Paragraph(f'● {name1}', hdr_c_st)] + [''] * (n_farm - 1)
+                + [Paragraph(f'● {name2}', hdr_c_st)] + [''] * (n_farm - 1))
+
+    # ── Fila 1: cabecera de columnas ───────────────────────────────────────────
+    if show_s365:
+        farm_cols = [
+            Paragraph('Stock',       hdr_c_st),
+            Paragraph('S.min',       hdr_c_st),
+            Paragraph(f'V.{yr_cur}', hdr_c_st),
+            Paragraph(f'V.{yr_prev}',hdr_c_st),
+            Paragraph('S.365',       hdr_c_st),
+            Paragraph('Ped.',        hdr_c_st),
+        ]
+    else:
+        farm_cols = [
+            Paragraph('Stock',       hdr_c_st),
+            Paragraph('S.min',       hdr_c_st),
+            Paragraph(f'V.{yr_cur}', hdr_c_st),
+            Paragraph(f'V.{yr_prev}',hdr_c_st),
+            Paragraph('Ped.',        hdr_c_st),
+        ]
+
+    col_row = (
+        [Paragraph('Cantidad', hdr_l_st),
+         Paragraph('Código',   hdr_l_st),
+         Paragraph('Descripción', hdr_l_st)]
+        + farm_cols + farm_cols
+    )
 
     table_data = [farm_row, col_row]
     row_heights = [14, 13]
@@ -1141,68 +1181,84 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab):
 
     for r in results:
         desc = r.get('description', '')
-        if len(desc) > 55:
-            desc = desc[:53] + '…'
+        max_chars = 50 if show_s365 else 56
+        if len(desc) > max_chars:
+            desc = desc[:max_chars - 2] + '…'
 
         p1 = r.get('pedido1', 0) or 0
         p2 = r.get('pedido2', 0) or 0
 
-        table_data.append([
-            Paragraph(r['code'], anchor_st),   # ancla tenue para mapear filas
-            r['code'],
-            Paragraph(desc, desc_st),
-            _v(r.get('stock1')),
-            _v(r.get('total1')),
-            str(p1) if p1 else '—',
-            _v(r.get('stock2')),
-            _v(r.get('total2')),
-            str(p2) if p2 else '—',
-        ])
-        row_heights.append(22)   # altura generosa para Apple Pencil
+        if show_s365:
+            row = [
+                '',                          # columna verde — VACÍA
+                r['code'],
+                Paragraph(desc, desc_st),
+                _v(r.get('stock1')), _v(r.get('smin1')),
+                _v(r.get('total1')), _v(r.get('total1_prev')),
+                _v(r.get('s365_1')),
+                str(p1) if p1 else '—',
+                _v(r.get('stock2')), _v(r.get('smin2')),
+                _v(r.get('total2')), _v(r.get('total2_prev')),
+                _v(r.get('s365_2')),
+                str(p2) if p2 else '—',
+            ]
+        else:
+            row = [
+                '',                          # columna verde — VACÍA
+                r['code'],
+                Paragraph(desc, desc_st),
+                _v(r.get('stock1')), _v(r.get('smin1')),
+                _v(r.get('total1')), _v(r.get('total1_prev')),
+                str(p1) if p1 else '—',
+                _v(r.get('stock2')), _v(r.get('smin2')),
+                _v(r.get('total2')), _v(r.get('total2_prev')),
+                str(p2) if p2 else '—',
+            ]
+
+        table_data.append(row)
+        row_heights.append(22)
 
     n = len(table_data)
+    last_col = n_cols_total - 1
 
     ts = TableStyle([
-        # Cabecera farmacia
-        ('BACKGROUND',    (0, 0), (2, 0),  C_GREEN_DARK),
-        ('BACKGROUND',    (3, 0), (5, 0),  C_Z_HDR),
-        ('BACKGROUND',    (6, 0), (8, 0),  C_B_HDR),
-        ('SPAN',          (3, 0), (5, 0)),
-        ('SPAN',          (6, 0), (8, 0)),
-        # Cabecera columnas
-        ('BACKGROUND',    (0, 1), (0, 1),  C_GREEN_DARK),
-        ('BACKGROUND',    (1, 1), (2, 1),  C_GREEN_DARK),
-        ('BACKGROUND',    (3, 1), (5, 1),  C_Z_HDR),
-        ('BACKGROUND',    (6, 1), (8, 1),  C_B_HDR),
-        # Columna verde (col 0) en filas de datos
-        ('BACKGROUND',    (0, 2), (0, n-1), C_GREEN_COL),
-        # Alternado filas pares (gris muy suave)
-        ('ROWBACKGROUNDS',(1, 2), (8, n-1), [colors.white, C_GREEN_LIGHT]),
-        # Alineación
-        ('ALIGN',         (0, 0), (-1, 1),  'CENTER'),
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN',         (0, 2), (0, n-1), 'CENTER'),
-        ('ALIGN',         (1, 2), (1, n-1), 'CENTER'),
-        ('ALIGN',         (2, 2), (2, n-1), 'LEFT'),
-        ('ALIGN',         (3, 2), (-1, n-1),'CENTER'),
-        # Fuente datos
-        ('FONTNAME',      (1, 2), (1, n-1), 'Courier'),
-        ('FONTSIZE',      (1, 2), (1, n-1), 7),
-        ('TEXTCOLOR',     (1, 2), (1, n-1), C_MUTED),
-        ('FONTNAME',      (2, 2), (2, n-1), 'Helvetica'),
-        ('FONTSIZE',      (2, 2), (2, n-1), 7),
-        ('FONTNAME',      (3, 2), (-1, n-1),'Helvetica'),
-        ('FONTSIZE',      (3, 2), (-1, n-1), 7),
-        # Grid
-        ('GRID',          (0, 0), (-1, -1), 0.3, C_BORDER),
-        ('LINEAFTER',     (0, 0), (0, -1),  0.8, colors.HexColor('#86efac')),
-        ('LINEAFTER',     (2, 0), (2, -1),  0.6, C_BORDER),
-        ('LINEAFTER',     (5, 0), (5, -1),  1.0, colors.HexColor('#6b7280')),
-        # Padding
-        ('TOPPADDING',    (0, 0), (-1, -1), 2),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-        ('LEFTPADDING',   (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
+        # ── Cabecera farmacia (fila 0) ──
+        ('BACKGROUND',    (0, 0), (2, 0),              C_GREEN_DARK),
+        ('BACKGROUND',    (farm1_start, 0), (farm1_end, 0), C_Z_HDR),
+        ('BACKGROUND',    (farm2_start, 0), (last_col, 0),  C_B_HDR),
+        ('SPAN',          (farm1_start, 0), (farm1_end, 0)),
+        ('SPAN',          (farm2_start, 0), (last_col, 0)),
+        # ── Cabecera columnas (fila 1) ──
+        ('BACKGROUND',    (0, 1), (0, 1),              C_GREEN_DARK),
+        ('BACKGROUND',    (1, 1), (2, 1),              C_GREEN_DARK),
+        ('BACKGROUND',    (farm1_start, 1), (farm1_end, 1), C_Z_HDR),
+        ('BACKGROUND',    (farm2_start, 1), (last_col, 1),  C_B_HDR),
+        # ── Columna verde (col 0) filas de datos — fondo verde, sin contenido ──
+        ('BACKGROUND',    (0, 2), (0, n-1),            C_GREEN_COL),
+        # ── Alternado de filas ──
+        ('ROWBACKGROUNDS',(1, 2), (last_col, n-1), [colors.white, C_GREEN_LIGHT]),
+        # ── Alineación ──
+        ('ALIGN',         (0, 0), (-1, 1),   'CENTER'),
+        ('VALIGN',        (0, 0), (-1, -1),  'MIDDLE'),
+        ('ALIGN',         (2, 2), (2, n-1),  'LEFT'),
+        ('ALIGN',         (0, 2), (1, n-1),  'CENTER'),
+        ('ALIGN',         (3, 2), (-1, n-1), 'CENTER'),
+        # ── Fuentes datos ──
+        ('FONTNAME',      (1, 2), (1, n-1),  'Courier'),
+        ('FONTSIZE',      (1, 2), (1, n-1),  7),
+        ('TEXTCOLOR',     (1, 2), (1, n-1),  C_MUTED),
+        ('FONTNAME',      (2, 2), (-1, n-1), 'Helvetica'),
+        ('FONTSIZE',      (2, 2), (-1, n-1), 7),
+        # ── Grid y divisores ──
+        ('GRID',          (0, 0), (-1, -1),  0.3,  C_BORDER),
+        ('LINEAFTER',     (0, 0), (0, -1),   1.0,  colors.HexColor('#86efac')),
+        ('LINEAFTER',     (2, 0), (2, -1),   0.5,  C_BORDER),
+        ('LINEAFTER',     (divider_after, 0), (divider_after, -1), 1.2, C_DIVIDER),
+        # ── Padding ──
+        ('TOPPADDING',    (0, 0), (-1, -1),  2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1),  2),
+        ('LEFTPADDING',   (0, 0), (-1, -1),  4),
+        ('RIGHTPADDING',  (0, 0), (-1, -1),  4),
     ])
 
     table = Table(table_data, colWidths=col_widths, rowHeights=row_heights, repeatRows=2)
