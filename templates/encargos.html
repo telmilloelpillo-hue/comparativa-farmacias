@@ -3,195 +3,115 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Encargos · Farmacias</title>
+  <title>Encargos · Farmacias Barris &amp; Zarzuelo</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/monogram.svg') }}">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --z:      #C2410C;
-      --b:      #1E3A8A;
-      --bg:     #EAF1EC;
-      --border: #d1d5db;
-      --text:   #111827;
-      --muted:  #6b7280;
-      --accent: #155A3C;
-      --radius: 8px;
-    }
-
     body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      position: fixed;
-      width: 100%;
+      height: 100vh; height: 100dvh;
+      overflow: hidden; position: fixed; width: 100%;
     }
+    .app-shell { height: 100%; display: flex; flex-direction: column; }
 
-    /* ── TOPBAR ── */
-    .topbar { padding: 0 1.25rem; z-index: 200; flex-shrink: 0; }
-
-    /* ── PAGE HEADER ── */
-    .page-header {
-      background: white; border-bottom: 1px solid #e5e7eb;
-      padding: 0.85rem 1.5rem 0.7rem; flex-shrink: 0;
-    }
-    .page-title    { font-size: 1rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-    .page-subtitle { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
-
-    /* ── VIEWS ── */
+    /* Views that scroll independently */
     #listView, #detailView {
       flex: 1; overflow-y: auto; min-height: 0;
     }
 
-    /* ── LIST VIEW ── */
-    .encargo-row {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.9rem 1.5rem;
-      background: white;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-    .encargo-row:hover { background: var(--bg); }
-    .encargo-main { flex: 1; min-width: 0; }
-    .encargo-lab {
-      font-size: 0.88rem; font-weight: 700; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .encargo-info-sub {
-      font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem;
-    }
-    .encargo-units {
-      font-size: 0.78rem; color: var(--muted); white-space: nowrap; flex-shrink: 0;
-    }
+    /* Table row status cells */
+    .encargo-units { font-size: 12px; color: var(--fg-muted); white-space: nowrap; flex-shrink: 0; }
     .enc-pdf-btn {
-      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
-      color: var(--accent); border: 1px solid var(--accent); border-radius: 4px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      color: var(--brand-700); border: 1px solid var(--brand-700); border-radius: 4px;
       padding: 2px 8px; text-decoration: none; white-space: nowrap; flex-shrink: 0;
       transition: background 0.15s, color 0.15s;
     }
-    .enc-pdf-btn:hover { background: var(--accent); color: #fff; }
+    .enc-pdf-btn:hover { background: var(--brand-700); color: #fff; }
 
-    .empty-state {
+    /* Empty state for list */
+    .enc-empty-state {
       text-align: center; padding: 4rem 1.5rem;
-      font-size: 0.88rem; color: var(--muted); line-height: 1.7;
+      font-size: 14px; color: var(--fg-muted); line-height: 1.7;
     }
-    .empty-state strong { display: block; font-size: 1rem; color: var(--text); margin-bottom: 0.4rem; }
-
-    /* ── STATUS BADGES ── */
-    .status-badge {
-      display: inline-flex; align-items: center; gap: 0.35rem;
-      font-size: 0.7rem; font-weight: 700; padding: 0.22rem 0.65rem;
-      border-radius: 999px; white-space: nowrap;
-    }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .status-pendiente  { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-    .status-pendiente  .status-dot { background: #f59e0b; }
-    .status-parcial    { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
-    .status-parcial    .status-dot { background: #f97316; }
-    .status-completado { background: #f0fdf4; color: #155A3C; border: 1px solid #bbf7d0; }
-    .status-completado .status-dot { background: #16a34a; }
+    .enc-empty-state strong { display: block; font-size: 15px; color: var(--fg-1); margin-bottom: 6px; }
 
     /* ── DETAIL VIEW ── */
-    .detail-wrap { padding: 1.25rem 1.5rem 2rem; }
-
+    .detail-wrap { padding: 20px 24px 32px; }
     .detail-back {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      font-size: 0.78rem; font-weight: 600; color: var(--muted);
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--fg-muted);
       background: none; border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 0.35rem 0.75rem; cursor: pointer; margin-bottom: 1rem;
+      padding: 6px 12px; cursor: pointer; margin-bottom: 16px;
       transition: all 0.15s;
     }
-    .detail-back:hover { border-color: var(--accent); color: var(--accent); }
-
-    .detail-meta-row {
-      display: flex; align-items: center; gap: 1rem; margin-bottom: 0.4rem;
-    }
+    .detail-back:hover { border-color: var(--brand-700); color: var(--brand-700); }
+    .detail-meta-row { display: flex; align-items: center; gap: 16px; margin-bottom: 6px; }
     .detail-order-id {
-      font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 700; color: var(--accent);
+      font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--brand-700);
     }
-    .detail-meta {
-      font-size: 0.78rem; color: var(--muted); margin-bottom: 1rem;
-    }
+    .detail-meta { font-size: 12px; color: var(--fg-muted); margin-bottom: 16px; }
 
-    /* Progress bar replacing the verbose pending list */
     .detail-progress-bar-wrap {
-      background: #f0fdf4; border: 1px solid var(--border); border-radius: 8px;
-      padding: 0.65rem 1rem; margin-bottom: 1rem;
-      display: flex; align-items: center; gap: 0.85rem;
+      background: var(--success-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 10px 16px; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 14px;
     }
     .detail-progress-track {
-      flex: 1; height: 6px; background: #d1fae5; border-radius: 99px; overflow: hidden;
+      flex: 1; height: 6px; background: var(--success-bd); border-radius: 99px; overflow: hidden;
     }
     .detail-progress-fill {
       height: 100%; border-radius: 99px;
-      background: linear-gradient(90deg, #155A3C, #16a34a);
+      background: linear-gradient(90deg, var(--brand-700), var(--success));
       transition: width 0.3s ease;
     }
     .detail-progress-label {
-      font-size: 0.72rem; font-weight: 700; color: var(--accent); white-space: nowrap;
+      font-size: 11px; font-weight: 700; color: var(--brand-700); white-space: nowrap;
     }
 
-    /* Compact product table */
+    /* Product table in detail view */
     .encargo-table {
       width: 100%; border-collapse: collapse;
-      border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
     }
     .encargo-table thead th {
-      background: var(--accent); color: white;
-      padding: 0.5rem 0.9rem; font-size: 0.65rem; font-weight: 600;
+      background: var(--brand-700); color: white;
+      padding: 8px 14px; font-size: 10px; font-weight: 600;
       text-transform: uppercase; letter-spacing: 0.06em;
     }
     .encargo-table thead th:first-child { text-align: left; }
     .encargo-table thead th:not(:first-child) { text-align: center; width: 120px; }
     .encargo-table tbody tr { border-top: 1px solid var(--border); background: white; }
-    .encargo-table tbody tr:nth-child(even) td { background: #f9fafb; }
-    .encargo-table tbody td { padding: 0.55rem 0.9rem; vertical-align: middle; }
+    .encargo-table tbody tr:nth-child(even) td { background: var(--surface-2); }
+    .encargo-table tbody td { padding: 9px 14px; vertical-align: middle; }
     .encargo-table tbody td:not(:first-child) { text-align: center; }
-    .encargo-prod-name { font-size: 0.8rem; font-weight: 600; color: var(--text); }
-    .encargo-prod-code { font-family: monospace; font-size: 0.65rem; color: var(--muted); font-weight: 700; margin-top: 0.05rem; }
+    .encargo-prod-name { font-size: 13px; font-weight: 600; color: var(--fg-1); }
+    .encargo-prod-code { font-family: var(--font-mono); font-size: 10px; color: var(--fg-muted); font-weight: 700; margin-top: 1px; }
 
-    /* Checkbox cell */
     .enc-check-cell {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      cursor: pointer; user-select: none; padding: 0.25rem 0.5rem;
-      border-radius: 6px; transition: background 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+      cursor: pointer; user-select: none; padding: 4px 8px;
+      border-radius: var(--radius); transition: background 0.1s;
     }
-    .enc-check-cell:hover { background: #f0fdf4; }
+    .enc-check-cell:hover { background: var(--success-bg); }
     .enc-check-cell input[type="checkbox"] { display: none; }
     .enc-check-icon {
-      width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #d1d5db;
+      width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--border);
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; flex-shrink: 0; transition: all 0.15s; background: white;
+      font-size: 11px; flex-shrink: 0; transition: all 0.15s; background: white;
     }
-    .enc-check-cell.recibido .enc-check-icon {
-      background: #16a34a; border-color: #16a34a; color: white;
-    }
-    .enc-check-qty { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
-    .enc-check-cell.recibido .enc-check-qty { color: #16a34a; }
+    .enc-check-cell.recibido .enc-check-icon { background: var(--success); border-color: var(--success); color: white; }
+    .enc-check-qty { font-size: 12px; font-weight: 700; color: var(--fg-muted); }
+    .enc-check-cell.recibido .enc-check-qty { color: var(--success-fg); }
     .enc-check-cell.na { opacity: 0.25; cursor: default; pointer-events: none; }
 
-    /* ── MOBILE ── */
     @media (max-width: 768px) {
-      .topbar { padding: 0 0.9rem; }
-      .btn-ghost { font-size: 0.72rem; padding: 0.35rem 0.65rem; }
-      .page-header { padding: 0.65rem 0.9rem; }
-      .encargo-row { padding: 0.75rem 0.9rem; gap: 0.75rem; }
-      .encargo-units { display: none; }
-      .detail-wrap { padding: 0.9rem 0.9rem 2rem; }
+      .detail-wrap { padding: 14px 14px 32px; }
       .encargo-table thead th:not(:first-child) { width: 90px; }
     }
   </style>
 </head>
 <body>
+<div class="app-shell">
 
 <!-- ── TOPBAR ── -->
 <header class="topbar">
@@ -204,8 +124,8 @@
   <div class="divider"></div>
   <nav class="tabs">
     <a class="tab" href="/">
-      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="13" y="8" width="3" height="10"/></svg>
-      Comparativa
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Inicio
     </a>
     <a class="tab" href="/facturas">
       <svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2"/><path d="M16 8H8M16 12H8M13 16H8"/></svg>
@@ -221,16 +141,57 @@
   </div>
 </header>
 
-<!-- ── PAGE HEADER ── -->
-<div class="page-header">
-  <div class="page-title"  id="pageTitle">Encargos</div>
-  <div class="page-subtitle" id="pageSubtitle"></div>
-</div>
-
 <!-- ── LIST VIEW ── -->
 <div id="listView">
-  <div id="encargoList"></div>
-  <div id="emptyState" class="empty-state" style="display:none">
+  <div style="padding:24px 24px 0">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:22px">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.01em;margin:0;color:var(--fg-1)" id="pageTitle">Encargos</h1>
+        <p style="font-size:13px;color:var(--fg-muted);margin:4px 0 0" id="pageSubtitle"></p>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="radio-group" id="filterGroup">
+        <label class="radio-opt on" data-filter="todos">
+          <span class="radio-dot"></span>Todos
+        </label>
+        <label class="radio-opt" data-filter="pendiente">
+          <span class="radio-dot"></span>Pendientes
+        </label>
+        <label class="radio-opt" data-filter="parcial">
+          <span class="radio-dot"></span>Parciales
+        </label>
+        <label class="radio-opt" data-filter="completado">
+          <span class="radio-dot"></span>Completados
+        </label>
+      </div>
+      <div class="spacer"></div>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="searchInput" placeholder="Buscar laboratorio o ID">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="margin:16px 24px 0">
+    <table class="data" id="encargoTable">
+      <thead>
+        <tr>
+          <th style="width:100px">ID</th>
+          <th>Laboratorio</th>
+          <th>Farmacias</th>
+          <th>Fecha</th>
+          <th class="col-num">Productos</th>
+          <th class="col-num">Uds</th>
+          <th>Estado</th>
+          <th class="col-actions"></th>
+        </tr>
+      </thead>
+      <tbody id="encargoList"></tbody>
+    </table>
+  </div>
+  <div id="emptyState" class="enc-empty-state" style="display:none">
     <strong>No hay encargos registrados</strong>
     Confirma un pedido desde la comparativa para que aparezca aquí.
   </div>
@@ -243,7 +204,7 @@
 
     <div class="detail-meta-row">
       <div class="detail-order-id" id="detailOrderId"></div>
-      <div style="display:flex;align-items:center;gap:0.6rem">
+      <div style="display:flex;align-items:center;gap:10px">
         <button id="detailPdfBtn" class="enc-pdf-btn" onclick="downloadDetailPdf()">PDF</button>
         <div id="detailStatusBadge"></div>
       </div>
@@ -251,15 +212,18 @@
     <div class="detail-meta" id="detailMeta"></div>
 
     <div class="detail-pending-summary" id="detailPending"></div>
-
     <div id="detailProducts"></div>
   </div>
+</div>
+
 </div>
 
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let encargos = [];
 let currentEncargoIdx = null;
+let activeFilter = 'todos';
+let searchTerm = '';
 
 function loadEncargos() {
   try {
@@ -272,18 +236,14 @@ function persistEncargos() {
   try { localStorage.setItem('encargos', JSON.stringify(encargos)); } catch(e) {}
 }
 
-// ─── PDF DEL PEDIDO ───────────────────────────────────────────────────────────
+// ─── PDF ─────────────────────────────────────────────────────────────────────
 async function downloadDetailPdf() {
   if (currentEncargoIdx === null) return;
   const enc = encargos[currentEncargoIdx];
-
-  // Si el PDF ya está guardado en servidor, abrirlo directamente
   if (enc.pdf_id) {
     window.open('/pedido_file/' + enc.pdf_id, '_blank');
     return;
   }
-
-  // Si no hay pdf_id (encargo antiguo), generarlo on-the-fly
   const btn = document.getElementById('detailPdfBtn');
   btn.textContent = '...'; btn.disabled = true;
   const rows = (enc.products || []).map(p => ({
@@ -316,62 +276,106 @@ function calcStatus(enc) {
     if ((p.pedido_zarzuelo || 0) > 0) { expected++; if (p.recibido_zarzuelo) received++; }
     if ((p.pedido_barris   || 0) > 0) { expected++; if (p.recibido_barris)   received++; }
   });
-  if (expected === 0) return 'pendiente';
-  if (received === 0) return 'pendiente';
+  if (expected === 0 || received === 0) return 'pendiente';
   if (received >= expected) return 'completado';
   return 'parcial';
 }
 
 function statusBadgeHTML(status) {
-  const labels = { pendiente: 'Pendiente', parcial: 'Parcial', completado: 'Completado' };
-  return `<span class="status-badge status-${status}">
-    <span class="status-dot"></span>${labels[status] || status}
-  </span>`;
+  const map = {
+    pendiente:  { cls: 'badge-pending',  dot: 'var(--warning)', label: 'Pendiente' },
+    parcial:    { cls: 'badge-partial',  dot: 'var(--partial)', label: 'Parcial' },
+    completado: { cls: 'badge-completed',dot: 'var(--success)', label: 'Completado' },
+  };
+  const m = map[status] || map.pendiente;
+  return `<span class="badge ${m.cls}"><span class="d" style="width:5px;height:5px;border-radius:50%;background:${m.dot}"></span>${m.label}</span>`;
 }
 
 // ─── LIST VIEW ────────────────────────────────────────────────────────────────
 function renderList() {
-  const list = document.getElementById('encargoList');
+  const tbody = document.getElementById('encargoList');
   const empty = document.getElementById('emptyState');
 
   if (encargos.length === 0) {
-    list.innerHTML = '';
+    tbody.innerHTML = '';
+    document.querySelector('#encargoTable').closest('.table-wrap').style.display = 'none';
     empty.style.display = '';
     return;
   }
+  document.querySelector('#encargoTable').closest('.table-wrap').style.display = '';
   empty.style.display = 'none';
 
-  // Newest first
-  const sorted = encargos.map((e, i) => ({ ...e, _idx: i }))
-                          .slice().reverse();
+  const sorted = encargos.map((e, i) => ({ ...e, _idx: i })).slice().reverse();
 
-  list.innerHTML = sorted.map(enc => {
+  const filtered = sorted.filter(enc => {
+    const status = calcStatus(enc);
+    if (activeFilter !== 'todos' && status !== activeFilter) return false;
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      const lab = (enc.lab || '').toLowerCase();
+      const id = (enc.order_id || '').toLowerCase();
+      if (!lab.includes(q) && !id.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--fg-muted)">Sin resultados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(enc => {
     const status   = calcStatus(enc);
     const nProds   = (enc.products || []).length;
     const totalUds = (enc.products || []).reduce((s, p) =>
       s + (p.pedido_total || (p.pedido_zarzuelo || 0) + (p.pedido_barris || 0)), 0);
+    const name1 = enc.name1 || '';
+    const name2 = enc.name2 || '';
+    const pharmacies = [name1, name2].filter(Boolean).join(' · ');
     return `
-      <div class="encargo-row" onclick="showDetail(${enc._idx})">
-        <div class="encargo-main">
-          <div class="encargo-lab">${enc.lab || 'Sin laboratorio'}</div>
-          <div class="encargo-info-sub">${enc.date} · ${enc.name1 || ''} vs ${enc.name2 || ''}</div>
-        </div>
-        <div class="encargo-units">${nProds} prod · ${totalUds} uds</div>
-        ${enc.pdf_id ? `<a class="enc-pdf-btn" href="/pedido_file/${enc.pdf_id}" target="_blank" onclick="event.stopPropagation()" title="Ver PDF del pedido">PDF</a>` : ''}
-        <div class="encargo-status-col">${statusBadgeHTML(status)}</div>
-      </div>`;
+      <tr onclick="showDetail(${enc._idx})" style="cursor:pointer">
+        <td><span style="font-family:var(--font-mono);font-size:11px;color:var(--fg-muted)">${enc.order_id}</span></td>
+        <td><div style="font-weight:600">${enc.lab || 'Sin laboratorio'}</div><div style="font-size:11px;color:var(--fg-muted)">${enc.date}</div></td>
+        <td><div style="font-size:12px;color:var(--fg-muted)">${pharmacies}</div></td>
+        <td><div style="font-size:12px">${enc.date}</div></td>
+        <td class="col-num">${nProds}</td>
+        <td class="col-num">${totalUds}</td>
+        <td>${statusBadgeHTML(status)}</td>
+        <td class="col-actions"><div class="row-actions">
+          ${enc.pdf_id ? `<a class="enc-pdf-btn" href="/pedido_file/${enc.pdf_id}" target="_blank" onclick="event.stopPropagation()" title="Ver PDF">PDF</a>` : ''}
+        </div></td>
+      </tr>`;
   }).join('');
+}
+
+function updatePageMeta() {
+  const count = encargos.length;
+  document.getElementById('pageTitle').textContent    = 'Encargos';
+  document.getElementById('pageSubtitle').textContent = count + ' pedido' + (count !== 1 ? 's' : '') + ' en total';
 }
 
 function showList() {
   currentEncargoIdx = null;
   document.getElementById('listView').style.display   = '';
   document.getElementById('detailView').style.display = 'none';
-  document.getElementById('pageTitle').textContent    = 'Encargos';
-  document.getElementById('pageSubtitle').textContent =
-    encargos.length + ' pedido' + (encargos.length !== 1 ? 's' : '');
+  updatePageMeta();
   renderList();
 }
+
+// ─── FILTER BAR ───────────────────────────────────────────────────────────────
+document.getElementById('filterGroup').addEventListener('click', e => {
+  const opt = e.target.closest('.radio-opt');
+  if (!opt) return;
+  document.querySelectorAll('#filterGroup .radio-opt').forEach(o => o.classList.remove('on'));
+  opt.classList.add('on');
+  activeFilter = opt.dataset.filter;
+  renderList();
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchTerm = e.target.value.trim();
+  renderList();
+});
 
 // ─── DETAIL VIEW ──────────────────────────────────────────────────────────────
 function showDetail(idx) {
@@ -385,14 +389,12 @@ function renderDetail(idx) {
   const enc    = encargos[idx];
   const status = calcStatus(enc);
 
-  document.getElementById('pageTitle').textContent    = enc.order_id;
-  document.getElementById('pageSubtitle').textContent = enc.date + ' · ' + (enc.lab || '');
   document.getElementById('detailOrderId').textContent = enc.order_id;
   document.getElementById('detailStatusBadge').innerHTML = statusBadgeHTML(status);
   document.getElementById('detailPdfBtn').style.display = '';
   document.getElementById('detailMeta').textContent =
     (enc.name1 || 'Farm. 1') + ' vs ' + (enc.name2 || 'Farm. 2') +
-    ' · ' + (enc.products || []).length + ' productos';
+    ' · ' + (enc.products || []).length + ' productos · ' + enc.date;
 
   renderPendingSummary(enc);
   renderDetailProducts(idx);
@@ -448,10 +450,7 @@ function renderDetailProducts(idx) {
 
     return `
       <tr>
-        <td>
-          <div class="encargo-prod-name">${p.descripcion}</div>
-          <div class="encargo-prod-code">${p.codigo}</div>
-        </td>
+        <td><div class="encargo-prod-name">${p.descripcion}</div><div class="encargo-prod-code">${p.codigo}</div></td>
         <td>${cellZ}</td>
         <td>${cellB}</td>
       </tr>`;
@@ -472,17 +471,12 @@ function renderDetailProducts(idx) {
 function onCheckboxChange(eIdx, pIdx, side) {
   const enc = encargos[eIdx];
   if (!enc || !enc.products[pIdx]) return;
-
-  // Toggle
   const isZ = side === 'z';
   const newVal = isZ ? !enc.products[pIdx].recibido_zarzuelo : !enc.products[pIdx].recibido_barris;
   if (isZ) enc.products[pIdx].recibido_zarzuelo = newVal;
   else     enc.products[pIdx].recibido_barris   = newVal;
-
   enc.status = calcStatus(enc);
   persistEncargos();
-
-  // Update cell in place
   const wrapId = 'chk-wrap-' + eIdx + '-' + pIdx + '-' + side;
   const wrap   = document.getElementById(wrapId);
   if (wrap) {
@@ -490,7 +484,6 @@ function onCheckboxChange(eIdx, pIdx, side) {
     const icon = wrap.querySelector('.enc-check-icon');
     if (icon) icon.innerHTML = newVal ? '&#10003;' : '';
   }
-
   document.getElementById('detailStatusBadge').innerHTML = statusBadgeHTML(enc.status);
   renderPendingSummary(enc);
 }

@@ -3,374 +3,238 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Facturas · Farmacias</title>
+  <title>Facturas · Farmacias Barris &amp; Zarzuelo</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/monogram.svg') }}">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:     #EAF1EC;
-      --surface:#ffffff;
-      --border: #e5e7eb;
-      --text:   #111827;
-      --muted:  #6b7280;
-      --accent: #155A3C;
-      --accent2:#0f3d28;
-      --radius: 8px;
-    }
-
     body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      height: 100vh; overflow: hidden; display: flex; flex-direction: column;
     }
+    .app-shell { height: 100%; display: flex; flex-direction: column; }
 
-    /* ══ TOPBAR ══ */
-    .topbar { padding: 0 1.25rem; z-index: 200; flex-shrink: 0; }
-
-    /* ══ UPLOAD LAYOUT (estado inicial) ══ */
+    /* ── Upload layout ── */
     #uploadLayout {
-      flex: 1;
-      overflow-y: auto;
-      display: grid;
-      grid-template-columns: 420px 1fr;
-      gap: 0;
-      max-width: 1400px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 1.75rem 1.5rem 3rem;
-      align-content: start;
+      flex: 1; overflow-y: auto;
     }
     #uploadLayout.hidden { display: none; }
-
-    .left-panel {
-      padding-right: 1.75rem;
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; gap: 1.25rem;
+    .upload-grid {
+      display: grid; grid-template-columns: 420px 1fr; gap: 0;
+      padding-bottom: 48px; align-content: start;
     }
-    .right-panel-upload { padding-left: 1.75rem; min-width: 0; }
+    .upload-left {
+      padding-right: 28px; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .upload-right { padding-left: 28px; min-width: 0; }
 
-    /* ══ RESULTS LAYOUT (después de analizar) ══ */
+    /* ── Form elements (upload state) ── */
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: var(--radius-xl); padding: 2rem 1rem;
+      text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      position: relative; margin-bottom: 20px;
+    }
+    .drop-zone.dragover { border-color: var(--brand-700); background: var(--brand-50); }
+    .drop-zone.has-file { border-color: var(--brand-700); background: var(--brand-50); border-style: solid; }
+    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .drop-icon { font-size: 1.8rem; margin-bottom: 8px; }
+    .drop-title { font-size: 13px; font-weight: 700; color: var(--fg-1); }
+    .drop-sub { font-size: 12px; color: var(--fg-muted); margin-top: 3px; }
+    .drop-file-name { font-size: 12px; font-weight: 600; color: var(--brand-700); margin-top: 8px; word-break: break-all; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--fg-1); margin-bottom: 7px; }
+    .radio-group-upload { display: flex; gap: 10px; flex-wrap: wrap; }
+    .radio-option-upload {
+      display: flex; align-items: center; gap: 6px; cursor: pointer;
+      padding: 8px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-lg);
+      font-size: 12px; font-weight: 500; color: var(--fg-1);
+      transition: border-color 0.15s, background 0.15s; user-select: none;
+    }
+    .radio-option-upload input { display: none; }
+    .radio-option-upload.selected { border-color: var(--brand-700); background: var(--brand-50); color: var(--brand-700); }
+    .radio-dot-upload { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--fg-muted); flex-shrink: 0; transition: border-color 0.15s, background 0.15s; }
+    .radio-option-upload.selected .radio-dot-upload { border-color: var(--brand-700); background: var(--brand-700); }
+
+    .btn-analyze {
+      width: 100%; padding: 11px; background: var(--brand-700); color: white;
+      border: none; border-radius: var(--radius-lg); font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; margin-top: 20px;
+    }
+    .btn-analyze:hover:not(:disabled) { background: var(--brand-900); }
+    .btn-analyze:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .analyzing-bar {
+      display: none; align-items: center; gap: 8px;
+      padding: 10px 14px; background: var(--brand-50); border: 1px solid var(--brand-100);
+      border-radius: var(--radius-lg); margin-top: 12px; font-size: 12px; color: var(--brand-700); font-weight: 500;
+    }
+    .analyzing-bar.visible { display: flex; }
+    .spinner { width: 14px; height: 14px; border: 2px solid var(--brand-100); border-top-color: var(--brand-700); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box { display: none; padding: 10px 14px; background: var(--danger-bg); border: 1px solid var(--danger-bd); border-radius: var(--radius-lg); font-size: 12px; color: var(--danger-fg); margin-top: 12px; }
+    .error-box.visible { display: block; }
+
+    /* ── Results layout ── */
     #resultsLayout {
-      display: none;
-      flex-direction: column;
-      height: calc(100vh - 56px); /* topbar height */
-      overflow: hidden;
+      display: none; flex-direction: column;
+      height: calc(100vh - 56px); overflow: hidden;
     }
     #resultsLayout.visible { display: flex; }
 
-    /* ── Controls bar ── */
+    /* Controls bar (proveedor / redondeo) */
     #controlsBar {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-      padding: 0.7rem 1.5rem;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      z-index: 100;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 10px 24px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; z-index: 100;
     }
-    .ctrl-label { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+    .ctrl-label { font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
     .ctrl-select {
-      padding: 0.35rem 2rem 0.35rem 0.6rem;
-      border: 1.5px solid var(--border); border-radius: 6px;
-      font-size: 0.76rem; color: var(--text); background: white;
+      padding: 5px 28px 5px 10px;
+      border: 1.5px solid var(--border); border-radius: var(--radius);
+      font-size: 12px; color: var(--fg-1); background: white;
       appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 0.5rem center; cursor: pointer;
+      background-repeat: no-repeat; background-position: right 8px center; cursor: pointer;
     }
-    .ctrl-select:focus { outline: none; border-color: var(--accent); }
-    .ctrl-sep { width: 1px; height: 20px; background: var(--border); margin: 0 0.2rem; }
-    .btn-ctrl {
-      padding: 0.38rem 0.9rem;
-      background: white;
-      border: 1.5px solid var(--border);
-      color: var(--text);
-      border-radius: 6px;
-      font-size: 0.76rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      white-space: nowrap;
-    }
-    .btn-ctrl:hover { background: var(--bg); }
-    .btn-ctrl-accent {
-      border-color: var(--accent); color: var(--accent);
-    }
-    .btn-ctrl-accent:hover { background: var(--accent); color: white; }
+    .ctrl-select:focus { outline: none; border-color: var(--brand-700); }
+    .ctrl-sep { width: 1px; height: 20px; background: var(--border); margin: 0 3px; }
+    .ctrl-meta { font-size: 12px; color: var(--fg-muted); }
+    .ctrl-meta strong { color: var(--fg-1); }
 
-    .ctrl-meta { font-size: 0.76rem; color: var(--muted); }
-    .ctrl-meta strong { color: var(--text); }
-
-    /* ── Main results area (tabla + preview) ── */
-    #mainArea {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-      min-height: 0; /* critical for flex children to respect overflow */
+    /* Results split area */
+    #splitArea {
+      flex: 1; display: flex; overflow: hidden; min-height: 0;
     }
 
-    /* ── Table section ── */
+    /* Table section (split-col-body) */
     #tableSection {
-      flex: 1;
-      min-width: 0;
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 1.25rem 1.5rem 3rem;
-      /* isolated scroll — wheel events stay here */
+      flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden;
+      padding: 20px 24px 48px;
       overscroll-behavior: contain;
     }
 
-    /* ── Resize handle ── */
+    /* Resize handle */
     #resizeHandle {
-      width: 5px;
-      background: var(--border);
-      cursor: col-resize;
-      flex-shrink: 0;
+      width: 5px; background: var(--border); cursor: col-resize; flex-shrink: 0;
       transition: background 0.15s;
-      position: relative;
     }
-    #resizeHandle:hover, #resizeHandle.dragging { background: var(--accent); }
+    #resizeHandle:hover, #resizeHandle.dragging { background: var(--brand-700); }
 
-    /* ── Preview panel ── */
+    /* Preview panel */
     #previewPanel {
-      width: 380px;
-      min-width: 200px;
-      max-width: 700px;
-      background: var(--surface);
-      border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      overflow: hidden;
-      min-height: 0;
+      width: 380px; min-width: 200px; max-width: 700px;
+      background: var(--surface); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; min-height: 0;
     }
     #previewPanel.collapsed { width: 0 !important; min-width: 0; border-left: none; }
 
     .preview-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.6rem 0.9rem;
-      border-bottom: 1px solid var(--border);
-      background: #f9fafb;
-      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      background: var(--surface-2); flex-shrink: 0;
     }
-    .preview-title { font-size: 0.76rem; font-weight: 700; color: var(--text); }
+    .preview-title { font-size: 12px; font-weight: 700; color: var(--fg-1); }
     .btn-collapse {
       background: none; border: none; cursor: pointer;
-      color: var(--muted); font-size: 1rem; padding: 0.1rem 0.3rem;
-      border-radius: 4px; transition: color 0.15s, background 0.15s;
-      line-height: 1;
+      color: var(--fg-muted); font-size: 1rem; padding: 2px 5px;
+      border-radius: 4px; transition: color 0.15s, background 0.15s; line-height: 1;
     }
-    .btn-collapse:hover { color: var(--text); background: var(--border); }
+    .btn-collapse:hover { color: var(--fg-1); background: var(--border); }
 
     #previewContent {
-      flex: 1;
-      overflow: hidden;
-      position: relative;
-      background: #d1d5db;
-      cursor: grab;
-      touch-action: none;
-      user-select: none;
-      min-height: 0;
-      overscroll-behavior: contain;
+      flex: 1; overflow: hidden; position: relative;
+      background: #d1d5db; cursor: grab; touch-action: none;
+      user-select: none; min-height: 0; overscroll-behavior: contain;
     }
     #previewContent.grabbing { cursor: grabbing; }
     #previewInner {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform-origin: center center;
-      transform: translate(-50%, -50%) scale(1);
-      transition: none;
-    }
-    #previewInner img {
-      display: block;
-      max-width: 460px;
-      max-height: 640px;
-      border-radius: 4px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-      pointer-events: none;
-    }
-    #previewInner iframe {
-      display: block;
-      width: 460px;
-      height: 640px;
-      border: none;
-      pointer-events: none;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-    }
-    .preview-empty {
       position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 0.78rem; color: #9ca3af; text-align: center;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(1); transition: none;
     }
+    #previewInner img { display: block; max-width: 460px; max-height: 640px; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); pointer-events: none; }
+    #previewInner iframe { display: block; width: 460px; height: 640px; border: none; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+    .preview-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 12px; color: #9ca3af; text-align: center; }
 
-    /* zoom controls in preview header */
-    .preview-zoom {
-      display: flex; align-items: center; gap: 0.3rem; margin: 0 0.5rem;
-    }
+    .preview-zoom { display: flex; align-items: center; gap: 5px; margin: 0 8px; }
     .preview-zoom button {
       background: var(--border); border: none; border-radius: 4px;
-      width: 22px; height: 22px; cursor: pointer; font-size: 0.9rem; font-weight: 700;
-      color: var(--text); display: flex; align-items: center; justify-content: center;
-      transition: background 0.15s;
+      width: 22px; height: 22px; cursor: pointer; font-size: 14px; font-weight: 700;
+      color: var(--fg-1); display: flex; align-items: center; justify-content: center;
     }
     .preview-zoom button:hover { background: #d1d5db; }
-    .preview-zoom-label {
-      font-size: 0.7rem; color: var(--muted); min-width: 34px; text-align: center;
-    }
+    .preview-zoom-label { font-size: 11px; color: var(--fg-muted); min-width: 34px; text-align: center; }
 
-    /* ── Toggle preview button (en controls bar) ── */
-    #btnTogglePreview {
-      margin-left: auto;
-    }
-
-    /* ══ CARDS ══ */
-    .dash-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
-    .dash-card-header { padding: 1rem 1.25rem 0.8rem; border-bottom: 1px solid var(--border); }
-    .dash-card-title { font-size: 0.82rem; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
-    .dash-card-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.18rem; }
-    .dash-card-body { padding: 1.25rem; }
-
-    /* ══ UPLOAD ZONE ══ */
-    .drop-zone {
-      border: 2px dashed #d1d5db; border-radius: 10px; padding: 2rem 1rem;
-      text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-      position: relative; margin-bottom: 1.2rem;
-    }
-    .drop-zone.dragover { border-color: var(--accent); background: #f0fdf4; }
-    .drop-zone.has-file { border-color: var(--accent); background: #f0fdf4; border-style: solid; }
-    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-    .drop-icon { font-size: 1.8rem; margin-bottom: 0.5rem; }
-    .drop-title { font-size: 0.82rem; font-weight: 700; color: var(--text); }
-    .drop-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
-    .drop-file-name { font-size: 0.76rem; font-weight: 600; color: var(--accent); margin-top: 0.5rem; word-break: break-all; }
-
-    /* ══ FORM ELEMENTS ══ */
-    .form-group { margin-bottom: 1rem; }
-    .form-group:last-child { margin-bottom: 0; }
-    .form-label { display: block; font-size: 0.76rem; font-weight: 600; color: var(--text); margin-bottom: 0.45rem; }
-    .radio-group { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-    .radio-option {
-      display: flex; align-items: center; gap: 0.4rem; cursor: pointer;
-      padding: 0.5rem 0.85rem; border: 1.5px solid var(--border); border-radius: 7px;
-      font-size: 0.78rem; font-weight: 500; color: var(--text);
-      transition: border-color 0.15s, background 0.15s; user-select: none;
-    }
-    .radio-option input { display: none; }
-    .radio-option.selected { border-color: var(--accent); background: #f0fdf4; color: var(--accent); }
-    .radio-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--muted); flex-shrink: 0; transition: border-color 0.15s, background 0.15s; }
-    .radio-option.selected .radio-dot { border-color: var(--accent); background: var(--accent); }
-
-    select {
-      width: 100%; padding: 0.5rem 0.75rem; border: 1.5px solid var(--border); border-radius: 7px;
-      font-size: 0.82rem; color: var(--text); background: white; appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2rem; cursor: pointer;
-    }
-    select:focus { outline: none; border-color: var(--accent); }
-
-    .btn-analyze {
-      width: 100%; padding: 0.7rem; background: var(--accent); color: white;
-      border: none; border-radius: 8px; font-size: 0.84rem; font-weight: 600;
-      cursor: pointer; transition: background 0.15s; margin-top: 1.25rem;
-    }
-    .btn-analyze:hover:not(:disabled) { background: var(--accent2); }
-    .btn-analyze:disabled { opacity: 0.55; cursor: not-allowed; }
-
-    .analyzing-bar {
-      display: none; align-items: center; gap: 0.5rem;
-      padding: 0.6rem 0.9rem; background: #f0fdf4; border: 1px solid #bbf7d0;
-      border-radius: 8px; margin-top: 0.75rem; font-size: 0.76rem; color: var(--accent); font-weight: 500;
-    }
-    .analyzing-bar.visible { display: flex; }
-    .spinner { width: 14px; height: 14px; border: 2px solid #bbf7d0; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .error-box { display: none; padding: 0.65rem 0.9rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.76rem; color: #991b1b; margin-top: 0.75rem; }
-    .error-box.visible { display: block; }
-
-    /* ══ EMPTY STATE ══ */
-    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 320px; color: var(--muted); text-align: center; gap: 0.5rem; }
-    .empty-state-icon { font-size: 2.5rem; opacity: 0.4; }
-    .empty-state-title { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
-    .empty-state-sub { font-size: 0.76rem; }
-
-    /* ══ TABLE ══ */
-    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px 10px 0 0; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.77rem; }
-    thead th {
-      background: #f9fafb; padding: 0.55rem 0.75rem; text-align: left;
-      font-size: 0.68rem; font-weight: 700; color: var(--muted);
+    /* Table styles */
+    .table-wrap-results { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+    table.result-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table.result-tbl thead th {
+      background: var(--surface-2); padding: 9px 12px; text-align: left;
+      font-size: 10px; font-weight: 700; color: var(--fg-muted);
       text-transform: uppercase; letter-spacing: 0.04em;
       border-bottom: 1px solid var(--border); white-space: nowrap;
     }
-    tbody tr:not(:last-child) td { border-bottom: 1px solid #f3f4f6; }
-    tbody tr:hover td { background: #f9fafb; }
-    td { padding: 0.5rem 0.75rem; vertical-align: middle; }
-    .td-cn { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+    table.result-tbl tbody tr:not(:last-child) td { border-bottom: 1px solid var(--surface-2); }
+    table.result-tbl tbody tr:hover td { background: var(--surface-2); }
+    table.result-tbl td { padding: 8px 12px; vertical-align: middle; }
+    .td-cn { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); white-space: nowrap; }
     .td-nombre { max-width: 300px; }
     .td-num { text-align: right; white-space: nowrap; }
     .td-pvp { text-align: right; white-space: nowrap; }
 
     .iva-select {
-      padding: 0.25rem 1.6rem 0.25rem 0.4rem; border: 1px solid var(--border); border-radius: 5px;
-      font-size: 0.72rem; color: var(--text); background: white; appearance: none;
+      padding: 4px 22px 4px 6px; border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 11px; color: var(--fg-1); background: white; appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 0.35rem center; cursor: pointer;
+      background-repeat: no-repeat; background-position: right 5px center; cursor: pointer;
     }
-    .iva-select:focus { outline: none; border-color: var(--accent); }
+    .iva-select:focus { outline: none; border-color: var(--brand-700); }
 
-    /* PVP editable input */
-    .pvp-cell { display: flex; align-items: center; justify-content: flex-end; gap: 0.3rem; }
+    .pvp-cell { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
     .pvp-input {
-      text-align: right; font-weight: 700; color: var(--accent);
-      width: 70px; border: 1.5px solid transparent; border-radius: 5px;
-      background: transparent; font-size: 0.77rem; font-family: inherit;
-      padding: 0.2rem 0.3rem; transition: border-color 0.15s, background 0.15s;
+      text-align: right; font-weight: 700; color: var(--brand-700);
+      width: 70px; border: 1.5px solid transparent; border-radius: var(--radius);
+      background: transparent; font-size: 12px; font-family: inherit;
+      padding: 3px 5px; transition: border-color 0.15s, background 0.15s;
     }
     .pvp-input:hover { border-color: var(--border); background: white; }
-    .pvp-input:focus { outline: none; border-color: var(--accent); background: white; }
-    .pvp-input.pvp-manual { color: #1d4ed8; }
+    .pvp-input:focus { outline: none; border-color: var(--brand-700); background: white; }
+    .pvp-input.pvp-manual { color: var(--ph-barris); }
     .pvp-reset {
-      background: none; border: none; cursor: pointer; color: var(--muted);
-      font-size: 0.75rem; padding: 0.1rem 0.2rem; border-radius: 3px;
-      transition: color 0.15s; line-height: 1; opacity: 0.7;
+      background: none; border: none; cursor: pointer; color: var(--fg-muted);
+      font-size: 12px; padding: 2px 3px; border-radius: 3px; transition: color 0.15s; line-height: 1; opacity: 0.7;
     }
-    .pvp-reset:hover { color: #dc2626; opacity: 1; }
+    .pvp-reset:hover { color: var(--danger); opacity: 1; }
 
-    /* ══ SUMMARY FOOTER ══ */
     .results-summary {
-      display: flex; justify-content: flex-end; gap: 2rem;
-      padding: 0.9rem 0.75rem; background: #f9fafb;
+      display: flex; justify-content: flex-end; gap: 32px;
+      padding: 14px 12px; background: var(--surface-2);
       border: 1px solid var(--border); border-top: none;
-      border-radius: 0 0 10px 10px; flex-wrap: wrap;
+      border-radius: 0 0 var(--radius-xl) var(--radius-xl); flex-wrap: wrap;
     }
     .summary-item { display: flex; flex-direction: column; align-items: flex-end; }
-    .summary-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-    .summary-value { font-size: 0.9rem; font-weight: 700; color: var(--text); }
-    .summary-value.accent { color: var(--accent); }
+    .summary-label { font-size: 10px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .summary-value { font-size: 14px; font-weight: 700; color: var(--fg-1); }
+    .summary-value.accent { color: var(--brand-700); }
 
-    /* ══ RESPONSIVE ══ */
+    #btnTogglePreview { margin-left: auto; }
+
     @media (max-width: 900px) {
-      #uploadLayout { grid-template-columns: 1fr; padding: 1.25rem 1rem 3rem; }
-      .left-panel { padding-right: 0; border-right: none; }
-      .right-panel-upload { padding-left: 0; padding-top: 1rem; }
+      .upload-grid { grid-template-columns: 1fr; }
+      .upload-left { padding-right: 0; border-right: none; }
+      .upload-right { padding-left: 0; padding-top: 16px; }
       #previewPanel { display: none !important; }
       #resizeHandle { display: none !important; }
     }
   </style>
 </head>
 <body>
+<div class="app-shell">
 
-<!-- ══ TOPBAR ══ -->
+<!-- ── TOPBAR ── -->
 <header class="topbar">
   <div class="brand">
     <div class="mark">
@@ -381,8 +245,8 @@
   <div class="divider"></div>
   <nav class="tabs">
     <a class="tab" href="/">
-      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="13" y="8" width="3" height="10"/></svg>
-      Comparativa
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+      Inicio
     </a>
     <a class="tab on" href="/facturas">
       <svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2"/><path d="M16 8H8M16 12H8M13 16H8"/></svg>
@@ -398,78 +262,102 @@
   </div>
 </header>
 
-<!-- ══ UPLOAD LAYOUT (estado inicial) ══ -->
+<!-- ── UPLOAD LAYOUT ── -->
 <div id="uploadLayout">
+  <div style="padding:24px 28px 0">
+    <div style="margin-bottom:22px">
+      <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.01em;margin:0;color:var(--fg-1)">Lectura de facturas</h1>
+      <p style="font-size:13px;color:var(--fg-muted);margin:4px 0 0">Sube un PDF o foto de albarán — la IA extrae los productos y calcula el PVP</p>
+    </div>
+  </div>
 
-  <!-- Izquierda: upload -->
-  <section class="left-panel">
-    <div class="dash-card">
-      <div class="dash-card-header">
-        <div class="dash-card-title">Leer factura</div>
-        <div class="dash-card-sub">Sube una factura o albarán — la IA extrae los productos y calcula el PVP</div>
-      </div>
-      <div class="dash-card-body">
-
-        <div class="drop-zone" id="dropZone">
-          <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp">
-          <div class="drop-icon" id="dropIcon">📄</div>
-          <div class="drop-title" id="dropTitle">Arrastra la factura aquí</div>
-          <div class="drop-sub" id="dropSub">PDF, JPG, PNG o WEBP · máx 20 MB</div>
-          <div class="drop-file-name" id="dropFileName"></div>
+  <div class="upload-grid" style="padding-left:28px;padding-right:28px">
+    <section class="upload-left">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow-1);overflow:hidden">
+        <div style="padding:16px 20px 13px;border-bottom:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;color:var(--fg-1)">Subir factura</div>
+          <div style="font-size:11px;color:var(--fg-muted);margin-top:3px">PDF, JPG, PNG o WEBP · máx 20 MB</div>
         </div>
-
-        <div class="form-group">
-          <div class="form-label">Tipo de proveedor</div>
-          <div class="radio-group" id="proveedorGroup">
-            <label class="radio-option selected" data-value="hefame_bida">
-              <input type="radio" name="proveedor" value="hefame_bida" checked>
-              <div class="radio-dot"></div>
-              Hefame / BIDA
-            </label>
-            <label class="radio-option" data-value="laboratorio">
-              <input type="radio" name="proveedor" value="laboratorio">
-              <div class="radio-dot"></div>
-              Laboratorio
-            </label>
+        <div style="padding:20px">
+          <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp">
+            <div class="drop-icon" id="dropIcon">📄</div>
+            <div class="drop-title" id="dropTitle">Arrastra la factura aquí</div>
+            <div class="drop-sub" id="dropSub">PDF, JPG, PNG o WEBP</div>
+            <div class="drop-file-name" id="dropFileName"></div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label class="form-label" for="redondeoSelect">Redondeo del PVP</label>
-          <select id="redondeoSelect">
-            <option value="ninguno">Sin redondeo</option>
-            <option value="fin9550">Fin en ,95 / ,50</option>
-            <option value="fin95">Fin en ,95</option>
-            <option value="fin90">Fin en ,90</option>
-          </select>
-        </div>
+          <div class="form-group">
+            <div class="form-label">Tipo de proveedor</div>
+            <div class="radio-group-upload" id="proveedorGroup">
+              <label class="radio-option-upload selected" data-value="hefame_bida">
+                <input type="radio" name="proveedor" value="hefame_bida" checked>
+                <div class="radio-dot-upload"></div>
+                Hefame / BIDA
+              </label>
+              <label class="radio-option-upload" data-value="laboratorio">
+                <input type="radio" name="proveedor" value="laboratorio">
+                <div class="radio-dot-upload"></div>
+                Laboratorio
+              </label>
+            </div>
+          </div>
 
-        <div class="error-box" id="errorBox"></div>
-        <div class="analyzing-bar" id="analyzingBar">
-          <div class="spinner"></div>
-          Analizando factura con IA…
-        </div>
-        <button class="btn-analyze" id="btnAnalyze" disabled>Analizar factura</button>
+          <div class="form-group">
+            <label class="form-label" for="redondeoSelect">Redondeo del PVP</label>
+            <select id="redondeoSelect" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-lg);font-size:13px;color:var(--fg-1);background:white;appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22%3E%3Cpath fill=%22%236b7280%22 d=%22M6 8L1 3h10z%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer;">
+              <option value="ninguno">Sin redondeo</option>
+              <option value="fin9550">Fin en ,95 / ,50</option>
+              <option value="fin95">Fin en ,95</option>
+              <option value="fin90">Fin en ,90</option>
+            </select>
+          </div>
 
+          <div class="error-box" id="errorBox"></div>
+          <div class="analyzing-bar" id="analyzingBar">
+            <div class="spinner"></div>
+            Analizando factura con IA…
+          </div>
+          <button class="btn-analyze" id="btnAnalyze" disabled>Analizar factura</button>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Derecha: estado vacío -->
-  <section class="right-panel-upload">
-    <div class="empty-state">
-      <div class="empty-state-icon">🧾</div>
-      <div class="empty-state-title">Sin resultados todavía</div>
-      <div class="empty-state-sub">Sube una factura y pulsa "Analizar"</div>
-    </div>
-  </section>
-
+    <section class="upload-right">
+      <div class="empty" style="height:320px;justify-content:center">
+        <div class="empty-ico">
+          <svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2"/><path d="M16 8H8M16 12H8M13 16H8"/></svg>
+        </div>
+        <div class="empty-title">Sin resultados todavía</div>
+        <div class="empty-sub">Sube una factura y pulsa "Analizar"</div>
+      </div>
+    </section>
+  </div>
 </div>
 
-<!-- ══ RESULTS LAYOUT (tras analizar) ══ -->
+<!-- ── RESULTS LAYOUT ── -->
 <div id="resultsLayout">
 
-  <!-- Controls bar sticky -->
+  <!-- Page head with actions -->
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:18px 24px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
+    <div>
+      <h1 style="font-size:18px;font-weight:700;letter-spacing:-0.01em;margin:0;color:var(--fg-1)" id="resultsTitle">Factura</h1>
+      <p style="font-size:12px;color:var(--fg-muted);margin:3px 0 0" id="resultsMeta"></p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" id="btnNueva">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        Nueva factura
+      </button>
+      <button class="btn btn-ghost" id="btnExport">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar CSV
+      </button>
+      <button class="btn btn-ghost btn-sm" id="btnTogglePreview">Ocultar vista previa</button>
+    </div>
+  </div>
+
+  <!-- Controls bar (proveedor / redondeo) -->
   <div id="controlsBar">
     <span class="ctrl-label">Proveedor:</span>
     <select class="ctrl-select" id="ctrlProveedor">
@@ -485,19 +373,15 @@
     </select>
     <div class="ctrl-sep"></div>
     <span class="ctrl-meta" id="ctrlMeta"></span>
-    <div class="ctrl-sep"></div>
-    <button class="btn-ctrl" id="btnNueva">Nueva factura</button>
-    <button class="btn-ctrl btn-ctrl-accent" id="btnExport">Exportar CSV</button>
-    <button class="btn-ctrl" id="btnTogglePreview">Ocultar vista previa</button>
   </div>
 
-  <!-- Main area: tabla + preview -->
-  <div id="mainArea">
+  <!-- Split: table + preview -->
+  <div id="splitArea">
 
-    <!-- Tabla -->
+    <!-- Table section -->
     <div id="tableSection">
-      <div class="table-wrap">
-        <table id="resultTable">
+      <div class="table-wrap-results">
+        <table class="result-tbl" id="resultTable">
           <thead>
             <tr>
               <th>CN</th>
@@ -550,6 +434,8 @@
   </div>
 </div>
 
+</div>
+
 <script>
 // ── ESTADO ────────────────────────────────────────────────────────────────────
 let _proveedores = {};
@@ -592,13 +478,8 @@ function ivaOptions(provKey) {
   return Object.entries(prov.factores).map(([key, v]) => ({ key, etiqueta: v.etiqueta }));
 }
 
-function fmt(n) {
-  return Number(n).toFixed(2).replace('.', ',') + ' €';
-}
-
-function escHtml(str) {
-  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function fmt(n) { return Number(n).toFixed(2).replace('.', ',') + ' €'; }
+function escHtml(str) { return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ── RENDER TABLE ──────────────────────────────────────────────────────────────
 function renderTable() {
@@ -662,9 +543,7 @@ function onPvpChange(input) {
   const idx = parseInt(input.dataset.idx);
   const raw = input.value.replace(',', '.').replace(/[^\d.]/g, '');
   const val = parseFloat(raw);
-  if (!isNaN(val) && val >= 0) {
-    _lineas[idx].pvpManual = val;
-  }
+  if (!isNaN(val) && val >= 0) { _lineas[idx].pvpManual = val; }
   renderTable();
   persistLineas();
 }
@@ -678,22 +557,7 @@ function resetPvp(idx) {
 // ── SESSION PERSISTENCE ───────────────────────────────────────────────────────
 const SESSION_KEY = 'factura_session';
 
-function saveSession(data, provKey, redondeo) {
-  try {
-    const session = {
-      data,
-      provKey,
-      redondeo,
-      lineas: _lineas,
-      fileDataURL: _previewURL ? null : null, // will be set separately
-      fileMime: _previewMime,
-    };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  } catch(e) { /* quota exceeded — ignore */ }
-}
-
 function saveFileToSession(file) {
-  // Read file as base64 data URL for preview persistence
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -701,21 +565,18 @@ function saveFileToSession(file) {
       existing.fileDataURL = e.target.result;
       existing.fileName = file.name;
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(existing));
-    } catch(e) { /* quota exceeded (large PDF) — preview won't restore, data will */ }
+    } catch(e) {}
   };
   reader.readAsDataURL(file);
 }
 
-function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
-}
+function clearSession() { sessionStorage.removeItem(SESSION_KEY); }
 
 // ── SHOW RESULTS ──────────────────────────────────────────────────────────────
 function showResults(data, savedLineas, provKey, redondeo) {
   _proveedores = data.proveedores || {};
 
   if (savedLineas) {
-    // Restoring from session — use saved lineas (preserves ivaKey + pvpManual edits)
     _lineas = savedLineas;
   } else {
     _lineas = (data.lineas || []).map(l => ({ ...l, ivaKey: null, pvpManual: null }));
@@ -727,14 +588,20 @@ function showResults(data, savedLineas, provKey, redondeo) {
   document.getElementById('ctrlProveedor').value = provKey;
   document.getElementById('ctrlRedondeo').value  = redondeo;
 
-  // Meta info
   const meta = [];
   if (data.proveedor)      meta.push(`<strong>${escHtml(data.proveedor)}</strong>`);
   if (data.numero_factura) meta.push(`Nº ${escHtml(data.numero_factura)}`);
   if (data.fecha)          meta.push(escHtml(data.fecha));
   document.getElementById('ctrlMeta').innerHTML = meta.join(' · ') || '';
 
-  // Switch layout
+  // Update page head
+  document.getElementById('resultsTitle').textContent = data.proveedor ? `Factura · ${data.proveedor}` : 'Factura';
+  const subParts = [];
+  if (data.numero_factura) subParts.push(`Albarán ${data.numero_factura}`);
+  if (data.lineas) subParts.push(`${data.lineas.length} líneas extraídas`);
+  subParts.push('toca Cant., Neto o PVP para corregir');
+  document.getElementById('resultsMeta').textContent = subParts.join(' · ');
+
   document.getElementById('uploadLayout').classList.add('hidden');
   document.getElementById('resultsLayout').classList.add('visible');
 
@@ -748,13 +615,8 @@ document.getElementById('ctrlRedondeo').addEventListener('change', renderTable);
 
 document.getElementById('btnNueva').addEventListener('click', () => {
   clearSession();
-  // Reset state
-  _lineas = [];
-  _proveedores = {};
-  _selectedFile = null;
+  _lineas = []; _proveedores = {}; _selectedFile = null;
   if (_previewURL) { URL.revokeObjectURL(_previewURL); _previewURL = null; }
-
-  // Reset upload form
   document.getElementById('dropZone').classList.remove('has-file');
   document.getElementById('dropIcon').textContent = '📄';
   document.getElementById('dropTitle').textContent = 'Arrastra la factura aquí';
@@ -762,8 +624,6 @@ document.getElementById('btnNueva').addEventListener('click', () => {
   document.getElementById('btnAnalyze').disabled = true;
   document.getElementById('fileInput').value = '';
   document.getElementById('errorBox').classList.remove('visible');
-
-  // Switch back
   document.getElementById('resultsLayout').classList.remove('visible');
   document.getElementById('uploadLayout').classList.remove('hidden');
 });
@@ -772,7 +632,6 @@ document.getElementById('btnNueva').addEventListener('click', () => {
 document.getElementById('btnExport').addEventListener('click', () => {
   const provKey  = document.getElementById('ctrlProveedor').value;
   const redondeo = document.getElementById('ctrlRedondeo').value;
-
   const rows = [['CN', 'Descripción', 'Cantidad', 'Precio Neto Unitario', 'IVA', 'PVP']];
   _lineas.forEach(l => {
     const ivaKey   = l.ivaKey || defaultIvaKey(l.iva_porcentaje);
@@ -781,9 +640,8 @@ document.getElementById('btnExport').addEventListener('click', () => {
     const ivaLabel = _proveedores[provKey]?.factores[ivaKey]?.etiqueta || ivaKey;
     rows.push([l.cn || '', l.nombre, l.cantidad, l.precio_neto_unitario.toFixed(2), ivaLabel, pvp.toFixed(2)]);
   });
-
   const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a'); a.href = url; a.download = 'factura_pvp.csv'; a.click();
   URL.revokeObjectURL(url);
@@ -801,124 +659,86 @@ function setTransform() {
   document.getElementById('zoomLabel').textContent = Math.round(_zoom * 100) + '%';
 }
 
-function resetZoomPan() {
-  _zoom = 1; _panX = 0; _panY = 0;
-  setTransform();
-}
+function resetZoomPan() { _zoom = 1; _panX = 0; _panY = 0; setTransform(); }
+function changeZoom(delta) { _zoom = Math.max(0.2, Math.min(6, _zoom + delta)); setTransform(); }
 
-function changeZoom(delta) {
-  _zoom = Math.max(0.2, Math.min(6, _zoom + delta));
-  setTransform();
-}
-
-// ── PREVIEW RENDER ────────────────────────────────────────────────────────────
 function renderPreview() {
   const content = document.getElementById('previewContent');
   resetZoomPan();
   content.innerHTML = '';
-
-  if (!_previewURL) {
-    content.innerHTML = '<span class="preview-empty">Sin archivo</span>';
-    return;
-  }
-
+  if (!_previewURL) { content.innerHTML = '<span class="preview-empty">Sin archivo</span>'; return; }
   const inner = document.createElement('div');
   inner.id = 'previewInner';
-
   if (_previewMime === 'application/pdf') {
     const iframe = document.createElement('iframe');
     iframe.src = _previewURL + '#toolbar=0&navpanes=0';
     inner.appendChild(iframe);
   } else {
     const img = document.createElement('img');
-    img.src = _previewURL;
-    img.alt = 'Vista previa';
-    img.draggable = false;
+    img.src = _previewURL; img.alt = 'Vista previa'; img.draggable = false;
     inner.appendChild(img);
   }
-
   content.appendChild(inner);
   setTransform();
 }
 
-// Wheel zoom (aislado — no propaga a la página)
 const _previewEl = document.getElementById('previewContent');
 _previewEl.addEventListener('wheel', e => {
-  e.preventDefault();
-  e.stopPropagation();
+  e.preventDefault(); e.stopPropagation();
   const factor = e.deltaY < 0 ? 1.12 : 0.89;
   _zoom = Math.max(0.2, Math.min(6, _zoom * factor));
   setTransform();
 }, { passive: false });
 
-// Mouse drag
 _previewEl.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   _panning = true;
-  _panStartX = e.clientX - _panX;
-  _panStartY = e.clientY - _panY;
-  _previewEl.classList.add('grabbing');
-  e.preventDefault();
+  _panStartX = e.clientX - _panX; _panStartY = e.clientY - _panY;
+  _previewEl.classList.add('grabbing'); e.preventDefault();
 });
 document.addEventListener('mousemove', e => {
   if (!_panning) return;
-  _panX = e.clientX - _panStartX;
-  _panY = e.clientY - _panStartY;
+  _panX = e.clientX - _panStartX; _panY = e.clientY - _panStartY;
   setTransform();
 });
 document.addEventListener('mouseup', () => {
   if (_panning) { _panning = false; _previewEl.classList.remove('grabbing'); }
 });
 
-// Touch: pinch zoom + drag
 _previewEl.addEventListener('touchstart', e => {
   if (e.touches.length === 2) {
-    _lastPinchDist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
+    _lastPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
     _panning = false;
   } else if (e.touches.length === 1) {
     _panning = true;
-    _panStartX = e.touches[0].clientX - _panX;
-    _panStartY = e.touches[0].clientY - _panY;
+    _panStartX = e.touches[0].clientX - _panX; _panStartY = e.touches[0].clientY - _panY;
   }
 }, { passive: true });
-
 _previewEl.addEventListener('touchmove', e => {
   e.preventDefault();
   if (e.touches.length === 2) {
-    const dist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
+    const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
     if (_lastPinchDist > 0) {
       const raw = dist / _lastPinchDist;
-      // Dampen sensitivity: interpolate 30% towards raw ratio
       const damped = 1 + (raw - 1) * 0.1;
       _zoom = Math.max(0.2, Math.min(6, _zoom * damped));
     }
-    _lastPinchDist = dist;
-    setTransform();
+    _lastPinchDist = dist; setTransform();
   } else if (e.touches.length === 1 && _panning) {
-    _panX = e.touches[0].clientX - _panStartX;
-    _panY = e.touches[0].clientY - _panStartY;
+    _panX = e.touches[0].clientX - _panStartX; _panY = e.touches[0].clientY - _panStartY;
     setTransform();
   }
 }, { passive: false });
-
 _previewEl.addEventListener('touchend', () => { _panning = false; _lastPinchDist = 0; });
 
-// ── PREVIEW TOGGLE / COLLAPSE ─────────────────────────────────────────────────
+// ── PREVIEW TOGGLE ────────────────────────────────────────────────────────────
 let _previewOpen = true;
-
 document.getElementById('btnCollapse').addEventListener('click', () => {
   _previewOpen = false;
   document.getElementById('previewPanel').classList.add('collapsed');
   document.getElementById('resizeHandle').style.display = 'none';
   document.getElementById('btnTogglePreview').textContent = 'Mostrar vista previa';
 });
-
 document.getElementById('btnTogglePreview').addEventListener('click', () => {
   if (_previewOpen) {
     _previewOpen = false;
@@ -934,34 +754,21 @@ document.getElementById('btnTogglePreview').addEventListener('click', () => {
 });
 
 // ── RESIZE HANDLE ─────────────────────────────────────────────────────────────
-const resizeHandle  = document.getElementById('resizeHandle');
-const previewPanel  = document.getElementById('previewPanel');
+const resizeHandle = document.getElementById('resizeHandle');
+const previewPanel = document.getElementById('previewPanel');
 let isResizing = false, startX = 0, startWidth = 0;
-
 resizeHandle.addEventListener('mousedown', e => {
-  isResizing = true;
-  startX = e.clientX;
-  startWidth = previewPanel.offsetWidth;
-  resizeHandle.classList.add('dragging');
-  document.body.style.cursor = 'col-resize';
-  document.body.style.userSelect = 'none';
-  e.preventDefault();
+  isResizing = true; startX = e.clientX; startWidth = previewPanel.offsetWidth;
+  resizeHandle.classList.add('dragging'); document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none'; e.preventDefault();
 });
-
 document.addEventListener('mousemove', e => {
   if (!isResizing) return;
-  const delta = startX - e.clientX;
-  const newW  = Math.max(200, Math.min(700, startWidth + delta));
+  const newW = Math.max(200, Math.min(700, startWidth + (startX - e.clientX)));
   previewPanel.style.width = newW + 'px';
 });
-
 document.addEventListener('mouseup', () => {
-  if (isResizing) {
-    isResizing = false;
-    resizeHandle.classList.remove('dragging');
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-  }
+  if (isResizing) { isResizing = false; resizeHandle.classList.remove('dragging'); document.body.style.cursor = ''; document.body.style.userSelect = ''; }
 });
 
 // ── FILE HANDLING ─────────────────────────────────────────────────────────────
@@ -981,7 +788,6 @@ function setFile(file) {
 
 const dropZone  = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
-
 dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e => {
@@ -997,24 +803,20 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
   document.getElementById('errorBox').classList.remove('visible');
   document.getElementById('analyzingBar').classList.add('visible');
   document.getElementById('btnAnalyze').disabled = true;
-
   try {
     const fd = new FormData();
     fd.append('file', _selectedFile);
     const resp = await fetch('/leer_factura', { method: 'POST', body: fd });
     const rawText = await resp.text();
     let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch {
+    try { data = JSON.parse(rawText); } catch {
       const preview = rawText.slice(0, 200).replace(/</g, '&lt;');
       document.getElementById('errorBox').innerHTML =
-        `Error del servidor (${resp.status}). Vuelve a intentarlo o reduce el tamaño de la imagen.` +
+        `Error del servidor (${resp.status}). Vuelve a intentarlo.` +
         (preview ? `<br><small style="opacity:.6">${preview}</small>` : '');
       document.getElementById('errorBox').classList.add('visible');
       return;
     }
-
     if (!resp.ok) {
       document.getElementById('errorBox').textContent = data.error || 'Error desconocido';
       document.getElementById('errorBox').classList.add('visible');
@@ -1028,7 +830,6 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
     const provKey  = document.getElementById('proveedorGroup').querySelector('input:checked')?.value || 'hefame_bida';
     const redondeo = document.getElementById('redondeoSelect').value;
     showResults(data, null, provKey, redondeo);
-    // Save to session for page refresh persistence
     try {
       const session = { data, lineas: _lineas, provKey, redondeo, fileMime: _previewMime, fileName: _selectedFile?.name || '' };
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -1045,14 +846,13 @@ document.getElementById('btnAnalyze').addEventListener('click', async () => {
 
 // ── PROVEEDOR RADIO ───────────────────────────────────────────────────────────
 document.getElementById('proveedorGroup').addEventListener('click', e => {
-  const opt = e.target.closest('.radio-option');
+  const opt = e.target.closest('.radio-option-upload');
   if (!opt) return;
-  document.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('.radio-option-upload').forEach(o => o.classList.remove('selected'));
   opt.classList.add('selected');
   opt.querySelector('input').checked = true;
 });
 
-// Save lineas edits to session after IVA/PVP changes
 function persistLineas() {
   try {
     const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
@@ -1060,7 +860,6 @@ function persistLineas() {
   } catch(e) {}
 }
 
-// Persist ctrl changes
 document.getElementById('ctrlProveedor').addEventListener('change', () => {
   try {
     const session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
@@ -1074,24 +873,16 @@ document.getElementById('ctrlRedondeo').addEventListener('change', () => {
   } catch(e) {}
 });
 
-// ── RESTORE SESSION ON LOAD ───────────────────────────────────────────────────
+// ── RESTORE SESSION ───────────────────────────────────────────────────────────
 (function restoreSession() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return;
     const session = JSON.parse(raw);
     if (!session?.data?.lineas?.length) return;
-
-    // Restore preview from saved data URL
-    if (session.fileDataURL) {
-      _previewURL  = session.fileDataURL;
-      _previewMime = session.fileMime || '';
-    }
-
+    if (session.fileDataURL) { _previewURL = session.fileDataURL; _previewMime = session.fileMime || ''; }
     showResults(session.data, session.lineas, session.provKey, session.redondeo);
-  } catch(e) {
-    sessionStorage.removeItem(SESSION_KEY);
-  }
+  } catch(e) { sessionStorage.removeItem(SESSION_KEY); }
 })();
 </script>
 </body>
