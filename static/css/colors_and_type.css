@@ -1,47 +1,49 @@
-/* =========================================================================
-   Farmacias Barris & Zarzuelo – Design Tokens
-   =========================================================================
+/* ──────────────────────────────────────────────────────────────────────
+   Farmacias Barris & Zarzuelo — Design Tokens
+   ────────────────────────────────────────────────────────────────────────
    Drop this file into any new page via:
-     <link rel="stylesheet" href="/static/css/colors_and_type.css">
+     <link rel="stylesheet" href="colors_and_type.css">
    Then use the CSS custom properties below. Never hardcode hex values.
-   ========================================================================= */
+   ─────────────────────────────────────────────────────────────────── */
 
-/* -- Inter & JetBrains Mono ------------------------------------------------ */
+/* ── Inter & JetBrains Mono ───────────────────────────────────────── */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url('fonts/InterVariable.woff2') format('woff2-variations'),
-       url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.0') format('woff2-variations');
+  src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.0') format('woff2-variations');
 }
 @font-face {
   font-family: 'JetBrains Mono';
   font-style: normal;
   font-weight: 100 800;
   font-display: swap;
-  src: url('fonts/JetBrainsMono-Variable.woff2') format('woff2-variations'),
-       url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@v2.304/fonts/variable/JetBrainsMono[wght].woff2') format('woff2-variations');
+  src: url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@v2.304/fonts/variable/JetBrainsMono[wght].woff2') format('woff2-variations');
 }
 
 :root {
-  /* -- COLOR: Neutral ------------------------------------------------------- */
-  --bg:        #EAF1EC;
-  --bg-2:      #DDE8E0;
-  --surface:   #FFFFFF;
-  --surface-2: #F0F6F2;
+  /* ════════════════════════════════════════════════════════════════════
+     COLOR — Neutral
+     ════════════════════════════════════════════════════════════════════ */
+  --bg:        #EAF1EC;  /* page background — clearly green-tinted */
+  --bg-2:      #DDE8E0;  /* hover rows, secondary surfaces */
+  --surface:   #FFFFFF;  /* cards, panels, inputs */
+  --surface-2: #F0F6F2;  /* table head, footer summary */
 
-  --border:        #D2DED6;
-  --border-soft:   #E1EBE4;
-  --border-strong: #B8C7BD;
+  --border:        #D2DED6;  /* default 1px borders */
+  --border-soft:   #E1EBE4;  /* table row separators */
+  --border-strong: #B8C7BD;  /* heavier dividers, dashed drop zones */
 
-  --fg-1:     #0B1812;
-  --fg-2:     #1A2620;
-  --fg-3:     #3F4F46;
-  --fg-muted: #5C6E64;
-  --fg-faint: #94A39A;
+  --fg-1:      #0B1812;  /* primary text — deep green-black */
+  --fg-2:      #1A2620;  /* body */
+  --fg-3:      #3F4F46;  /* secondary text */
+  --fg-muted:  #5C6E64;  /* labels, hints */
+  --fg-faint:  #94A39A;  /* placeholders, disabled */
 
-  /* -- COLOR: Brand (pharmaceutical green) ---------------------------------- */
+  /* ════════════════════════════════════════════════════════════════════
+     COLOR — Brand (pharmaceutical green)
+     ════════════════════════════════════════════════════════════════════ */
   --brand-50:  #ECFAF2;
   --brand-100: #D2F2DF;
   --brand-200: #A8E3C2;
@@ -49,11 +51,13 @@
   --brand-400: #3FB07A;
   --brand-500: #229263;
   --brand-600: #1A7A4F;
-  --brand-700: #155A3C;
-  --brand-800: #103F2B;
-  --brand-900: #0E3A26;
+  --brand-700: #155A3C;  /* topbar, primary buttons */
+  --brand-800: #103F2B;  /* press state */
+  --brand-900: #0E3A26;  /* deepest — login bg */
 
-  /* -- COLOR: Pharmacy identity --------------------------------------------- */
+  /* ════════════════════════════════════════════════════════════════════
+     COLOR — Pharmacy identity (Z / B)
+     ════════════════════════════════════════════════════════════════════ */
   --ph-zarzuelo:     #C2410C;
   --ph-zarzuelo-bg:  #FFF1E8;
   --ph-zarzuelo-mid: #F5B591;
@@ -61,7 +65,9 @@
   --ph-barris-bg:    #E8ECF7;
   --ph-barris-mid:   #93A3D4;
 
-  /* -- COLOR: Semantic ------------------------------------------------------- */
+  /* ════════════════════════════════════════════════════════════════════
+     COLOR — Semantic
+     ════════════════════════════════════════════════════════════════════ */
   --success:    #16A34A;
   --success-bg: #F0FDF4;
   --success-fg: #14532D;
@@ -72,25 +78,30 @@
   --warning-fg: #92400E;
   --warning-bd: #FDE68A;
 
-  --danger:    #DC2626;
-  --danger-bg: #FEF2F2;
-  --danger-fg: #991B1B;
-  --danger-bd: #FECACA;
+  --danger:     #DC2626;
+  --danger-bg:  #FEF2F2;
+  --danger-fg:  #991B1B;
+  --danger-bd:  #FECACA;
 
-  --info:    #2563EB;
-  --info-bg: #EFF6FF;
-  --info-fg: #1E40AF;
-  --info-bd: #BFDBFE;
+  --info:       #2563EB;
+  --info-bg:    #EFF6FF;
+  --info-fg:    #1E40AF;
+  --info-bd:    #BFDBFE;
 
   --partial:    #F97316;
   --partial-bg: #FFF7ED;
   --partial-fg: #9A3412;
   --partial-bd: #FED7AA;
 
-  /* -- TYPOGRAPHY ----------------------------------------------------------- */
+  /* ════════════════════════════════════════════════════════════════════
+     TYPOGRAPHY — families
+     ════════════════════════════════════════════════════════════════════ */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 
+  /* ════════════════════════════════════════════════════════════════════
+     TYPOGRAPHY — scale
+     ════════════════════════════════════════════════════════════════════ */
   --text-display:  24px;
   --text-h1:       20px;
   --text-h2:       16px;
@@ -115,58 +126,72 @@
   --w-semibold: 600;
   --w-bold:     700;
 
-  /* -- SPACING (4px base) --------------------------------------------------- */
-  --space-0:  0;
-  --space-px: 1px;
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  20px;
-  --space-6:  24px;
-  --space-7:  32px;
-  --space-8:  40px;
-  --space-9:  48px;
-  --space-10: 64px;
+  /* ════════════════════════════════════════════════════════════════════
+     SPACING (4px base)
+     ════════════════════════════════════════════════════════════════════ */
+  --space-0:   0;
+  --space-px:  1px;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-7:   32px;
+  --space-8:   40px;
+  --space-9:   48px;
+  --space-10:  64px;
 
-  /* -- RADII ----------------------------------------------------------------- */
+  /* ════════════════════════════════════════════════════════════════════
+     RADII
+     ════════════════════════════════════════════════════════════════════ */
   --radius-sm:   4px;
   --radius-md:   6px;
   --radius-lg:   10px;
   --radius-xl:   14px;
   --radius-pill: 999px;
 
-  /* -- SHADOWS --------------------------------------------------------------- */
+  /* ════════════════════════════════════════════════════════════════════
+     SHADOWS
+     ════════════════════════════════════════════════════════════════════ */
   --shadow-0:     0 0 0 0 transparent;
-  --shadow-1:     0 1px 2px rgba(15,23,42,.04);
-  --shadow-2:     0 4px 12px rgba(15,23,42,.06);
-  --shadow-3:     0 12px 36px rgba(15,23,42,.10);
-  --shadow-focus: 0 0 0 3px rgba(26,122,79,.18);
+  --shadow-1:     0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-2:     0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-3:     0 12px 36px rgba(15, 23, 42, 0.10);
+  --shadow-focus: 0 0 0 3px rgba(26, 122, 79, 0.18);
 
-  /* -- LAYOUT --------------------------------------------------------------- */
+  /* ════════════════════════════════════════════════════════════════════
+     LAYOUT
+     ════════════════════════════════════════════════════════════════════ */
   --topbar-h:     52px;
   --maxw-content: 1280px;
   --maxw-narrow:  720px;
 
-  /* -- MOTION --------------------------------------------------------------- */
+  /* ════════════════════════════════════════════════════════════════════
+     MOTION
+     ════════════════════════════════════════════════════════════════════ */
   --duration-fast:    100ms;
   --duration-default: 150ms;
   --duration-slow:    220ms;
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* -- SEMANTIC ALIASES ----------------------------------------------------- */
-  --color-text:          var(--fg-1);
-  --color-text-muted:    var(--fg-muted);
-  --color-bg-page:       var(--bg);
-  --color-bg-surface:    var(--surface);
-  --color-border:        var(--border);
-  --color-primary:       var(--brand-600);
-  --color-primary-hover: var(--brand-700);
-  --color-primary-press: var(--brand-800);
-  --color-link:          var(--brand-700);
+  /* ════════════════════════════════════════════════════════════════════
+     SEMANTIC ALIASES
+     ════════════════════════════════════════════════════════════════════ */
+  --color-text:           var(--fg-1);
+  --color-text-muted:     var(--fg-muted);
+  --color-bg-page:        var(--bg);
+  --color-bg-surface:     var(--surface);
+  --color-border:         var(--border);
+  --color-primary:        var(--brand-600);
+  --color-primary-hover:  var(--brand-700);
+  --color-primary-press:  var(--brand-800);
+  --color-link:           var(--brand-700);
 }
 
-/* -- BASE TYPE ------------------------------------------------------------- */
+/* ══════════════════════════════════════════════════════════════════════
+   BASE TYPE
+   ══════════════════════════════════════════════════════════════════════ */
 html, body {
   font-family: var(--font-sans);
   font-size: var(--text-body);
@@ -181,8 +206,10 @@ html, body {
 h1, .h1 { font-size: var(--text-h1); font-weight: var(--w-bold); letter-spacing: var(--tracking-tight); line-height: var(--lh-tight); color: var(--fg-1); }
 h2, .h2 { font-size: var(--text-h2); font-weight: var(--w-bold); letter-spacing: var(--tracking-tight); line-height: var(--lh-tight); color: var(--fg-1); }
 h3, .h3 { font-size: var(--text-h3); font-weight: var(--w-semibold); line-height: var(--lh-tight); color: var(--fg-1); }
+
 p, .p { font-size: var(--text-body); line-height: var(--lh-normal); color: var(--fg-2); }
 small, .small { font-size: var(--text-meta); color: var(--fg-muted); }
+
 code, kbd, samp, .mono { font-family: var(--font-mono); font-size: 0.92em; }
 
 .label-micro {
@@ -192,6 +219,7 @@ code, kbd, samp, .mono { font-family: var(--font-mono); font-size: 0.92em; }
   letter-spacing: var(--tracking-caps);
   color: var(--fg-muted);
 }
+
 .num, .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";

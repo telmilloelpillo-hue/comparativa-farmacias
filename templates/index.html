@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Farmacias</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/monogram.svg') }}">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -36,79 +37,7 @@
     }
 
     /* ══ TOPBAR ══════════════════════════════════════════════════════════════ */
-    .topbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 1.5rem;
-      height: 52px;
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-      flex-shrink: 0;
-      position: sticky;
-      top: 0;
-      z-index: 200;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    }
-
-    .topbar-brand {
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-      text-decoration: none;
-    }
-
-    .topbar-tabs {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      height: 100%;
-    }
-    .tab-link {
-      display: flex;
-      align-items: center;
-      height: 100%;
-      padding: 0 1rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-decoration: none;
-      border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
-      white-space: nowrap;
-    }
-    .tab-link:hover { color: var(--accent); }
-    .tab-link.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 18px;
-      height: 18px;
-      padding: 0 5px;
-      border-radius: 99px;
-      font-size: 0.62rem;
-      font-weight: 700;
-      margin-left: 0.4rem;
-    }
-    .tab-badge.badge-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-    .tab-badge.badge-green   { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-left: auto;
-    }
-    .topbar-logout {
-      font-size: 0.78rem; font-weight: 600; color: var(--muted);
-      text-decoration: none; padding: 0.35rem 0.7rem;
-      border: 1px solid var(--border); border-radius: var(--radius);
-      transition: all 0.15s; white-space: nowrap;
-    }
-    .topbar-logout:hover { color: var(--accent); border-color: var(--accent); background: var(--bg); }
+    .topbar { padding: 0 1.25rem; z-index: 200; flex-shrink: 0; }
 
     /* ══ MAIN LAYOUT ═════════════════════════════════════════════════════════ */
     main {
@@ -537,16 +466,29 @@
 
 <!-- ══ TOPBAR ══ -->
 <header class="topbar">
-  <a class="topbar-brand" href="/">Farmacias</a>
-
-  <nav class="topbar-tabs">
-    <a href="/" class="tab-link active">Comparativa</a>
-    <a href="/encargos" class="tab-link" id="tabEncargos">Encargos</a>
-    <a href="/facturas" class="tab-link">Facturas</a>
+  <div class="brand">
+    <div class="mark">
+      <img src="{{ url_for('static', filename='img/monogram.svg') }}" alt="">
+    </div>
+    Barris &amp; Zarzuelo
+  </div>
+  <div class="divider"></div>
+  <nav class="tabs">
+    <a class="tab on" href="/">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="13" y="8" width="3" height="10"/></svg>
+      Comparativa
+    </a>
+    <a class="tab" href="/facturas">
+      <svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2"/><path d="M16 8H8M16 12H8M13 16H8"/></svg>
+      Facturas
+    </a>
+    <a class="tab" href="/encargos" id="tabEncargos">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Encargos
+    </a>
   </nav>
-
-  <div class="topbar-right">
-    <a href="/logout" class="topbar-logout">Cerrar sesión</a>
+  <div class="right">
+    <a class="logout" href="/logout">Cerrar sesión</a>
   </div>
 </header>
 

@@ -3,149 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Acceso · Comparativa de Farmacias</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: #155A3C;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-    }
-
-    .card {
-      background: white;
-      border-radius: 14px;
-      padding: 2.5rem 2rem;
-      width: 100%;
-      max-width: 380px;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.25);
-    }
-
-    .logo {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    .logo-icon {
-      width: 52px; height: 52px;
-      background: #155A3C;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1rem;
-    }
-    .logo-monogram {
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: white;
-      letter-spacing: -0.04em;
-    }
-    .logo h1 {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #111827;
-      letter-spacing: -0.02em;
-    }
-    .logo p {
-      color: #9ca3af;
-      font-size: 0.78rem;
-      margin-top: 0.3rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 500;
-    }
-
-    {% if error %}
-    .error {
-      background: #fef2f2;
-      color: #991b1b;
-      padding: 0.75rem 1rem;
-      border-radius: 8px;
-      font-size: 0.82rem;
-      margin-bottom: 1.25rem;
-      border-left: 3px solid #c0392b;
-    }
-    {% endif %}
-
-    label {
-      display: block;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #64748b;
-      margin-bottom: 0.5rem;
-    }
-
-    input[type="password"] {
-      width: 100%;
-      padding: 0.7rem 0.9rem;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 8px;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.95rem;
-      color: #1e293b;
-      background: #f8fafc;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    input[type="password"]:focus {
-      border-color: #155A3C;
-      box-shadow: 0 0 0 3px rgba(21,90,60,0.12);
-      background: white;
-    }
-
-    button {
-      width: 100%;
-      padding: 0.75rem;
-      background: #155A3C;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 1.25rem;
-      transition: background 0.15s, box-shadow 0.15s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    }
-    button:hover { background: #0f3d28; }
-
-    .card-footer {
-      margin-top: 1.5rem;
-      text-align: center;
-      font-size: 0.72rem;
-      color: #94a3b8;
-    }
-  </style>
+  <title>Acceso · Farmacias Barris &amp; Zarzuelo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/monogram.svg') }}">
 </head>
 <body>
-  <div class="card">
+<div class="login-stage">
+  <div class="login-card">
     <div class="logo">
-      <div class="logo-icon"><span class="logo-monogram">FB</span></div>
-      <h1>Comparativa de Farmacias</h1>
-      <p>Acceso restringido</p>
+      <img src="{{ url_for('static', filename='img/monogram.svg') }}" alt="">
     </div>
+    <h1>Farmacias Barris &amp; Zarzuelo</h1>
+    <p class="lead">Herramienta interna · introduce la contraseña</p>
 
     {% if error %}
-    <div class="error">{{ error }}</div>
+    <div class="alert danger" style="margin-bottom:16px;text-align:left">{{ error }}</div>
     {% endif %}
 
     <form method="POST">
-      <label for="password">Contraseña</label>
-      <input type="password" id="password" name="password"
-             placeholder="Introduce la contraseña" autofocus>
-      <button type="submit">Entrar</button>
+      <div class="field">
+        <div class="field-label">Contraseña</div>
+        <input type="password" id="password" name="password" placeholder="••••••••" autofocus>
+      </div>
+      <button class="btn btn-primary" type="submit">Entrar</button>
     </form>
 
-    <p class="card-footer">Farmacias Barris &amp; Zarzuelo · Sistema interno</p>
+    <div class="foot">Sólo personal autorizado · Sesión de 8 h</div>
   </div>
+</div>
 </body>
 </html>
