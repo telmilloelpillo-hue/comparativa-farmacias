@@ -442,6 +442,32 @@ def pedido_file(pdf_id):
                      download_name=f'pedido_{safe_id}.pdf')
 
 
+@app.route('/plantilla_anotacion')
+def plantilla_anotacion():
+    token = request.args.get('token') or session.get('comp_token')
+    if not token:
+        return redirect(url_for('index'))
+    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+    if not os.path.exists(json_path):
+        return redirect(url_for('index'))
+    with open(json_path, encoding='utf-8') as f:
+        data = json.load(f)
+
+    tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    tmp.close()
+    _generate_plantilla_pdf(
+        data['results'], tmp.name,
+        data['name1'], data['name2'], data['lab'],
+    )
+
+    from datetime import date as _date
+    slug  = ''.join(c if c.isalnum() else '_' for c in data['lab'].lower())
+    fecha = _date.today().strftime('%Y%m%d')
+    return send_file(tmp.name, as_attachment=True,
+                     download_name=f'plantilla_{slug}_{fecha}.pdf',
+                     mimetype='application/pdf')
+
+
 @app.route('/encargos')
 def encargos():
     return render_template('encargos.html')
@@ -1017,6 +1043,172 @@ def _build_logistics_table(results, name1, name2,
         elements.append(t)
 
     return elements
+
+
+def _generate_plantilla_pdf(results, output_path, name1, name2, lab):
+    """PDF plantilla A4 con columna verde vacía para anotar cantidades con Apple Pencil."""
+    from datetime import date as _date
+
+    MESES = ['enero','febrero','marzo','abril','mayo','junio',
+             'julio','agosto','septiembre','octubre','noviembre','diciembre']
+    hoy = _date.today()
+    fecha_str = f'{hoy.day} de {MESES[hoy.month-1]} de {hoy.year}'
+
+    C_GREEN_DARK  = colors.HexColor('#14532d')
+    C_GREEN_COL   = colors.HexColor('#d1fae5')
+    C_GREEN_LIGHT = colors.HexColor('#f0fdf4')
+    C_BORDER      = colors.HexColor('#bbdec9')
+    C_MUTED       = colors.HexColor('#4b7c5e')
+    C_ANCHOR      = colors.HexColor('#b0c4b8')   # código de ancla en col verde (muy tenue)
+    C_Z_HDR       = colors.HexColor('#C2410C')
+    C_B_HDR       = colors.HexColor('#1E3A8A')
+
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=A4,
+        leftMargin=1.3*cm, rightMargin=1.3*cm,
+        topMargin=1.3*cm, bottomMargin=1.3*cm,
+    )
+    styles = getSampleStyleSheet()
+
+    title_st = ParagraphStyle('pt', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=12,
+        textColor=C_GREEN_DARK, spaceAfter=1)
+    sub_st = ParagraphStyle('ps', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=7.5,
+        textColor=C_MUTED, spaceAfter=3)
+    instr_st = ParagraphStyle('pi', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=7,
+        textColor=colors.HexColor('#374151'), spaceAfter=10)
+    desc_st = ParagraphStyle('pd', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=7, leading=8.5)
+    hdr_c_st = ParagraphStyle('hc', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=6.5,
+        textColor=colors.white, alignment=1)
+    hdr_l_st = ParagraphStyle('hl', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=6.5,
+        textColor=colors.white)
+    anchor_st = ParagraphStyle('anc', parent=styles['Normal'],
+        fontName='Courier', fontSize=5, leading=6,
+        textColor=C_ANCHOR, alignment=1)
+
+    story = [
+        Paragraph(f'PLANTILLA DE PEDIDO — {lab.upper()}', title_st),
+        Paragraph(
+            f'Generado el {fecha_str}  ·  {name1} vs {name2}  ·  '
+            'Escribe la cantidad a pedir en la columna verde con Apple Pencil. '
+            'Deja la celda vacía si no quieres pedir ese producto.',
+            sub_st,
+        ),
+    ]
+
+    yr_cur = results[0]['year_current'] if results else hoy.year
+
+    # Anchos (A4 usable ~183mm): verde | cód | desc | st1 | v1 | ped1 | st2 | v2 | ped2
+    col_widths = [1.6*cm, 1.8*cm, 6.2*cm, 1.1*cm, 1.1*cm, 1.1*cm, 1.1*cm, 1.1*cm, 1.1*cm]
+    # Total ≈ 16.2cm ✓
+
+    # Fila 0: cabecera de farmacia (con spans)
+    farm_row = [
+        Paragraph('', hdr_c_st),
+        Paragraph('', hdr_c_st),
+        Paragraph('', hdr_c_st),
+        Paragraph(f'← {name1}', hdr_c_st), '', '',
+        Paragraph(f'← {name2}', hdr_c_st), '', '',
+    ]
+    # Fila 1: cabecera de columnas
+    col_row = [
+        Paragraph('Cantidad', hdr_l_st),
+        Paragraph('Código', hdr_l_st),
+        Paragraph('Descripción', hdr_l_st),
+        Paragraph('Stock', hdr_c_st),
+        Paragraph(f'V.{yr_cur}', hdr_c_st),
+        Paragraph('Ped.', hdr_c_st),
+        Paragraph('Stock', hdr_c_st),
+        Paragraph(f'V.{yr_cur}', hdr_c_st),
+        Paragraph('Ped.', hdr_c_st),
+    ]
+
+    table_data = [farm_row, col_row]
+    row_heights = [14, 13]
+
+    def _v(v):
+        if v in ('—', '⚠️', None): return '—'
+        try:
+            return str(int(v))
+        except (ValueError, TypeError):
+            return str(v)
+
+    for r in results:
+        desc = r.get('description', '')
+        if len(desc) > 55:
+            desc = desc[:53] + '…'
+
+        p1 = r.get('pedido1', 0) or 0
+        p2 = r.get('pedido2', 0) or 0
+
+        table_data.append([
+            Paragraph(r['code'], anchor_st),   # ancla tenue para mapear filas
+            r['code'],
+            Paragraph(desc, desc_st),
+            _v(r.get('stock1')),
+            _v(r.get('total1')),
+            str(p1) if p1 else '—',
+            _v(r.get('stock2')),
+            _v(r.get('total2')),
+            str(p2) if p2 else '—',
+        ])
+        row_heights.append(22)   # altura generosa para Apple Pencil
+
+    n = len(table_data)
+
+    ts = TableStyle([
+        # Cabecera farmacia
+        ('BACKGROUND',    (0, 0), (2, 0),  C_GREEN_DARK),
+        ('BACKGROUND',    (3, 0), (5, 0),  C_Z_HDR),
+        ('BACKGROUND',    (6, 0), (8, 0),  C_B_HDR),
+        ('SPAN',          (3, 0), (5, 0)),
+        ('SPAN',          (6, 0), (8, 0)),
+        # Cabecera columnas
+        ('BACKGROUND',    (0, 1), (0, 1),  C_GREEN_DARK),
+        ('BACKGROUND',    (1, 1), (2, 1),  C_GREEN_DARK),
+        ('BACKGROUND',    (3, 1), (5, 1),  C_Z_HDR),
+        ('BACKGROUND',    (6, 1), (8, 1),  C_B_HDR),
+        # Columna verde (col 0) en filas de datos
+        ('BACKGROUND',    (0, 2), (0, n-1), C_GREEN_COL),
+        # Alternado filas pares (gris muy suave)
+        ('ROWBACKGROUNDS',(1, 2), (8, n-1), [colors.white, C_GREEN_LIGHT]),
+        # Alineación
+        ('ALIGN',         (0, 0), (-1, 1),  'CENTER'),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN',         (0, 2), (0, n-1), 'CENTER'),
+        ('ALIGN',         (1, 2), (1, n-1), 'CENTER'),
+        ('ALIGN',         (2, 2), (2, n-1), 'LEFT'),
+        ('ALIGN',         (3, 2), (-1, n-1),'CENTER'),
+        # Fuente datos
+        ('FONTNAME',      (1, 2), (1, n-1), 'Courier'),
+        ('FONTSIZE',      (1, 2), (1, n-1), 7),
+        ('TEXTCOLOR',     (1, 2), (1, n-1), C_MUTED),
+        ('FONTNAME',      (2, 2), (2, n-1), 'Helvetica'),
+        ('FONTSIZE',      (2, 2), (2, n-1), 7),
+        ('FONTNAME',      (3, 2), (-1, n-1),'Helvetica'),
+        ('FONTSIZE',      (3, 2), (-1, n-1), 7),
+        # Grid
+        ('GRID',          (0, 0), (-1, -1), 0.3, C_BORDER),
+        ('LINEAFTER',     (0, 0), (0, -1),  0.8, colors.HexColor('#86efac')),
+        ('LINEAFTER',     (2, 0), (2, -1),  0.6, C_BORDER),
+        ('LINEAFTER',     (5, 0), (5, -1),  1.0, colors.HexColor('#6b7280')),
+        # Padding
+        ('TOPPADDING',    (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
+    ])
+
+    table = Table(table_data, colWidths=col_widths, rowHeights=row_heights, repeatRows=2)
+    table.setStyle(ts)
+    story.append(table)
+    doc.build(story)
 
 
 def _generate_pedido_pdf(rows, output_path, lab, name1, name2):
