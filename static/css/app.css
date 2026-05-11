@@ -153,7 +153,7 @@ a:hover { text-decoration: underline; }
   transition: background .12s, border-color .12s, color .12s;
   white-space: nowrap;
 }
-.btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.btn:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .btn svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none; flex-shrink: 0; }
 
@@ -274,16 +274,16 @@ a:hover { text-decoration: underline; }
   border: 1px solid transparent;
   white-space: nowrap;
 }
-.badge .d { width: 5px; height: 5px; border-radius: 50%; }
+.badge .dot { width: 5px; height: 5px; border-radius: 50%; }
 
 .badge-pending { background: var(--warning-bg); color: var(--warning-fg); border-color: var(--warning-bd); }
-.badge-pending .d { background: var(--warning); }
+.badge-pending .dot { background: var(--warning); }
 .badge-partial { background: #FFF7ED; color: #9A3412; border-color: #FED7AA; }
-.badge-partial .d { background: var(--partial); }
+.badge-partial .dot { background: var(--partial); }
 .badge-completed { background: var(--success-bg); color: var(--success-fg); border-color: var(--success-bd); }
-.badge-completed .d { background: var(--success); }
+.badge-completed .dot { background: var(--success); }
 .badge-error { background: var(--danger-bg); color: var(--danger-fg); border-color: var(--danger-bd); }
-.badge-error .d { background: var(--danger); }
+.badge-error .dot { background: var(--danger); }
 
 .ph-pill {
   display: inline-flex; align-items: center; gap: 6px;
@@ -323,7 +323,7 @@ input[type="search"], select, textarea {
 }
 input:focus, select:focus, textarea:focus {
   border-color: var(--brand-600);
-  box-shadow: var(--focus-ring);
+  box-shadow: var(--shadow-focus);
 }
 input::placeholder { color: var(--fg-faint); }
 input[readonly] { background: var(--surface-2); color: var(--fg-muted); }
@@ -483,7 +483,6 @@ table.data td.cell-edit.invalid::before {
   display: flex; align-items: center; justify-content: center;
 }
 
-/* Error popover */
 .cell-error-pop {
   position: absolute;
   z-index: 100;

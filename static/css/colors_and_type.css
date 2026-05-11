@@ -1,16 +1,47 @@
 /* =========================================================================
-   Barris & Zarzuelo – Design tokens: colors, typography, shadows, radii
-   Imported by app.css. Single source of truth for all CSS custom properties.
+   Farmacias Barris & Zarzuelo – Design Tokens
+   =========================================================================
+   Drop this file into any new page via:
+     <link rel="stylesheet" href="/static/css/colors_and_type.css">
+   Then use the CSS custom properties below. Never hardcode hex values.
    ========================================================================= */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500;600&display=swap");
+/* -- Inter & JetBrains Mono ------------------------------------------------ */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('fonts/InterVariable.woff2') format('woff2-variations'),
+       url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.0') format('woff2-variations');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('fonts/JetBrainsMono-Variable.woff2') format('woff2-variations'),
+       url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@v2.304/fonts/variable/JetBrainsMono[wght].woff2') format('woff2-variations');
+}
 
 :root {
-  /* ── Typography ─────────────────────────────────────────────────────── */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  /* -- COLOR: Neutral ------------------------------------------------------- */
+  --bg:        #EAF1EC;
+  --bg-2:      #DDE8E0;
+  --surface:   #FFFFFF;
+  --surface-2: #F0F6F2;
 
-  /* ── Brand ramp (green) ─────────────────────────────────────────────── */
+  --border:        #D2DED6;
+  --border-soft:   #E1EBE4;
+  --border-strong: #B8C7BD;
+
+  --fg-1:     #0B1812;
+  --fg-2:     #1A2620;
+  --fg-3:     #3F4F46;
+  --fg-muted: #5C6E64;
+  --fg-faint: #94A39A;
+
+  /* -- COLOR: Brand (pharmaceutical green) ---------------------------------- */
   --brand-50:  #ECFAF2;
   --brand-100: #D2F2DF;
   --brand-200: #A8E3C2;
@@ -22,68 +53,146 @@
   --brand-800: #103F2B;
   --brand-900: #0E3A26;
 
-  /* ── Neutral scale ──────────────────────────────────────────────────── */
-  --bg:            #EAF1EC;
-  --bg-2:          #DDE8E0;
-  --surface:       #FFFFFF;
-  --surface-2:     #F0F6F2;
-  --border-soft:   #E1EBE4;
-  --border:        #D2DED6;
-  --border-strong: #B8C7BD;
-  --fg-muted:      #5C6E64;
-  --fg-2:          #1A2620;
-  --fg-1:          #0B1812;
-
-  /* ── Pharmacy identity ──────────────────────────────────────────────── */
-  --ph-zarzuelo:    #C2410C;
-  --ph-zarzuelo-mid: #F5B591;
+  /* -- COLOR: Pharmacy identity --------------------------------------------- */
+  --ph-zarzuelo:     #C2410C;
   --ph-zarzuelo-bg:  #FFF1E8;
-  --ph-barris:      #1E3A8A;
-  --ph-barris-mid:  #93A3D4;
-  --ph-barris-bg:   #E8ECF7;
+  --ph-zarzuelo-mid: #F5B591;
+  --ph-barris:       #1E3A8A;
+  --ph-barris-bg:    #E8ECF7;
+  --ph-barris-mid:   #93A3D4;
 
-  /* ── Semantic: success ──────────────────────────────────────────────── */
+  /* -- COLOR: Semantic ------------------------------------------------------- */
   --success:    #16A34A;
   --success-bg: #F0FDF4;
   --success-fg: #14532D;
   --success-bd: #BBF7D0;
 
-  /* ── Semantic: warning ──────────────────────────────────────────────── */
   --warning:    #F59E0B;
   --warning-bg: #FFFBEB;
   --warning-fg: #92400E;
   --warning-bd: #FDE68A;
 
-  /* ── Semantic: partial (orange) ─────────────────────────────────────── */
-  --partial:    #F97316;
-  --partial-bg: #FFF7ED;
-  --partial-fg: #9A3412;
-  --partial-bd: #FED7AA;
-
-  /* ── Semantic: danger ───────────────────────────────────────────────── */
   --danger:    #DC2626;
   --danger-bg: #FEF2F2;
   --danger-fg: #991B1B;
   --danger-bd: #FECACA;
 
-  /* ── Semantic: info ─────────────────────────────────────────────────── */
-  --info:    #0EA5E9;
-  --info-bg: #F0F9FF;
-  --info-fg: #0C4A6E;
-  --info-bd: #BAE6FD;
+  --info:    #2563EB;
+  --info-bg: #EFF6FF;
+  --info-fg: #1E40AF;
+  --info-bd: #BFDBFE;
 
-  /* ── Shadows ────────────────────────────────────────────────────────── */
-  --shadow-1: 0 1px 2px rgba(15,23,42,.04);
-  --shadow-2: 0 4px 12px rgba(15,23,42,.06);
-  --shadow-3: 0 12px 36px rgba(15,23,42,.10);
+  --partial:    #F97316;
+  --partial-bg: #FFF7ED;
+  --partial-fg: #9A3412;
+  --partial-bd: #FED7AA;
 
-  /* ── Focus ring ─────────────────────────────────────────────────────── */
-  --focus-ring: 0 0 0 3px rgba(26,122,79,.18);
-  --focus-border: 1.5px solid var(--brand-600);
+  /* -- TYPOGRAPHY ----------------------------------------------------------- */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 
-  /* ── Border radii ───────────────────────────────────────────────────── */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --text-display:  24px;
+  --text-h1:       20px;
+  --text-h2:       16px;
+  --text-h3:       14px;
+  --text-body:     14px;
+  --text-body-sm:  13px;
+  --text-table:    13px;
+  --text-meta:     12px;
+  --text-micro:    11px;
+
+  --lh-tight:  1.25;
+  --lh-snug:   1.35;
+  --lh-normal: 1.5;
+
+  --tracking-tight:  -0.01em;
+  --tracking-normal:  0;
+  --tracking-label:   0.04em;
+  --tracking-caps:    0.08em;
+
+  --w-regular:  400;
+  --w-medium:   500;
+  --w-semibold: 600;
+  --w-bold:     700;
+
+  /* -- SPACING (4px base) --------------------------------------------------- */
+  --space-0:  0;
+  --space-px: 1px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  32px;
+  --space-8:  40px;
+  --space-9:  48px;
+  --space-10: 64px;
+
+  /* -- RADII ----------------------------------------------------------------- */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-xl:   14px;
+  --radius-pill: 999px;
+
+  /* -- SHADOWS --------------------------------------------------------------- */
+  --shadow-0:     0 0 0 0 transparent;
+  --shadow-1:     0 1px 2px rgba(15,23,42,.04);
+  --shadow-2:     0 4px 12px rgba(15,23,42,.06);
+  --shadow-3:     0 12px 36px rgba(15,23,42,.10);
+  --shadow-focus: 0 0 0 3px rgba(26,122,79,.18);
+
+  /* -- LAYOUT --------------------------------------------------------------- */
+  --topbar-h:     52px;
+  --maxw-content: 1280px;
+  --maxw-narrow:  720px;
+
+  /* -- MOTION --------------------------------------------------------------- */
+  --duration-fast:    100ms;
+  --duration-default: 150ms;
+  --duration-slow:    220ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* -- SEMANTIC ALIASES ----------------------------------------------------- */
+  --color-text:          var(--fg-1);
+  --color-text-muted:    var(--fg-muted);
+  --color-bg-page:       var(--bg);
+  --color-bg-surface:    var(--surface);
+  --color-border:        var(--border);
+  --color-primary:       var(--brand-600);
+  --color-primary-hover: var(--brand-700);
+  --color-primary-press: var(--brand-800);
+  --color-link:          var(--brand-700);
+}
+
+/* -- BASE TYPE ------------------------------------------------------------- */
+html, body {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--lh-snug);
+  color: var(--color-text);
+  background: var(--color-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv11", "ss03";
+}
+
+h1, .h1 { font-size: var(--text-h1); font-weight: var(--w-bold); letter-spacing: var(--tracking-tight); line-height: var(--lh-tight); color: var(--fg-1); }
+h2, .h2 { font-size: var(--text-h2); font-weight: var(--w-bold); letter-spacing: var(--tracking-tight); line-height: var(--lh-tight); color: var(--fg-1); }
+h3, .h3 { font-size: var(--text-h3); font-weight: var(--w-semibold); line-height: var(--lh-tight); color: var(--fg-1); }
+p, .p { font-size: var(--text-body); line-height: var(--lh-normal); color: var(--fg-2); }
+small, .small { font-size: var(--text-meta); color: var(--fg-muted); }
+code, kbd, samp, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+
+.label-micro {
+  font-size: var(--text-micro);
+  font-weight: var(--w-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--fg-muted);
+}
+.num, .tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
