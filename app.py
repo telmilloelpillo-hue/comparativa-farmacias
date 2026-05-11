@@ -442,6 +442,159 @@ def pedido_file(pdf_id):
                      download_name=f'pedido_{safe_id}.pdf')
 
 
+@app.route('/procesar_anotaciones', methods=['POST'])
+def procesar_anotaciones():
+    """
+    Recibe el PDF plantilla anotado con Apple Pencil.
+    Usa PyMuPDF para renderizar cada página a imagen, y Claude Vision
+    para leer los números escritos a mano en la columna verde.
+    Devuelve JSON con la lista de productos + cantidades extraídas.
+    """
+    if not session.get('authenticated'):
+        return jsonify({'error': 'no auth'}), 401
+
+    token = request.form.get('token') or session.get('comp_token')
+    if not token:
+        return jsonify({'error': 'Sin sesión de comparativa activa'}), 400
+
+    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+    if not os.path.exists(json_path):
+        return jsonify({'error': 'Sesión expirada — vuelve a generar la comparativa'}), 400
+
+    f = request.files.get('pdf')
+    if not f:
+        return jsonify({'error': 'No se recibió ningún archivo'}), 400
+    pdf_bytes = f.read()
+    if pdf_bytes[:4] != b'%PDF':
+        return jsonify({'error': 'El archivo no es un PDF válido'}), 400
+
+    with open(json_path, encoding='utf-8') as jf:
+        comp_data = json.load(jf)
+
+    # Mapa código → descripción para validar resultados de Claude
+    desc_map = {r['code']: r.get('description', '') for r in comp_data['results']}
+
+    if not _ai_available():
+        return jsonify({'error': 'IA no configurada (ANTHROPIC_API_KEY)'}), 503
+
+    try:
+        import fitz          # PyMuPDF
+        import base64, io
+        from PIL import Image
+
+        doc = fitz.open(stream=pdf_bytes, filetype='pdf')
+        client = _anthropic.Anthropic(api_key=_get_api_key())
+
+        extracted = {}   # {code: {qty, description}}
+
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            # Renderizar a 150 DPI (calidad suficiente, sin exceder límite de tokens)
+            mat = fitz.Matrix(150 / 72, 150 / 72)
+            pix = page.get_pixmap(matrix=mat, colorspace=fitz.csRGB)
+            img = Image.frombytes('RGB', (pix.width, pix.height), pix.samples)
+
+            buf = io.BytesIO()
+            img.save(buf, format='PNG')
+            b64 = base64.standard_b64encode(buf.getvalue()).decode()
+
+            prompt = (
+                'Este es un PDF de plantilla de pedido de farmacia con orientación horizontal. '
+                'Las columnas son, de izquierda a derecha: '
+                '1) Columna verde (cantidad escrita a mano con Apple Pencil), '
+                '2) Código del producto (6 caracteres alfanuméricos), '
+                '3) Descripción del producto (texto impreso). '
+                'Tu tarea: para cada fila de producto en esta página, extrae los tres campos. '
+                'Si la celda verde está vacía, omite esa fila completamente. '
+                'Responde SOLO con JSON válido, sin texto extra, con este formato exacto:\n'
+                '[{"code":"XXXXXX","description":"nombre del producto","qty":N}, ...]\n'
+                'Si no hay ningún número escrito en la columna verde, responde: []'
+            )
+
+            msg = client.messages.create(
+                model='claude-haiku-4-5-20251001',
+                max_tokens=1200,
+                messages=[{
+                    'role': 'user',
+                    'content': [
+                        {'type': 'image',
+                         'source': {'type': 'base64', 'media_type': 'image/png', 'data': b64}},
+                        {'type': 'text', 'text': prompt},
+                    ]
+                }]
+            )
+
+            raw = msg.content[0].text.strip()
+            # Extraer el JSON aunque venga envuelto en markdown
+            if '```' in raw:
+                raw = raw.split('```')[1].lstrip('json').strip()
+            try:
+                page_items = json.loads(raw)
+            except json.JSONDecodeError:
+                continue   # página sin resultados válidos
+
+            for item in page_items:
+                code = str(item.get('code', '')).strip()
+                desc = str(item.get('description', '')).strip()
+                try:
+                    qty = int(item.get('qty', 0))
+                except (ValueError, TypeError):
+                    qty = 0
+                if code and qty > 0:
+                    if code in extracted:
+                        extracted[code]['qty'] += qty
+                    else:
+                        extracted[code] = {'qty': qty, 'description': desc}
+
+        doc.close()
+
+        # Construir lista final manteniendo el orden de la comparativa
+        # La descripción viene de Claude (leída de la imagen); si falta, fallback al JSON
+        items = []
+        for r in comp_data['results']:
+            code = r['code']
+            entry = extracted.get(code)
+            if not entry:
+                continue
+            qty  = entry['qty']
+            desc = entry['description'] or desc_map.get(code, '')
+            items.append({'code': code, 'description': desc, 'qty': qty})
+
+        # Añadir códigos reconocidos que no estén en la comparativa (poco probable)
+        known = {r['code'] for r in comp_data['results']}
+        for code, entry in extracted.items():
+            if code not in known and entry['qty'] > 0:
+                items.append({'code': code, 'description': entry['description'], 'qty': entry['qty']})
+
+        session['anotacion_items'] = items
+        session['anotacion_lab']   = comp_data.get('lab', '')
+        return jsonify({'items': items, 'total': sum(x['qty'] for x in items)})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/pedido_anotacion_pdf', methods=['POST'])
+def pedido_anotacion_pdf():
+    """Genera PDF de pedido a partir de los ítems revisados (código, descripción, cantidad)."""
+    if not session.get('authenticated'):
+        return jsonify({'error': 'no auth'}), 401
+    data  = request.get_json(force=True)
+    items = data.get('items', [])
+    lab   = data.get('lab', session.get('anotacion_lab', 'Farmacia'))
+
+    tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    tmp.close()
+    _generate_pedido_anotacion_pdf(items, tmp.name, lab)
+
+    from datetime import date as _date
+    slug  = ''.join(c if c.isalnum() else '_' for c in lab.lower())
+    fecha = _date.today().strftime('%Y%m%d')
+    return send_file(tmp.name, as_attachment=True,
+                     download_name=f'pedido_pencil_{slug}_{fecha}.pdf',
+                     mimetype='application/pdf')
+
+
 @app.route('/plantilla_anotacion')
 def plantilla_anotacion():
     token = request.args.get('token') or session.get('comp_token')
@@ -1045,6 +1198,93 @@ def _build_logistics_table(results, name1, name2,
         elements.append(t)
 
     return elements
+
+
+def _generate_pedido_anotacion_pdf(items, output_path, lab):
+    """PDF de pedido simple: código · descripción · cantidad. Sin columnas por farmacia."""
+    from datetime import date as _date
+
+    MESES = ['enero','febrero','marzo','abril','mayo','junio',
+             'julio','agosto','septiembre','octubre','noviembre','diciembre']
+    hoy = _date.today()
+    fecha_str = f'{hoy.day} de {MESES[hoy.month-1]} de {hoy.year}'
+
+    C_GREEN_DARK  = colors.HexColor('#14532d')
+    C_GREEN_LIGHT = colors.HexColor('#f0fdf4')
+    C_BORDER      = colors.HexColor('#d1fae5')
+    C_MUTED       = colors.HexColor('#4b7c5e')
+
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=A4,
+        leftMargin=1.5*cm, rightMargin=1.5*cm,
+        topMargin=1.5*cm, bottomMargin=1.5*cm,
+    )
+    styles = getSampleStyleSheet()
+
+    title_st = ParagraphStyle('pt', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=14,
+        textColor=C_GREEN_DARK, spaceAfter=2)
+    sub_st = ParagraphStyle('ps', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=9,
+        textColor=C_MUTED, spaceAfter=14)
+    desc_st = ParagraphStyle('pd', parent=styles['Normal'],
+        fontName='Helvetica', fontSize=8, leading=10)
+    hdr_st = ParagraphStyle('ph', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7,
+        textColor=colors.white, alignment=1)
+    hdr_l_st = ParagraphStyle('phl', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=7,
+        textColor=colors.white)
+    tot_st = ParagraphStyle('ptot', parent=styles['Normal'],
+        fontName='Helvetica-Bold', fontSize=8)
+
+    story = [
+        Paragraph(f'PEDIDO — {lab.upper()}', title_st),
+        Paragraph(f'Generado el {fecha_str} · Cantidades extraídas de plantilla Apple Pencil', sub_st),
+    ]
+
+    col_widths = [2.0*cm, 11.5*cm, 4.0*cm]
+    table_data = [[
+        Paragraph('Código',      hdr_l_st),
+        Paragraph('Descripción', hdr_l_st),
+        Paragraph('Cantidad',    hdr_st),
+    ]]
+
+    for item in items:
+        table_data.append([
+            item.get('code', ''),
+            Paragraph(item.get('description', ''), desc_st),
+            str(item.get('qty', 0)),
+        ])
+
+    total_uds = sum(item.get('qty', 0) for item in items)
+    table_data.append(['', Paragraph('TOTAL', tot_st), str(total_uds)])
+
+    n = len(table_data)
+    ts = TableStyle([
+        ('BACKGROUND',     (0, 0), (-1, 0),   C_GREEN_DARK),
+        ('ROWBACKGROUNDS', (0, 1), (-1, n-2),  [colors.white, C_GREEN_LIGHT]),
+        ('BACKGROUND',     (0, n-1), (-1, n-1), C_GREEN_LIGHT),
+        ('LINEABOVE',      (0, n-1), (-1, n-1), 1, C_BORDER),
+        ('FONTNAME',       (0, n-1), (-1, n-1), 'Helvetica-Bold'),
+        ('GRID',           (0, 0), (-1, -1),   0.4, C_BORDER),
+        ('ALIGN',          (2, 0), (2, -1),    'CENTER'),
+        ('VALIGN',         (0, 0), (-1, -1),   'MIDDLE'),
+        ('TOPPADDING',     (0, 0), (-1, -1),   4),
+        ('BOTTOMPADDING',  (0, 0), (-1, -1),   4),
+        ('LEFTPADDING',    (0, 0), (-1, -1),   6),
+        ('RIGHTPADDING',   (0, 0), (-1, -1),   6),
+        ('FONTNAME',       (0, 1), (0, n-1),   'Courier'),
+        ('FONTSIZE',       (0, 1), (0, n-1),   7),
+        ('TEXTCOLOR',      (0, 1), (0, n-1),   C_MUTED),
+        ('FONTSIZE',       (2, 1), (2, n-1),   10),
+        ('FONTNAME',       (2, 1), (2, n-1),   'Helvetica-Bold'),
+    ])
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(ts)
+    story.append(table)
+    doc.build(story)
 
 
 def _generate_plantilla_pdf(results, output_path, name1, name2, lab,

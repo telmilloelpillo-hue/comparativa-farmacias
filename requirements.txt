@@ -4,12 +4,8 @@ reportlab
 gunicorn
 anthropic
 
-# OCR pipeline
-opencv-python-headless
 Pillow
 requests
 
-# PaddleOCR (opcional — requiere ≥2 GB RAM en producción).
-# Descomenta si tienes un plan Render Standard o superior:
-# paddlepaddle
-# paddleocr
+# OCR: renderizado de PDF sin dependencias externas (no necesita poppler ni ghostscript)
+pymupdf
