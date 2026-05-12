@@ -178,20 +178,29 @@ def extract_products(pdf_path, on_page=None):
                     ).strip()
                     if not re.match(r'^[0-9A-Z]{6}$', prev_code):
                         if _year_from_row(prev_row) is None:
-                            prev_desc = _extract_description(prev_row)
-                            # Solo aceptar texto en mayúsculas (excluye cabeceras
-                            # de página/columna que tienen minúsculas)
-                            if prev_desc and not re.search(r'[a-z]', prev_desc):
-                                description = re.sub(r'  +', ' ',
-                                                     (prev_desc + ' ' + description).strip())
-
-                stock = _digits_at(row, STOCK_X)
-                smin  = _digits_at(row, SMIN_X)
+                            # Guard: if i-2 has year data, i-1 is a continuation
+                            # tail of the previous product — don't prepend it here.
+                            prev_is_tail = (
+                                i >= 2 and
+                                _year_from_row(rows[sorted_ys[i - 2]]) is not None
+                            )
+                            if not prev_is_tail:
+                                prev_desc = _extract_description(prev_row)
+                                if prev_desc and not re.search(r'[a-z]', prev_desc):
+                                    description = re.sub(r'  +', ' ',
+                                                         (prev_desc + ' ' + description).strip())
 
                 zone_letters = [c for c in row
                                 if 200 <= c['x0'] < 255
                                 and c['text'].isalpha()]
                 stock_warning = len(zone_letters) > 0
+
+                if not stock_warning:
+                    stock = _digits_at(row, STOCK_X)
+                    smin  = _digits_at(row, SMIN_X)
+                else:
+                    stock = 0
+                    smin  = 0
 
                 months_current = [0] * 12
                 months_prev    = [0] * 12
@@ -200,8 +209,6 @@ def extract_products(pdf_path, on_page=None):
                     months_current = [_month_value(row, mx) for mx in MONTH_X]
                 elif yr_this_row == year_current:
                     months_current = [_month_value(row, mx) for mx in MONTH_X]
-                    stock = _digits_at(row, STOCK_X)
-                    smin  = _digits_at(row, SMIN_X)
 
                 for j in range(i + 1, min(i + 8, len(sorted_ys))):
                     y2 = sorted_ys[j]
@@ -307,7 +314,7 @@ def extract_situation(pdf_path):
                 # Buscar código de 6 caracteres alfanumérico
                 code = None
                 for w in row:
-                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80:
+                    if re.match(r'^[0-9A-Z]{6}$', w['text']) and 40 <= w['x0'] <= 90:
                         code = w['text']
                         break
 
@@ -342,7 +349,7 @@ def extract_situation(pdf_path):
                 while j < len(sorted_ys):
                     next_row = sorted(rows_dict[sorted_ys[j]], key=lambda w: w['x0'])
                     has_code = any(
-                        re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80
+                        re.match(r'^[0-9A-Z]{6}$', w['text']) and 40 <= w['x0'] <= 90
                         for w in next_row
                     )
                     if has_code:
@@ -365,7 +372,7 @@ def extract_situation(pdf_path):
                 while k >= 0 and len(back_parts) < 5:
                     prev_row = sorted(rows_dict[sorted_ys[k]], key=lambda w: w['x0'])
                     has_prev_code = any(
-                        re.match(r'^[0-9A-Z]{6}$', w['text']) and 50 <= w['x0'] <= 80
+                        re.match(r'^[0-9A-Z]{6}$', w['text']) and 40 <= w['x0'] <= 90
                         for w in prev_row
                     )
                     if has_prev_code:
