@@ -283,32 +283,58 @@ REGLAS CRÍTICAS — LEE TODAS ANTES DE EXTRAER:
 
 3. PRECIO NETO UNITARIO — REGLA MÁS IMPORTANTE:
    - Usa SIEMPRE el precio YA descontado, nunca el precio bruto:
-     * Columna "Precio Neto" → usa ese valor directamente
+     * Columna "Precio Neto" → usa ese valor directamente (es el precio unitario después del descuento)
      * Columna "COSTE UNITARIO" (Pierre Fabre, Almirall) → usa ese valor directamente
      * Si solo hay "Precio Fact." con descuento explícito → calcula: precio_neto = precio_fact × (1 − descuento/100)
    - NUNCA uses "Precio Fact.", "Precio Unid.", "PVP", "P.V.F." ni ningún precio BRUTO como precio_neto_unitario
 
-4. PRECIO NETO TOTAL:
+4. VALIDACIÓN OBLIGATORIA DEL PRECIO (aplica siempre que exista columna "Importe"):
+   - Tras leer precio_neto_unitario, verifica: precio_neto_unitario × cantidad ≈ Importe (tolerancia ±0,05 €)
+   - Si NO coinciden, significa que leíste el precio de la columna equivocada → corrige usando: precio_neto_unitario = Importe ÷ cantidad
+   - Ejemplo de error detectado: si lees 5,69 × 3 = 17,07 pero el Importe es 20,06 → ERROR → corrección: 20,06 ÷ 3 = 6,687 ✓
+
+5. PRECIO NETO TOTAL:
    - Usa el valor de la columna "Importe" si existe
    - Si no hay columna Importe, calcula: precio_neto_total = precio_neto_unitario × cantidad
 
-5. LÍNEAS GRATUITAS ("S/VALOR COMERCIAL", "RAPPEL", "BONIFICACIÓN", expositores, material promocional):
+6. LÍNEAS GRATUITAS ("S/VALOR COMERCIAL", "RAPPEL", "BONIFICACIÓN", "0,000", expositores, material promocional):
    - Inclúyelas con precio_neto_unitario = 0, sin_valor_comercial = true, iva_porcentaje = 0
 
-6. IVA:
-   - Detecta el % de IVA real de cada línea (4, 5, 10 o 21)
-   - Si no hay columna IVA explícita: infiere por tipo de producto (medicamentos→4, parafarmacia→21)
-   - Para líneas gratuitas: iva_porcentaje = 0
+7. IVA — TABLA OBLIGATORIA PARA FARMACIA ESPAÑOLA:
+   Si no hay columna IVA explícita en el documento, determina el % según el tipo de producto:
 
-7. NÚMEROS:
+   21% IVA — Cosmética e higiene (la mayoría de productos de farmacia):
+   · Cremas, geles de baño, champús, aceites corporales/masaje, colonias, perfumes
+   · Leches hidratantes, bálsamos, pomadas cosméticas, estrías, anticeluliticos
+   · Biberones, chupetes, tetinas, portadocumentos, puericultura, accesorios bebé
+   · Productos de marcas: Suavinex, Chicco, Nuk, Mustela, Weleda, SVR, Nuxe, Avène
+   · Todo producto con "BABY", "BIB", "CH" (chupete), "TETINA", "COL" (colonia) en el nombre
+   · Protectores solares, desodorantes, maquillaje, jabones, geles íntimos
+
+   10% IVA — Productos sanitarios específicos:
+   · Apósitos, tiritas, gasas, compresas, preservativos, termómetros
+   · Dispositivos médicos con marcado CE (tensiómetros, nebulizadores, etc.)
+
+   4% IVA — Medicamentos únicamente:
+   · Solo productos con número de registro de medicamento de la AEMPS
+   · Generalmente tienen CN de 7 dígitos con letra inicial (P00xxxxx, etc.) o nº registro AEMPS
+   · En caso de duda entre 4% y 21%: usa 21% si el producto es cosmético/parafarmacia
+
+   Para líneas gratuitas (precio 0): iva_porcentaje = 0
+
+8. NÚMEROS:
    - Usa punto "." como separador decimal en el JSON
    - El documento puede usar coma "," como decimal — conviértela a punto
 
-8. EXCLUYE siempre: subtotales de sección, filas de totales IVA, portes, líneas de cabecera de tabla
+9. EXCLUYE siempre: subtotales de sección, filas de totales IVA, portes, líneas de cabecera de tabla
 
 EJEMPLO SUAVINEX (columnas: Cod.Mater. | Descripción | Cajas | UDS/Caja | UDS | Precio Fact. | Dcto. | Precio Neto | Importe):
-  157989 | S BIB CON ASAS 150ML SIL +6M NIGHT_DAY | 0 | 0 | 4 | 9,560 | 16,00% | 8,030 | 32,12
-  → cn="157989", cantidad=4, precio_neto_unitario=8.030, precio_neto_total=32.12
+  212143 | S BABY ACEITE DE MASAJE HIDRATANTE 100ML | 0 | 0 | 3 | 7,960 | 16,00% | 6,687 | 20,06
+  → cn="212143", cantidad=3, precio_neto_unitario=6.687, precio_neto_total=20.06, iva_porcentaje=21
+  Validación: 6.687 × 3 = 20.061 ≈ 20.06 ✓
+
+  217167 | S SEL PORTADOCUMENTOS WONDERLAND LIB | 0 | 0 | 1 | 0,000 | — | 0,000 | 0,00
+  → cn="217167", cantidad=1, precio_neto_unitario=0, sin_valor_comercial=true, iva_porcentaje=0
 """
 
 
