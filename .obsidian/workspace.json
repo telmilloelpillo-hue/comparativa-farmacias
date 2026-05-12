@@ -184,6 +184,7 @@
   },
   "active": "0e4eb1311d4dde99",
   "lastOpenFiles": [
+    "templates/buscador.html",
     "venv/lib/python3.14/site-packages/pymupdf-1.27.2.3.dist-info/REQUESTED",
     "venv/lib/python3.14/site-packages/pymupdf-1.27.2.3.dist-info/INSTALLER",
     "venv/bin/pymupdf",
@@ -194,7 +195,6 @@
     "venv/lib/python3.14/site-packages/pymupdf/__pycache__/extra.cpython-314.pyc",
     "venv/lib/python3.14/site-packages/pymupdf/__pycache__/_wxcolors.cpython-314.pyc",
     "venv/lib/python3.14/site-packages/pymupdf/__pycache__/_build.cpython-314.pyc",
-    "venv/lib/python3.14/site-packages/pymupdf/__pycache__/_apply_pages.cpython-314.pyc",
     "venv/lib/python3.14/site-packages/pymupdf-1.27.2.3.dist-info/README.md",
     "static/img/icons/arrow-left.svg",
     "static/img/icons/arrow-right.svg",
