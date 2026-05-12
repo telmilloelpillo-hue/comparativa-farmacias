@@ -7,6 +7,8 @@ openai
 
 Pillow
 requests
+numpy
+opencv-python-headless
 
 # OCR: renderizado de PDF sin dependencias externas (no necesita poppler ni ghostscript)
 pymupdf
