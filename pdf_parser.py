@@ -104,9 +104,62 @@ def _extract_description(row_chars):
     return desc
 
 
+# ─── Vision fallback ──────────────────────────────────────────────────────────
+
+def _extract_page_vision(page_img_b64, year_current, year_prev, anthropic_key):
+    """
+    Usa Claude Vision para extraer datos de una página de PDF de ventas.
+    Solo se llama para páginas donde pdfplumber detectó contaminación zona stock/smin.
+    Retorna dict {code: {stock, smin, description, months_current, months_prev}}
+    """
+    import anthropic as _anthropic_mod
+    import json as _json
+    import re as _re
+
+    client = _anthropic_mod.Anthropic(api_key=anthropic_key)
+    prompt = (
+        f'Eres un extractor de datos de tablas de ventas de farmacia.\n'
+        f'La tabla tiene estas columnas: '
+        f'Código | Descripción | Stock | S.min | Año | Total | Ene | Feb | Mar | Abr | May | Jun | Jul | Ago | Sep | Oct | Nov | Dic\n\n'
+        f'Cada producto tiene 2 filas: año {year_current} y año {year_prev}.\n\n'
+        f'Para cada producto (código alfanumérico de 6 caracteres exactos), extrae:\n'
+        f'- "code": código exacto de 6 caracteres\n'
+        f'- "description": descripción completa del producto (sin números de columna)\n'
+        f'- "stock": entero de la columna Stock (fila {year_current})\n'
+        f'- "smin": entero de la columna S.min (fila {year_current})\n'
+        f'- "months_current": lista de 12 enteros [Ene..Dic] del año {year_current}\n'
+        f'- "months_prev": lista de 12 enteros [Ene..Dic] del año {year_prev}\n\n'
+        f'Responde SOLO con JSON válido, sin texto extra:\n'
+        f'[{{"code":"XXXXXX","description":"...","stock":N,"smin":N,'
+        f'"months_current":[...],"months_prev":[...]}}]'
+    )
+    msg = client.messages.create(
+        model='claude-haiku-4-5-20251001',
+        max_tokens=4096,
+        messages=[{
+            'role': 'user',
+            'content': [
+                {'type': 'image',
+                 'source': {'type': 'base64', 'media_type': 'image/png', 'data': page_img_b64}},
+                {'type': 'text', 'text': prompt},
+            ]
+        }]
+    )
+    text = msg.content[0].text.strip()
+    text = _re.sub(r'^```(?:json)?\s*', '', text)
+    text = _re.sub(r'\s*```$', '', text)
+    items = _json.loads(text)
+    result = {}
+    for item in items:
+        code = str(item.get('code', '')).strip()
+        if _re.match(r'^[0-9A-Z]{6}$', code):
+            result[code] = item
+    return result
+
+
 # ─── Extracción principal ──────────────────────────────────────────────────────
 
-def extract_products(pdf_path, on_page=None):
+def extract_products(pdf_path, on_page=None, anthropic_key=None):
     products = {}
 
     with pdfplumber.open(pdf_path) as pdf:
@@ -215,12 +268,9 @@ def extract_products(pdf_path, on_page=None):
                                 and c['text'].isalpha()]
                 stock_warning = len(zone_letters) > 0
 
-                if not stock_warning:
-                    stock = _digits_at(row, STOCK_X)
-                    smin  = _digits_at(row, SMIN_X)
-                else:
-                    stock = 0
-                    smin  = 0
+                # Siempre leer — zone_warning es aviso, no bloqueo
+                stock = _digits_at(row, STOCK_X)
+                smin  = _digits_at(row, SMIN_X)
 
                 months_current = [0] * 12
                 months_prev    = [0] * 12
@@ -304,7 +354,67 @@ def extract_products(pdf_path, on_page=None):
                     'pattern':        'A' if is_pattern_a else 'B',
                     'warnings':       warnings,
                     'needs_review':   len(warnings) > 0,
+                    '_page_idx':      page_idx,
                 }
+
+    # ── Vision fallback: re-extraer páginas con productos contaminados ──────────
+    if anthropic_key:
+        pages_with_warnings = {
+            p['_page_idx']
+            for p in products.values()
+            if 'stock_smin_zona_contaminada' in p.get('warnings', [])
+        }
+        if pages_with_warnings:
+            try:
+                import fitz as _fitz
+                import base64 as _b64
+                import io as _io
+                from PIL import Image as _Image
+                doc = _fitz.open(pdf_path)
+                for page_idx in sorted(pages_with_warnings):
+                    page = doc[page_idx]
+                    mat = _fitz.Matrix(150 / 72, 150 / 72)
+                    pix = page.get_pixmap(matrix=mat, colorspace=_fitz.csRGB)
+                    img = _Image.frombytes('RGB', (pix.width, pix.height), pix.samples)
+                    buf = _io.BytesIO()
+                    img.save(buf, format='PNG')
+                    b64 = _b64.standard_b64encode(buf.getvalue()).decode()
+                    vision_data = _extract_page_vision(
+                        b64, year_current, year_prev, anthropic_key
+                    )
+                    for code, vdata in vision_data.items():
+                        if code not in products:
+                            continue
+                        p = products[code]
+                        if 'stock_smin_zona_contaminada' not in p.get('warnings', []):
+                            continue
+                        if vdata.get('stock') is not None:
+                            p['stock'] = vdata['stock']
+                        if vdata.get('smin') is not None:
+                            p['smin'] = vdata['smin']
+                        if vdata.get('description'):
+                            p['description'] = vdata['description']
+                        if vdata.get('months_current'):
+                            mc = vdata['months_current']
+                            p['months_current'] = mc
+                            p['total_current'] = sum(mc)
+                            last = max((i for i, v in enumerate(mc) if v > 0), default=-1)
+                            p['close_month'] = last + 1
+                        if vdata.get('months_prev'):
+                            mp = vdata['months_prev']
+                            p['months_prev'] = mp
+                            p['total_prev'] = sum(mp)
+                        p['warnings'] = [
+                            w for w in p['warnings']
+                            if w != 'stock_smin_zona_contaminada'
+                        ]
+                        p['warnings'].append('vision_corrected')
+                        p['needs_review'] = any(
+                            'vision_corrected' not in w for w in p['warnings']
+                        ) if p['warnings'] else False
+                doc.close()
+            except Exception:
+                pass  # Vision opcional — no bloquear si falla
 
     return products
 
