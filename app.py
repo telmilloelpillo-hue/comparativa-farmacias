@@ -34,6 +34,21 @@ def _get_api_key():
 def _ai_available():
     return _ANTHROPIC_AVAILABLE and bool(_get_api_key())
 
+def _get_openai_key():
+    key = os.environ.get('OPENAI_API_KEY', '')
+    if key:
+        return key
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    try:
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('OPENAI_API_KEY='):
+                    return line.split('=', 1)[1].strip()
+    except Exception:
+        pass
+    return ''
+
 # ── Facturas: factores PVP por proveedor ──────────────────────────────────────
 _CONFIG_PROVEEDORES = {
     'hefame_bida': {
@@ -733,6 +748,7 @@ def leer_factura():
             anthropic_key = _get_api_key(),
             qwen_key      = qwen_key,
             qwen_endpoint = qwen_endpoint,
+            openai_key    = _get_openai_key(),
         )
         result['proveedores'] = _CONFIG_PROVEEDORES
         return jsonify(result)

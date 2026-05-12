@@ -3,6 +3,7 @@ pdfplumber
 reportlab
 gunicorn
 anthropic
+openai
 
 Pillow
 requests

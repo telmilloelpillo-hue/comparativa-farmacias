@@ -246,41 +246,70 @@ def pdf_first_page_image(pdf_bytes: bytes, dpi: int = 150) -> bytes:
 
 # ─── Extracción semántica ─────────────────────────────────────────────────────
 
-_INVOICE_PROMPT = (
-    "Analiza esta factura o albarán de farmacia española y extrae los datos de las líneas de producto.\n\n"
-    "Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin texto adicional, sin markdown):\n"
-    "{\n"
-    '  "proveedor": "nombre del proveedor/laboratorio o null",\n'
-    '  "numero_factura": "número o null",\n'
-    '  "fecha": "DD/MM/YYYY o null",\n'
-    '  "lineas": [\n'
-    "    {\n"
-    '      "cn": "código del producto EXACTAMENTE como aparece en el documento — puede ser alfanumérico: P0018200, 221193.3, 221724.T, 221194, etc. — NUNCA inventes ni normalices el código — null si no hay código",\n'
-    '      "nombre": "descripción completa del producto",\n'
-    '      "cantidad": número entero,\n'
-    '      "precio_neto_unitario": número decimal (ver REGLAS),\n'
-    '      "precio_neto_total": número decimal o null,\n'
-    '      "iva_porcentaje": 4 o 5 o 10 o 21 o 0,\n'
-    '      "recargo": número decimal o 0,\n'
-    '      "sin_valor_comercial": true si el precio aparece como "S/VALOR COMERCIAL", false en caso contrario\n'
-    "    }\n"
-    "  ],\n"
-    '  "total_sin_iva": número decimal o null,\n'
-    '  "total_con_iva": número decimal o null\n'
-    "}\n\n"
-    "REGLAS CRÍTICAS:\n"
-    "- cn: copia el código EXACTAMENTE como aparece en el documento. Si tiene letras, puntos o prefijos (P00, KL...) consérvelos tal cual. NUNCA inventes un formato de 7 dígitos si no es lo que aparece\n"
-    "- Incluye TODAS las líneas de producto, incluyendo gratuitas ('S/VALOR COMERCIAL', material promocional, expositores, displays)\n"
-    "- Para líneas con 'S/VALOR COMERCIAL': precio_neto_unitario = 0, sin_valor_comercial = true, iva_porcentaje = 0\n"
-    "- precio_neto_unitario: usa el COSTE UNITARIO (precio tras todos los descuentos aplicados). "
-    "En albaranes Pierre Fabre, Almirall y similares existe columna 'COSTE UNITARIO' — usa ESE valor, NO el 'PRECIO UNID' bruto previo al descuento. "
-    "Si solo aparece un precio y hay descuento explícito, calcula: precio_neto = precio_bruto × (1 - descuento/100)\n"
-    "- precio_neto_total = precio_neto_unitario × cantidad\n"
-    "- iva_porcentaje: % real de IVA de la línea (4, 5, 10 o 21). Para artículos sin valor comercial: 0\n"
-    "- cantidad mínima 1 si no se especifica\n"
-    "- Números con punto como separador decimal, sin puntos de miles\n"
-    "- NO incluyas: subtotales de sección, líneas de IVA, portes, cabeceras de tabla"
-)
+_INVOICE_PROMPT = """Analiza esta factura o albarán de farmacia española y extrae los datos de las líneas de producto.
+
+Devuelve ÚNICAMENTE un objeto JSON con esta estructura exacta (sin texto adicional, sin markdown):
+{
+  "proveedor": "nombre del proveedor/laboratorio o null",
+  "numero_factura": "número o null",
+  "fecha": "DD/MM/YYYY o null",
+  "lineas": [
+    {
+      "cn": "código del producto EXACTAMENTE como aparece — puede ser alfanumérico — NUNCA inventes ni normalices — null si no hay código",
+      "nombre": "descripción completa del producto",
+      "cantidad": número entero,
+      "precio_neto_unitario": número decimal (ver REGLAS),
+      "precio_neto_total": número decimal o null,
+      "iva_porcentaje": 4 o 5 o 10 o 21 o 0,
+      "recargo": número decimal o 0,
+      "sin_valor_comercial": true si el precio aparece como "S/VALOR COMERCIAL", false en caso contrario
+    }
+  ],
+  "total_sin_iva": número decimal o null,
+  "total_con_iva": número decimal o null
+}
+
+REGLAS CRÍTICAS — LEE TODAS ANTES DE EXTRAER:
+
+1. CÓDIGO (cn):
+   - Copia EXACTAMENTE el código tal como aparece en el documento (columna "Cód.", "Cod.Mater.", "CN", "Ref.", etc.)
+   - Conserva letras, puntos, guiones y prefijos (P00, KL, 221193.3, 221724.T, etc.)
+   - NUNCA normalices a 7 dígitos si el documento no los tiene
+
+2. CANTIDAD:
+   - En albaranes con columnas separadas "Cajas | UDS/Caja | UDS": usa el valor de la columna "UDS" como cantidad
+   - Si "Cajas" y "UDS/Caja" son 0 pero "UDS" tiene valor, ese valor UDS es la cantidad correcta
+   - Si solo hay una columna de cantidad, usa ese valor
+
+3. PRECIO NETO UNITARIO — REGLA MÁS IMPORTANTE:
+   - Usa SIEMPRE el precio YA descontado, nunca el precio bruto:
+     * Columna "Precio Neto" → usa ese valor directamente
+     * Columna "COSTE UNITARIO" (Pierre Fabre, Almirall) → usa ese valor directamente
+     * Si solo hay "Precio Fact." con descuento explícito → calcula: precio_neto = precio_fact × (1 − descuento/100)
+   - NUNCA uses "Precio Fact.", "Precio Unid.", "PVP", "P.V.F." ni ningún precio BRUTO como precio_neto_unitario
+
+4. PRECIO NETO TOTAL:
+   - Usa el valor de la columna "Importe" si existe
+   - Si no hay columna Importe, calcula: precio_neto_total = precio_neto_unitario × cantidad
+
+5. LÍNEAS GRATUITAS ("S/VALOR COMERCIAL", "RAPPEL", "BONIFICACIÓN", expositores, material promocional):
+   - Inclúyelas con precio_neto_unitario = 0, sin_valor_comercial = true, iva_porcentaje = 0
+
+6. IVA:
+   - Detecta el % de IVA real de cada línea (4, 5, 10 o 21)
+   - Si no hay columna IVA explícita: infiere por tipo de producto (medicamentos→4, parafarmacia→21)
+   - Para líneas gratuitas: iva_porcentaje = 0
+
+7. NÚMEROS:
+   - Usa punto "." como separador decimal en el JSON
+   - El documento puede usar coma "," como decimal — conviértela a punto
+
+8. EXCLUYE siempre: subtotales de sección, filas de totales IVA, portes, líneas de cabecera de tabla
+
+EJEMPLO SUAVINEX (columnas: Cod.Mater. | Descripción | Cajas | UDS/Caja | UDS | Precio Fact. | Dcto. | Precio Neto | Importe):
+  157989 | S BIB CON ASAS 150ML SIL +6M NIGHT_DAY | 0 | 0 | 4 | 9,560 | 16,00% | 8,030 | 32,12
+  → cn="157989", cantidad=4, precio_neto_unitario=8.030, precio_neto_total=32.12
+"""
 
 
 def _clean_json(raw: str) -> dict:
@@ -340,6 +369,36 @@ def extract_with_qwen(image_bytes: bytes, ocr_text: str, api_key: str,
     return _clean_json(raw)
 
 
+def extract_with_openai(image_bytes: bytes, ocr_text: str,
+                        api_key: str) -> dict:
+    """Extracción semántica con GPT-4.1-mini (OpenAI)."""
+    try:
+        import openai as _openai
+    except ImportError:
+        raise RuntimeError('openai package not installed')
+
+    client = _openai.OpenAI(api_key=api_key)
+    b64 = base64.b64encode(image_bytes).decode()
+    prompt = _INVOICE_PROMPT
+    if ocr_text:
+        prompt += f'\n\nTexto extraído por OCR (referencia adicional):\n"""\n{ocr_text}\n"""'
+
+    response = client.chat.completions.create(
+        model='gpt-4.1-mini',
+        max_tokens=4096,
+        temperature=0.05,
+        messages=[{
+            'role': 'user',
+            'content': [
+                {'type': 'image_url',
+                 'image_url': {'url': f'data:image/jpeg;base64,{b64}', 'detail': 'high'}},
+                {'type': 'text', 'text': prompt},
+            ],
+        }],
+    )
+    return _clean_json(response.choices[0].message.content)
+
+
 def extract_with_claude(image_bytes: bytes, ocr_text: str,
                         api_key: str, mime: str = 'image/jpeg') -> dict:
     """Fallback: extracción semántica con Claude Haiku."""
@@ -366,12 +425,13 @@ def extract_with_claude(image_bytes: bytes, ocr_text: str,
 def process_invoice(file_bytes: bytes, mime: str,
                     anthropic_key: str,
                     qwen_key: str | None = None,
-                    qwen_endpoint: str | None = None) -> dict:
+                    qwen_endpoint: str | None = None,
+                    openai_key: str | None = None) -> dict:
     """
     Pipeline completo:
       1. OpenCV preprocessing (imágenes) / extracción texto (PDFs)
       2. PaddleOCR (si disponible)
-      3. Qwen2-VL API  →  fallback Claude Haiku
+      3. GPT-4.1-mini (OpenAI)  →  Qwen2-VL  →  fallback Claude Haiku
 
     Devuelve dict con campos de factura + 'pipeline_used' para debug.
     """
@@ -415,12 +475,15 @@ def process_invoice(file_bytes: bytes, mime: str,
     except Exception:
         pass  # nunca bloquea el pipeline principal
 
-    # Semántica: Qwen2-VL o Claude
-    if qwen_key and image_bytes and not (is_pdf and not preprocessed):
+    # Semántica: OpenAI GPT-4.1-mini → Qwen2-VL → Claude Haiku
+    ocr_prefix = 'opencv+' + ('paddleocr+' if _PADDLE_OK and not is_pdf else '')
+
+    if openai_key and image_bytes:
+        result = extract_with_openai(image_bytes, ocr_text, openai_key)
+        result['pipeline_used'] = ocr_prefix + 'gpt-4.1-mini'
+    elif qwen_key and image_bytes and not (is_pdf and not preprocessed):
         result = extract_with_qwen(image_bytes, ocr_text, qwen_key, qwen_endpoint)
-        result['pipeline_used'] = (
-            f"opencv+{'paddleocr+' if _PADDLE_OK and not is_pdf else ''}qwen2-vl"
-        )
+        result['pipeline_used'] = ocr_prefix + 'qwen2-vl'
     elif is_pdf and not preprocessed:
         # PDF sin imagen: mandar PDF binario a Claude (ruta original)
         import anthropic
@@ -443,8 +506,6 @@ def process_invoice(file_bytes: bytes, mime: str,
     else:
         result = extract_with_claude(image_bytes or file_bytes, ocr_text,
                                      anthropic_key, mime)
-        result['pipeline_used'] = (
-            f"opencv+{'paddleocr+' if _PADDLE_OK and not is_pdf else ''}claude-haiku"
-        )
+        result['pipeline_used'] = ocr_prefix + 'claude-haiku'
 
     return result
