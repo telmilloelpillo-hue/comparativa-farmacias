@@ -276,9 +276,10 @@ REGLAS CRÍTICAS — LEE TODAS ANTES DE EXTRAER:
    - Conserva letras, puntos, guiones y prefijos (P00, KL, 221193.3, 221724.T, etc.)
    - NUNCA normalices a 7 dígitos si el documento no los tiene
 
-2. CANTIDAD:
-   - En albaranes con columnas separadas "Cajas | UDS/Caja | UDS": usa el valor de la columna "UDS" como cantidad
-   - Si "Cajas" y "UDS/Caja" son 0 pero "UDS" tiene valor, ese valor UDS es la cantidad correcta
+2. CANTIDAD — COLUMNA UDS:
+   - En albaranes con tres columnas "Cajas | UDS/Caja | UDS": la cantidad es SIEMPRE el valor de "UDS" (la tercera columna, más a la derecha)
+   - Si las tres muestran "0 | 0 | N", la cantidad es N (aunque las dos primeras sean cero)
+   - NUNCA uses "Cajas" ni "UDS/Caja" como cantidad cuando existe columna "UDS" separada
    - Si solo hay una columna de cantidad, usa ese valor
 
 3. PRECIO NETO UNITARIO — REGLA MÁS IMPORTANTE:
@@ -288,10 +289,23 @@ REGLAS CRÍTICAS — LEE TODAS ANTES DE EXTRAER:
      * Si solo hay "Precio Fact." con descuento explícito → calcula: precio_neto = precio_fact × (1 − descuento/100)
    - NUNCA uses "Precio Fact.", "Precio Unid.", "PVP", "P.V.F." ni ningún precio BRUTO como precio_neto_unitario
 
-4. VALIDACIÓN OBLIGATORIA DEL PRECIO (aplica siempre que exista columna "Importe"):
-   - Tras leer precio_neto_unitario, verifica: precio_neto_unitario × cantidad ≈ Importe (tolerancia ±0,05 €)
-   - Si NO coinciden, significa que leíste el precio de la columna equivocada → corrige usando: precio_neto_unitario = Importe ÷ cantidad
-   - Ejemplo de error detectado: si lees 5,69 × 3 = 17,07 pero el Importe es 20,06 → ERROR → corrección: 20,06 ÷ 3 = 6,687 ✓
+4. VALIDACIÓN CRUZADA OBLIGATORIA (aplica siempre que exista columna "Importe"):
+   Tras extraer cada línea verifica: precio_neto_unitario × cantidad ≈ Importe (tolerancia ±0,05 €)
+
+   Si NO coinciden, corrige en este orden:
+   a) Primero intenta corregir la CANTIDAD:
+      cantidad_correcta = redondear(Importe ÷ precio_neto_unitario)
+      Si precio_neto_unitario × cantidad_correcta ≈ Importe → usa cantidad_correcta
+   b) Si a) no resuelve, corrige el PRECIO:
+      precio_neto_unitario = Importe ÷ cantidad
+
+   Ejemplos reales de errores que DEBES detectar y autocorregir:
+   · Leíste cantidad=5, precio=4,167, importe=12,50 → 4,167×5=20,84 ≠ 12,50 → ERROR
+     → cantidad_correcta = redondear(12,50÷4,167) = 3 → 4,167×3=12,50 ✓
+   · Leíste cantidad=1, precio=3,898, importe=23,39 → 3,898×1=3,90 ≠ 23,39 → ERROR
+     → cantidad_correcta = redondear(23,39÷3,898) = 6 → 3,898×6=23,39 ✓
+   · Leíste precio=5,69, cantidad=3, importe=20,06 → 5,69×3=17,07 ≠ 20,06 → ERROR
+     → precio correcto = 20,06÷3 = 6,687 ✓
 
 5. PRECIO NETO TOTAL:
    - Usa el valor de la columna "Importe" si existe
