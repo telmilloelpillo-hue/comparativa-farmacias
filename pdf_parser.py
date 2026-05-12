@@ -146,9 +146,10 @@ def extract_products(pdf_path, on_page=None):
 
                 description = _extract_description(row)
 
-                # Forward: añadir filas de continuación hasta llegar a una fila con
-                # datos de año. Se para en la primera fila que tenga año detectado
-                # (independientemente del contenido textual de la continuación).
+                # Forward scan: añadir filas de continuación antes y después de la
+                # fila de año. Al llegar a la fila de año, seguimos escaneando para
+                # consumir cualquier cola de descripción posterior al año (ej: "LECHE
+                # 100 ML") — así el backward scan del producto siguiente no la recoge.
                 j = i + 1
                 while j < len(sorted_ys):
                     next_row = rows[sorted_ys[j]]
@@ -160,12 +161,30 @@ def extract_products(pdf_path, on_page=None):
                         break
                     next_yr = _year_from_row(next_row)
                     if next_yr is not None:
-                        # Primera fila de datos: puede tener texto de descripción
-                        # en la misma línea (p.ej. "0,12% 250 ML" + "2026 1 0...")
                         tail = _extract_description(next_row)
                         if tail and not re.search(r'[a-z]', tail):
                             description = re.sub(r'  +', ' ',
                                                  (description + ' ' + tail).strip())
+                        j += 1
+                        # Consumir filas de descripción que quedan DESPUÉS del año
+                        # (evita que el backward scan del siguiente producto las recoja)
+                        while j < len(sorted_ys):
+                            post_row = rows[sorted_ys[j]]
+                            post_code_chars = [c for c in post_row if 20 <= c['x0'] < 60]
+                            post_code = ''.join(
+                                c['text'] for c in sorted(post_code_chars, key=lambda c: c['x0'])
+                            ).strip()
+                            if re.match(r'^[0-9A-Z]{6}$', post_code):
+                                break
+                            if _year_from_row(post_row) is not None:
+                                break
+                            post_cont = _extract_description(post_row)
+                            if not post_cont:
+                                break
+                            if not re.search(r'[a-z]', post_cont):
+                                description = re.sub(r'  +', ' ',
+                                                     (description + ' ' + post_cont).strip())
+                            j += 1
                         break
                     continuation = _extract_description(next_row)
                     if not continuation:
@@ -186,25 +205,10 @@ def extract_products(pdf_path, on_page=None):
                     ).strip()
                     if not re.match(r'^[0-9A-Z]{6}$', prev_code):
                         if _year_from_row(prev_row) is None:
-                            # Guard: i-1 is a tail of the previous product only
-                            # if i-2 is a standalone year/data row (year present,
-                            # no product code). If i-2 has a code, i-1 is a
-                            # legitimate description prefix of the current product.
-                            prev_is_tail = False
-                            if i >= 2:
-                                pp_row = rows[sorted_ys[i - 2]]
-                                pp_yr = _year_from_row(pp_row)
-                                pp_code_chars = [c for c in pp_row if 20 <= c['x0'] < 60]
-                                pp_code = ''.join(
-                                    c['text'] for c in sorted(pp_code_chars, key=lambda c: c['x0'])
-                                ).strip()
-                                pp_has_code = bool(re.match(r'^[0-9A-Z]{6}$', pp_code))
-                                prev_is_tail = (pp_yr is not None and not pp_has_code)
-                            if not prev_is_tail:
-                                prev_desc = _extract_description(prev_row)
-                                if prev_desc and not re.search(r'[a-z]', prev_desc):
-                                    description = re.sub(r'  +', ' ',
-                                                         (prev_desc + ' ' + description).strip())
+                            prev_desc = _extract_description(prev_row)
+                            if prev_desc and not re.search(r'[a-z]', prev_desc):
+                                description = re.sub(r'  +', ' ',
+                                                     (prev_desc + ' ' + description).strip())
 
                 zone_letters = [c for c in row
                                 if 200 <= c['x0'] < 255
