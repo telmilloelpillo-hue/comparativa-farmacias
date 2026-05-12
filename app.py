@@ -246,7 +246,7 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
             def cb1(pg, total):
                 upd(5 + (pct_pdf1_end - 5) * pg / total,
                     f'Leyendo ventas — {name1} ({pg}/{total} páginas)')
-            _akey = _get_api_key() if _ai_available() else None
+            _akey = _get_api_key()
             products1 = extract_products(path1, on_page=cb1, anthropic_key=_akey)
 
             # PDF 2
