@@ -178,12 +178,20 @@ def extract_products(pdf_path, on_page=None):
                     ).strip()
                     if not re.match(r'^[0-9A-Z]{6}$', prev_code):
                         if _year_from_row(prev_row) is None:
-                            # Guard: if i-2 has year data, i-1 is a continuation
-                            # tail of the previous product — don't prepend it here.
-                            prev_is_tail = (
-                                i >= 2 and
-                                _year_from_row(rows[sorted_ys[i - 2]]) is not None
-                            )
+                            # Guard: i-1 is a tail of the previous product only
+                            # if i-2 is a standalone year/data row (year present,
+                            # no product code). If i-2 has a code, i-1 is a
+                            # legitimate description prefix of the current product.
+                            prev_is_tail = False
+                            if i >= 2:
+                                pp_row = rows[sorted_ys[i - 2]]
+                                pp_yr = _year_from_row(pp_row)
+                                pp_code_chars = [c for c in pp_row if 20 <= c['x0'] < 60]
+                                pp_code = ''.join(
+                                    c['text'] for c in sorted(pp_code_chars, key=lambda c: c['x0'])
+                                ).strip()
+                                pp_has_code = bool(re.match(r'^[0-9A-Z]{6}$', pp_code))
+                                prev_is_tail = (pp_yr is not None and not pp_has_code)
                             if not prev_is_tail:
                                 prev_desc = _extract_description(prev_row)
                                 if prev_desc and not re.search(r'[a-z]', prev_desc):
