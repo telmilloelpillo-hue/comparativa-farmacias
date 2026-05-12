@@ -423,27 +423,34 @@ class PDFPanel {
     }
 
     async renderPage(pageNum) {
-        const page     = await this.pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: this.scale });
+        const page = await this.pdfDoc.getPage(pageNum);
+        const dpr  = window.devicePixelRatio || 1;
+
+        // CSS viewport (logical pixels) — used for layout and text layer
+        const cssVp = page.getViewport({ scale: this.scale });
+        // Device viewport (physical pixels) — used for canvas rendering
+        const devVp = page.getViewport({ scale: this.scale * dpr });
 
         const wrap = document.createElement('div');
         wrap.className    = 'page-wrap';
         wrap.dataset.page = pageNum;
-        wrap.style.width  = viewport.width  + 'px';
-        wrap.style.height = viewport.height + 'px';
+        wrap.style.width  = cssVp.width  + 'px';
+        wrap.style.height = cssVp.height + 'px';
 
-        // Canvas
+        // Canvas at full device resolution, displayed at CSS size → sharp on Retina
         const canvas = document.createElement('canvas');
-        canvas.width  = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        canvas.width        = devVp.width;
+        canvas.height       = devVp.height;
+        canvas.style.width  = cssVp.width  + 'px';
+        canvas.style.height = cssVp.height + 'px';
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: devVp }).promise;
 
-        // Text layer
+        // Text layer uses CSS viewport so spans align with the displayed canvas
         const tl = document.createElement('div');
         tl.className = 'textLayer';
         try {
             const tc = await page.getTextContent({ includeMarkedContent: false });
-            const rt = PDFJS.renderTextLayer({ textContentSource: tc, container: tl, viewport, textDivs: [] });
+            const rt = PDFJS.renderTextLayer({ textContentSource: tc, container: tl, viewport: cssVp, textDivs: [] });
             await (rt?.promise ?? Promise.resolve(rt));
             tl.querySelectorAll('span').forEach(s => this.spans.push(s));
         } catch (_) { /* skip text layer on error */ }
