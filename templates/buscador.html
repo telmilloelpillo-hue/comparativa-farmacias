@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buscador Documental · {{ lab }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/monogram.svg') }}">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #155A3C;
+      --z:      #C2410C;
+      --b:      #1E3A8A;
+      --border: #e5e7eb;
+      --bg:     #f3f4f6;
+      --text:   #111827;
+      --muted:  #6b7280;
+      --radius: 8px;
+      --bar:    56px;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    /* ── TOOLBAR ── */
+    #toolbar {
+      height: var(--bar);
+      background: white;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+
+    .brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .brand-icon {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 13px; font-weight: 700;
+    }
+    .brand-info { line-height: 1.25; }
+    .brand-name { font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
+    .brand-sub  { font-size: 0.67rem; color: var(--muted); white-space: nowrap; }
+
+    .divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+    /* Search */
+    .search-row { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; max-width: 480px; }
+    .search-box { position: relative; flex: 1; }
+    .search-box svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); }
+    #globalSearch {
+      width: 100%;
+      padding: 7px 10px 7px 30px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8rem;
+      font-family: inherit;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    #globalSearch:focus { border-color: var(--accent); background: white; }
+    #globalSearch::placeholder { color: var(--muted); }
+    #matchInfo { font-size: 0.68rem; color: var(--muted); white-space: nowrap; min-width: 56px; text-align: center; }
+    .nav-pair { display: flex; gap: 2px; }
+    .nav-pair button {
+      width: 24px; height: 24px;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.12s;
+    }
+    .nav-pair button:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Toggles */
+    .toggles { display: flex; gap: 5px; flex-shrink: 0; }
+    .chip {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.7rem; font-weight: 600;
+      color: var(--muted);
+      cursor: pointer; user-select: none;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.on { background: var(--accent); border-color: var(--accent); color: white; }
+    .chip .dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; flex-shrink: 0; }
+    .chip.on .dot { background: currentColor; }
+
+    #diffBadge {
+      font-size: 0.68rem; font-weight: 600;
+      padding: 3px 8px; border-radius: 999px;
+      background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
+      white-space: nowrap; display: none;
+    }
+    #diffBadge.show { display: inline-block; }
+
+    .end-btns { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .btn-close {
+      padding: 5px 11px;
+      border: 1px solid var(--border); background: white;
+      border-radius: var(--radius);
+      font-size: 0.7rem; font-weight: 600; color: var(--muted);
+      cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 5px;
+      transition: all 0.12s;
+    }
+    .btn-close:hover { border-color: #dc2626; color: #dc2626; }
+
+    /* ── GRID 2×2 ── */
+    #grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 7px;
+      padding: 7px;
+      height: calc(100dvh - var(--bar));
+      overflow: hidden;
+    }
+
+    /* ── PANEL ── */
+    .panel {
+      background: white;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .panel-hdr {
+      display: flex; align-items: center;
+      height: 40px; padding: 0 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0; gap: 7px;
+      background: white;
+    }
+    .pdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .pdot-z { background: var(--z); }
+    .pdot-b { background: var(--b); }
+    .ptitle {
+      flex: 1; font-size: 0.73rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pnav { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+    .pinfo { font-size: 0.65rem; color: var(--muted); min-width: 68px; text-align: right; white-space: nowrap; }
+    .pbtn {
+      width: 20px; height: 20px;
+      border: 1px solid var(--border); background: white;
+      border-radius: 4px; cursor: pointer; font-size: 10px;
+      color: var(--muted); display: flex; align-items: center; justify-content: center;
+      transition: all 0.1s;
+    }
+    .pbtn:hover { border-color: var(--accent); color: var(--accent); }
+    .pzoom {
+      font-size: 0.65rem;
+      border: 1px solid var(--border); background: white;
+      border-radius: 4px; padding: 2px 3px;
+      color: var(--muted); cursor: pointer; outline: none; font-family: inherit;
+    }
+
+    /* ── PDF VIEWPORT ── */
+    .pdf-vp {
+      flex: 1; min-height: 0;
+      overflow-y: auto; overflow-x: auto;
+      background: #d4d4d4;
+      padding: 10px;
+      scroll-behavior: smooth;
+    }
+    .page-wrap {
+      position: relative;
+      margin: 0 auto 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      background: white;
+    }
+    .page-wrap:last-child { margin-bottom: 0; }
+    .page-wrap canvas { display: block; }
+
+    /* ── TEXT LAYER (PDF.js) ── */
+    .textLayer {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      line-height: 1;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .textLayer span,
+    .textLayer br {
+      color: transparent;
+      position: absolute;
+      white-space: pre;
+      cursor: default;
+      transform-origin: 0% 0%;
+    }
+    .textLayer mark.hl {
+      color: transparent;
+      background: rgba(253, 224, 71, 0.55);
+      border-radius: 2px;
+    }
+    .textLayer mark.hl-cur {
+      background: rgba(251, 146, 60, 0.65);
+    }
+
+    /* ── STATES ── */
+    .vp-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; gap: 10px;
+      color: var(--muted); font-size: 0.78rem; text-align: center;
+    }
+    .vp-state .sicon { font-size: 1.8rem; }
+    .vp-state p { font-weight: 600; color: var(--text); }
+    .vp-state small { font-size: 0.68rem; color: var(--muted); }
+    .spin {
+      width: 22px; height: 22px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- ══ TOOLBAR ══ -->
+<header id="toolbar">
+  <div class="brand">
+    <div class="brand-icon">B</div>
+    <div class="brand-info">
+      <div class="brand-name">Buscador Documental</div>
+      <div class="brand-sub">{{ lab }} &nbsp;·&nbsp; {{ name1 }} / {{ name2 }}</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="search-row">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="search" id="globalSearch" placeholder="Buscar producto o código…" autocomplete="off" spellcheck="false">
+    </div>
+    <span id="matchInfo"></span>
+    <div class="nav-pair">
+      <button onclick="prevMatch()" title="Anterior (Shift+Enter)">↑</button>
+      <button onclick="nextMatch()" title="Siguiente (Enter)">↓</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="toggles">
+    <div class="chip on" id="chipSync" onclick="toggleSync()">
+      <span class="dot"></span>Sincronizar scroll
+    </div>
+    <div class="chip on" id="chipHL" onclick="toggleHL()">
+      <span class="dot"></span>Resaltar
+    </div>
+    <div class="chip" id="chipDiff" onclick="toggleDiff()">
+      <span class="dot"></span>Solo diferencias
+    </div>
+  </div>
+  <span id="diffBadge"></span>
+
+  <div class="end-btns">
+    <a href="javascript:window.close()" class="btn-close">✕ Cerrar</a>
+  </div>
+</header>
+
+<!-- ══ GRID 2×2 ══ -->
+<main id="grid">
+
+  <!-- Panel 1: Estadísticas name1 (Zarzuelo) -->
+  <div class="panel" id="panel-pdf1">
+    <div class="panel-hdr">
+      <span class="pdot pdot-z"></span>
+      <span class="ptitle">Estadísticas de ventas &mdash; {{ name1 }}</span>
+      <div class="pnav">
+        <span class="pinfo" id="pinfo-pdf1">—</span>
+        <button class="pbtn" onclick="scrollPage('pdf1',-1)" title="Página anterior">&#8249;</button>
+        <button class="pbtn" onclick="scrollPage('pdf1',1)"  title="Página siguiente">&#8250;</button>
+        <select class="pzoom" onchange="setScale('pdf1',+this.value)">
+          <option value="0.75">75%</option>
+          <option value="1" selected>100%</option>
+          <option value="1.25">125%</option>
+          <option value="1.5">150%</option>
+        </select>
+      </div>
+    </div>
+    <div class="pdf-vp" id="vp-pdf1"></div>
+  </div>
+
+  <!-- Panel 2: Estadísticas name2 (Barris) -->
+  <div class="panel" id="panel-pdf2">
+    <div class="panel-hdr">
+      <span class="pdot pdot-b"></span>
+      <span class="ptitle">Estadísticas de ventas &mdash; {{ name2 }}</span>
+      <div class="pnav">
+        <span class="pinfo" id="pinfo-pdf2">—</span>
+        <button class="pbtn" onclick="scrollPage('pdf2',-1)">&#8249;</button>
+        <button class="pbtn" onclick="scrollPage('pdf2',1)">&#8250;</button>
+        <select class="pzoom" onchange="setScale('pdf2',+this.value)">
+          <option value="0.75">75%</option>
+          <option value="1" selected>100%</option>
+          <option value="1.25">125%</option>
+          <option value="1.5">150%</option>
+        </select>
+      </div>
+    </div>
+    <div class="pdf-vp" id="vp-pdf2"></div>
+  </div>
+
+  <!-- Panel 3: Informe name1 (Zarzuelo) -->
+  <div class="panel" id="panel-sit1">
+    <div class="panel-hdr">
+      <span class="pdot pdot-z"></span>
+      <span class="ptitle">Informe de situación &mdash; {{ name1 }}</span>
+      <div class="pnav">
+        <span class="pinfo" id="pinfo-sit1">—</span>
+        <button class="pbtn" onclick="scrollPage('sit1',-1)">&#8249;</button>
+        <button class="pbtn" onclick="scrollPage('sit1',1)">&#8250;</button>
+        <select class="pzoom" onchange="setScale('sit1',+this.value)">
+          <option value="0.75">75%</option>
+          <option value="1" selected>100%</option>
+          <option value="1.25">125%</option>
+          <option value="1.5">150%</option>
+        </select>
+      </div>
+    </div>
+    <div class="pdf-vp" id="vp-sit1"></div>
+  </div>
+
+  <!-- Panel 4: Informe name2 (Barris) -->
+  <div class="panel" id="panel-sit2">
+    <div class="panel-hdr">
+      <span class="pdot pdot-b"></span>
+      <span class="ptitle">Informe de situación &mdash; {{ name2 }}</span>
+      <div class="pnav">
+        <span class="pinfo" id="pinfo-sit2">—</span>
+        <button class="pbtn" onclick="scrollPage('sit2',-1)">&#8249;</button>
+        <button class="pbtn" onclick="scrollPage('sit2',1)">&#8250;</button>
+        <select class="pzoom" onchange="setScale('sit2',+this.value)">
+          <option value="0.75">75%</option>
+          <option value="1" selected>100%</option>
+          <option value="1.25">125%</option>
+          <option value="1.5">150%</option>
+        </select>
+      </div>
+    </div>
+    <div class="pdf-vp" id="vp-sit2"></div>
+  </div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+'use strict';
+
+// ── Config ───────────────────────────────────────────────────────────────────
+const PDFJS = window.pdfjsLib;
+PDFJS.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const TOKEN      = '{{ comp_token }}';
+const AVAILABLE  = {{ available | tojson }};
+const DIFF_CODES = {{ diff_codes | tojson }};
+
+// ── Global state ─────────────────────────────────────────────────────────────
+let syncOn   = true;
+let hlOn     = true;
+let diffOn   = false;
+let diffIdx  = 0;
+let allMarks = [];   // all <mark> elements across all panels, in DOM order
+let curMark  = -1;
+let searchTm = null;
+
+// ── PDFPanel ─────────────────────────────────────────────────────────────────
+class PDFPanel {
+    constructor(id) {
+        this.id     = id;
+        this.pdfDoc = null;
+        this.pages  = 0;
+        this.scale  = 1.0;
+        this.spans  = [];   // all text-layer spans
+        this.marked = [];   // spans currently highlighted
+        this.vp     = document.getElementById('vp-' + id);
+        this.pinfo  = document.getElementById('pinfo-' + id);
+    }
+
+    async load(url) {
+        this.showState('<div class="spin"></div><p>Cargando…</p>');
+        try {
+            const task  = PDFJS.getDocument({ url, withCredentials: true });
+            this.pdfDoc = await task.promise;
+            this.pages  = this.pdfDoc.numPages;
+            this.vp.innerHTML = '';
+            for (let p = 1; p <= this.pages; p++) await this.renderPage(p);
+            this._setupObserver();
+        } catch (err) {
+            this.showState('<span class="sicon">⚠</span><p>Error al cargar</p><small>' + (err.message || '') + '</small>');
+        }
+    }
+
+    async renderPage(pageNum) {
+        const page     = await this.pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: this.scale });
+
+        const wrap = document.createElement('div');
+        wrap.className    = 'page-wrap';
+        wrap.dataset.page = pageNum;
+        wrap.style.width  = viewport.width  + 'px';
+        wrap.style.height = viewport.height + 'px';
+
+        // Canvas
+        const canvas = document.createElement('canvas');
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+        // Text layer
+        const tl = document.createElement('div');
+        tl.className = 'textLayer';
+        try {
+            const tc = await page.getTextContent({ includeMarkedContent: false });
+            const rt = PDFJS.renderTextLayer({ textContentSource: tc, container: tl, viewport, textDivs: [] });
+            await (rt?.promise ?? Promise.resolve(rt));
+            tl.querySelectorAll('span').forEach(s => this.spans.push(s));
+        } catch (_) { /* skip text layer on error */ }
+
+        wrap.appendChild(canvas);
+        wrap.appendChild(tl);
+        this.vp.appendChild(wrap);
+    }
+
+    _setupObserver() {
+        const obs = new IntersectionObserver(entries => {
+            for (const e of entries) {
+                if (e.isIntersecting) this._setPageInfo(+e.target.dataset.page);
+            }
+        }, { root: this.vp, threshold: 0.3 });
+        this.vp.querySelectorAll('.page-wrap').forEach(w => obs.observe(w));
+        this._setPageInfo(1);
+    }
+
+    _setPageInfo(p) {
+        if (this.pinfo) this.pinfo.textContent = 'Pág. ' + p + ' de ' + this.pages;
+    }
+
+    showState(html) {
+        this.vp.innerHTML = '<div class="vp-state">' + html + '</div>';
+    }
+
+    // Returns array of <mark> elements created
+    search(query) {
+        this.clearHighlights();
+        if (!query) return [];
+        const q   = query.toLowerCase();
+        const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rx  = new RegExp(esc, 'gi');
+        const hits = [];
+
+        for (const span of this.spans) {
+            const orig = span.dataset.orig ?? span.textContent;
+            if (orig.toLowerCase().includes(q)) {
+                if (!span.dataset.orig) span.dataset.orig = orig;
+                span.innerHTML = orig.replace(rx, m => '<mark class="hl">' + m + '</mark>');
+                this.marked.push(span);
+                span.querySelectorAll('mark.hl').forEach(m => hits.push(m));
+            }
+        }
+        return hits;
+    }
+
+    clearHighlights() {
+        this.marked.forEach(s => { if (s.dataset.orig !== undefined) s.textContent = s.dataset.orig; });
+        this.marked = [];
+    }
+
+    async rerender(query) {
+        if (!this.pdfDoc) return;
+        this.vp.innerHTML = '';
+        this.spans  = [];
+        this.marked = [];
+        this.showState('<div class="spin"></div><p>Aplicando zoom…</p>');
+        this.vp.innerHTML = '';
+        for (let p = 1; p <= this.pages; p++) await this.renderPage(p);
+        this._setupObserver();
+        if (query) return this.search(query);
+        return [];
+    }
+}
+
+// ── Instances ─────────────────────────────────────────────────────────────────
+const PANELS = {
+    pdf1: new PDFPanel('pdf1'),
+    pdf2: new PDFPanel('pdf2'),
+    sit1: new PDFPanel('sit1'),
+    sit2: new PDFPanel('sit2'),
+};
+
+(async () => {
+    const loads = [];
+    for (const [id, panel] of Object.entries(PANELS)) {
+        if (AVAILABLE[id]) {
+            loads.push(panel.load('/buscador_pdf/' + TOKEN + '/' + id));
+        } else {
+            panel.showState('<span class="sicon">📄</span><p>No cargado</p><small>Este informe no fue subido</small>');
+        }
+    }
+    await Promise.allSettled(loads);
+})();
+
+// ── Search ────────────────────────────────────────────────────────────────────
+const searchEl   = document.getElementById('globalSearch');
+const matchInfoEl = document.getElementById('matchInfo');
+
+searchEl.addEventListener('input', () => {
+    clearTimeout(searchTm);
+    searchTm = setTimeout(() => doSearch(searchEl.value.trim()), 260);
+});
+
+searchEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); e.shiftKey ? prevMatch() : nextMatch(); }
+    if (e.key === 'Escape') { searchEl.value = ''; doSearch(''); }
+});
+
+function doSearch(query) {
+    allMarks = [];
+    curMark  = -1;
+    for (const panel of Object.values(PANELS)) {
+        if (!AVAILABLE[panel.id]) continue;
+        panel.search(query).forEach(m => allMarks.push(m));
+    }
+    _updateMatchInfo();
+    if (allMarks.length) { curMark = 0; _highlightCurrent(); }
+}
+
+function _updateMatchInfo() {
+    matchInfoEl.textContent = allMarks.length ? (curMark + 1) + ' / ' + allMarks.length : '';
+}
+
+function _highlightCurrent() {
+    allMarks.forEach(m => m.classList.remove('hl-cur'));
+    if (curMark >= 0 && allMarks[curMark]) {
+        allMarks[curMark].classList.add('hl-cur');
+        allMarks[curMark].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
+    _updateMatchInfo();
+}
+
+function nextMatch() {
+    if (diffOn && DIFF_CODES.length) { diffIdx = (diffIdx + 1) % DIFF_CODES.length; _searchDiffCode(); return; }
+    if (!allMarks.length) return;
+    curMark = (curMark + 1) % allMarks.length;
+    _highlightCurrent();
+}
+
+function prevMatch() {
+    if (diffOn && DIFF_CODES.length) { diffIdx = (diffIdx - 1 + DIFF_CODES.length) % DIFF_CODES.length; _searchDiffCode(); return; }
+    if (!allMarks.length) return;
+    curMark = (curMark - 1 + allMarks.length) % allMarks.length;
+    _highlightCurrent();
+}
+
+// ── Solo diferencias ──────────────────────────────────────────────────────────
+const diffBadge = document.getElementById('diffBadge');
+
+function toggleDiff() {
+    diffOn = !diffOn;
+    document.getElementById('chipDiff').classList.toggle('on', diffOn);
+    if (diffOn && DIFF_CODES.length) {
+        diffIdx = 0;
+        _searchDiffCode();
+    } else {
+        diffBadge.classList.remove('show');
+        if (!diffOn) { searchEl.value = ''; doSearch(''); }
+    }
+}
+
+function _searchDiffCode() {
+    const code = DIFF_CODES[diffIdx] || '';
+    searchEl.value = code;
+    doSearch(code);
+    diffBadge.textContent  = 'Diferencia ' + (diffIdx + 1) + ' de ' + DIFF_CODES.length;
+    diffBadge.classList.add('show');
+}
+
+// ── Scroll sync ───────────────────────────────────────────────────────────────
+[['pdf1','pdf2'], ['sit1','sit2']].forEach(([a, b]) => {
+    const vpA = document.getElementById('vp-' + a);
+    const vpB = document.getElementById('vp-' + b);
+    if (!vpA || !vpB) return;
+    let lock = false;
+
+    vpA.addEventListener('scroll', () => {
+        if (!syncOn || lock) return;
+        lock = true;
+        const r = vpA.scrollTop / Math.max(1, vpA.scrollHeight - vpA.clientHeight);
+        vpB.scrollTop = r * Math.max(1, vpB.scrollHeight - vpB.clientHeight);
+        requestAnimationFrame(() => { lock = false; });
+    });
+    vpB.addEventListener('scroll', () => {
+        if (!syncOn || lock) return;
+        lock = true;
+        const r = vpB.scrollTop / Math.max(1, vpB.scrollHeight - vpB.clientHeight);
+        vpA.scrollTop = r * Math.max(1, vpA.scrollHeight - vpA.clientHeight);
+        requestAnimationFrame(() => { lock = false; });
+    });
+});
+
+// ── Toggles ───────────────────────────────────────────────────────────────────
+function toggleSync() {
+    syncOn = !syncOn;
+    document.getElementById('chipSync').classList.toggle('on', syncOn);
+}
+
+function toggleHL() {
+    hlOn = !hlOn;
+    document.getElementById('chipHL').classList.toggle('on', hlOn);
+    document.querySelectorAll('.textLayer').forEach(l => { l.style.visibility = hlOn ? '' : 'hidden'; });
+    if (hlOn) doSearch(searchEl.value.trim());
+}
+
+// ── Page nav ──────────────────────────────────────────────────────────────────
+function scrollPage(id, dir) {
+    const vp = document.getElementById('vp-' + id);
+    if (!vp) return;
+    const wrappers = [...vp.querySelectorAll('.page-wrap')];
+    if (!wrappers.length) return;
+    const vpRect = vp.getBoundingClientRect();
+    let cur = 0;
+    wrappers.forEach((w, i) => {
+        if (w.getBoundingClientRect().top < vpRect.top + vpRect.height * 0.5) cur = i;
+    });
+    const target = Math.max(0, Math.min(wrappers.length - 1, cur + dir));
+    wrappers[target].scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Zoom (re-render) ──────────────────────────────────────────────────────────
+async function setScale(id, scale) {
+    const panel = PANELS[id];
+    if (!panel || !panel.pdfDoc) return;
+    panel.scale = scale;
+    const query = searchEl.value.trim();
+    const newMarks = await panel.rerender(query);
+    // Rebuild allMarks preserving order of panels
+    allMarks = [];
+    for (const p of Object.values(PANELS)) {
+        if (!AVAILABLE[p.id]) continue;
+        p.vp.querySelectorAll('mark.hl').forEach(m => allMarks.push(m));
+    }
+    curMark = allMarks.length ? 0 : -1;
+    if (curMark === 0) _highlightCurrent();
+    _updateMatchInfo();
+}
+</script>
+</body>
+</html>

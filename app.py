@@ -187,6 +187,11 @@ def comparar():
             if os.path.exists(p):
                 try: os.unlink(p)
                 except OSError: pass
+        for _w in ('pdf1', 'pdf2', 'sit1', 'sit2'):
+            p = os.path.join(tempfile.gettempdir(), f'buscador_{old_token}_{_w}.pdf')
+            if os.path.exists(p):
+                try: os.unlink(p)
+                except OSError: pass
 
     job_token = str(uuid.uuid4())
     _progress_store[job_token] = {
@@ -310,6 +315,15 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
                     'has_sit2':     has_sit2,
                     'current_year': datetime.now().year,
                 }, f, ensure_ascii=False)
+
+            import shutil as _shutil
+            for _which, _src in [('pdf1', path1), ('pdf2', path2),
+                                  ('sit1', path_sit1), ('sit2', path_sit2)]:
+                if _src and os.path.exists(_src):
+                    _dst = os.path.join(tempfile.gettempdir(),
+                                        f'buscador_{comp_token}_{_which}.pdf')
+                    try: _shutil.copy2(_src, _dst)
+                    except OSError: pass
 
             store['comp_token'] = comp_token
             store['lab_slug']   = lab_slug
@@ -1611,6 +1625,50 @@ def _generate_pedido_pdf(rows, output_path, lab, name1, name2):
     story.append(table)
 
     doc.build(story)
+
+
+@app.route('/buscador')
+def buscador():
+    token = session.get('comp_token')
+    if not token:
+        return redirect(url_for('index'))
+    json_path = os.path.join(tempfile.gettempdir(), f'comp_{token}.json')
+    if not os.path.exists(json_path):
+        return redirect(url_for('index'))
+    with open(json_path, encoding='utf-8') as f:
+        data = json.load(f)
+    available = {w: os.path.exists(
+        os.path.join(tempfile.gettempdir(), f'buscador_{token}_{w}.pdf')
+    ) for w in ('pdf1', 'pdf2', 'sit1', 'sit2')}
+    def _num(v):
+        try: return float(v or 0)
+        except: return 0
+    diff_codes = [
+        r['code'] for r in data.get('results', [])
+        if r.get('status') != 'both'
+        or _num(r.get('stock1')) != _num(r.get('stock2'))
+        or abs(_num(r.get('total1')) - _num(r.get('total2'))) > 10
+    ]
+    return render_template('buscador.html',
+                           comp_token=token,
+                           available=available,
+                           diff_codes=diff_codes,
+                           name1=data.get('name1', 'Farmacia 1'),
+                           name2=data.get('name2', 'Farmacia 2'),
+                           lab=data.get('lab', ''))
+
+
+@app.route('/buscador_pdf/<token>/<which>')
+def buscador_pdf(token, which):
+    import re as _re2
+    if not _re2.match(r'^[0-9a-f-]{36}$', token):
+        return '', 400
+    if which not in ('pdf1', 'pdf2', 'sit1', 'sit2'):
+        return '', 400
+    pdf_path = os.path.join(tempfile.gettempdir(), f'buscador_{token}_{which}.pdf')
+    if not os.path.exists(pdf_path):
+        return '', 404
+    return send_file(pdf_path, mimetype='application/pdf', conditional=True)
 
 
 if __name__ == '__main__':
