@@ -48,6 +48,14 @@ def _month_value(row_chars, target_x, window=6):
     return int(''.join(digits)) if digits else 0
 
 
+def _read_total_col(row_chars, window=8):
+    """Lee el valor de la columna Total (x ≈ TOTAL_X)."""
+    digits = [c['text'] for c in sorted(row_chars, key=lambda c: c['x0'])
+              if c['text'].isdigit()
+              and (TOTAL_X - window) <= c['x0'] <= (TOTAL_X + window)]
+    return int(''.join(digits)) if digits else None
+
+
 def _year_from_row(row_chars):
     zone = sorted(
         [c for c in row_chars if YEAR_X0 - 1 <= c['x0'] <= YEAR_X1 + 1],
@@ -213,6 +221,9 @@ def extract_products(pdf_path, on_page=None):
                 months_current = [0] * 12
                 months_prev    = [0] * 12
 
+                # Leer columna Total del PDF desde la fila del código
+                total_pdf = _read_total_col(row)
+
                 if not is_pattern_a:
                     months_current = [_month_value(row, mx) for mx in MONTH_X]
                 elif yr_this_row == year_current:
@@ -238,8 +249,15 @@ def extract_products(pdf_path, on_page=None):
                         months_current = months2
                         stock = _digits_at(row2, STOCK_X)
                         smin  = _digits_at(row2, SMIN_X)
+                        total_pdf_row2 = _read_total_col(row2)
+                        if total_pdf_row2 is not None:
+                            total_pdf = total_pdf_row2
                     elif yr2 == year_prev:
                         months_prev = months2
+
+                # Verificación 2: mes individual imposible (≥ 1000 → casi seguro año leído como mes)
+                if any(m >= 1000 for m in months_current):
+                    months_current = [m if m < 1000 else 0 for m in months_current]
 
                 total_current = sum(months_current)
                 total_prev    = sum(months_prev)
@@ -258,6 +276,14 @@ def extract_products(pdf_path, on_page=None):
                 if smin > 9999:
                     warnings.append(f'smin_sospechoso:{smin}')
                     smin = None
+
+                # Verificación 1: Total columna PDF vs suma de meses calculada
+                if total_pdf is not None and total_pdf > 0:
+                    discrepancy = abs(total_pdf - total_current)
+                    if discrepancy > max(2, total_pdf * 0.05):
+                        warnings.append(
+                            f'total_discrepancia:pdf={total_pdf},calc={total_current}'
+                        )
 
                 products[code] = {
                     'code':           code,
@@ -430,6 +456,15 @@ def calculate_pedido(product):
 
 # ─── Comparación ──────────────────────────────────────────────────────────────
 
+def _desc_similarity(a, b):
+    """Ratio de palabras comunes sobre el máximo de las dos listas."""
+    if not a or not b:
+        return 1.0
+    wa = set(a.upper().split())
+    wb = set(b.upper().split())
+    return len(wa & wb) / max(len(wa), len(wb))
+
+
 def compare_products(products1, products2,
                      name1='Farmacia 1', name2='Farmacia 2',
                      situation1=None, situation2=None):
@@ -476,7 +511,13 @@ def compare_products(products1, products2,
 
         if p1 and p2:
             status = 'both'
-            description = p1['description'] or p2['description']
+            d1, d2 = p1['description'], p2['description']
+            sim = _desc_similarity(d1, d2)
+            if sim < 0.5 and d1 and d2:
+                # Descripciones divergentes — tomar la más larga y marcar
+                description = d1 if len(d1) >= len(d2) else d2
+            else:
+                description = d1 or d2
         elif p1:
             status = 'only1'
             description = p1['description']
@@ -497,6 +538,10 @@ def compare_products(products1, products2,
             continue
 
         warnings = []
+        if p1 and p2:
+            d1, d2 = p1['description'], p2['description']
+            if _desc_similarity(d1, d2) < 0.5 and d1 and d2:
+                warnings.append(f'desc_inconsistente:{d1[:30]}|{d2[:30]}')
         if p1 and p1.get('warnings'):
             warnings += [f'{name1}:{w}' for w in p1['warnings']]
         if p2 and p2.get('warnings'):

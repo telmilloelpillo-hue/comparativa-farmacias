@@ -226,6 +226,13 @@
     tbody tr:nth-child(even) td.sticky-col-2 { background: #f8fafc; }
 
     tbody tr.data-row td { transition: background-color 0.18s ease; }
+    tbody tr.row-warn td { background: var(--warn) !important; }
+    tbody tr.row-warn td.sticky-col,
+    tbody tr.row-warn td.sticky-col-2 { background: var(--warn) !important; }
+    .warn-badge {
+      cursor: help; color: #b45309; font-size: 0.75rem;
+      margin-left: 3px; vertical-align: middle;
+    }
     tbody tr.row-selected td { background-color: #e8f5e9 !important; }
     tbody tr.row-selected td.sticky-col,
     tbody tr.row-selected td.sticky-col-2 { background-color: #e8f5e9 !important; }
@@ -907,6 +914,12 @@
     {% set p2_base = p1_ped + 1 %}
     {% set p2_ped  = p2_base + 4 + (1 if has_sit else 0) %}
 
+    {% set n_review = results | selectattr('needs_review') | list | length %}
+    {% if n_review > 0 %}
+    <p style="margin:0 0 6px;font-size:0.8rem;color:#92400e;background:#fef9c3;padding:4px 10px;border-radius:4px;border:1px solid #fcd34d">
+      &#9888; <strong>{{ n_review }} producto{{ 's' if n_review != 1 }}</strong> con datos cuestionables — pasa el cursor sobre &#9888; para ver el motivo.
+    </p>
+    {% endif %}
     <table id="mainTable">
       <thead>
         <tr>
@@ -951,7 +964,7 @@
             onclick="openPanel({{ loop.index0 }})">
 
           <td class="td-code sticky-col">{{ r.code }}</td>
-          <td class="td-desc sticky-col-2">{{ r.description }}{% if r.needs_review %} <span style="color:#b45309;font-size:0.7rem">&#9888;</span>{% endif %}</td>
+          <td class="td-desc sticky-col-2">{{ r.description }}{% if r.needs_review %} <span class="warn-badge" title="{{ r.warnings | join(' · ') }}">&#9888;</span>{% endif %}</td>
 
           <!-- F1 -->
           <td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ r.stock1 if r.status != 'only2' else '—' }}</td>
