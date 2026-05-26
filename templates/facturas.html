@@ -230,6 +230,32 @@
       #resizeHandle { display: none !important; }
     }
   </style>
+    <!-- Barcode scanner: ZXing-js (WebAssembly, sin dependencias npm) -->
+    <script src="https://unpkg.com/@zxing/browser@0.1.1/umd/index.min.js"></script>
+    <script src="{{ url_for('static', filename='js/barcode_scanner.js') }}" defer></script>
+    <style>
+      /* ── Tabs escanear / subir ── */
+      .scan-tabs { display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 16px; }
+      .scan-tab  { padding: 8px 18px; cursor: pointer; border-radius: 4px 4px 0 0;
+                   font-size: 13px; color: #666; border: none; background: none; font-family: inherit; }
+      .scan-tab.active { background: #4a90d9; color: #fff; font-weight: 600; }
+      .scan-tab:hover:not(.active) { background: #f0f0f0; }
+
+      /* ── Visor de cámara ── */
+      #scannerPanel { display: none; }
+      #scannerPanel.visible { display: block; }
+      #cameraView { width: 100%; max-height: 220px; border-radius: 8px;
+                    background: #111; object-fit: cover; display: block; }
+      .camera-guide { text-align: center; font-size: 11px; color: #888; margin: 4px 0 8px; }
+
+      /* ── Badge de proveedor ── */
+      #providerBadge { display: none; padding: 6px 12px; border-radius: 4px;
+                       font-size: 12px; margin-top: 8px; }
+      #providerBadge.hefame { background: #e8f4fd; border: 1px solid #4a90d9; color: #1a5fa8; display: block; }
+      #providerBadge.bida   { background: #e8fde8; border: 1px solid #2ecc71; color: #1a7a3a; display: block; }
+      #providerBadge.unknown{ background: #fff8e6; border: 1px solid #f0c040; color: #856404; display: block; }
+      #providerBadge.error  { background: #fdeaea; border: 1px solid #e74c3c; color: #a61c00; display: block; }
+    </style>
 </head>
 <body>
 <div class="app-shell">
@@ -279,6 +305,39 @@
           <div style="font-size:11px;color:var(--fg-muted);margin-top:3px">PDF, JPG, PNG o WEBP · máx 20 MB</div>
         </div>
         <div style="padding:20px">
+          <!-- ── Tabs: Escanear / Subir ─────────────────────────────── -->
+          <div class="scan-tabs">
+            <button class="scan-tab active" id="tabScan" onclick="switchTab('scan')">
+              📷 Escanear albarán
+            </button>
+            <button class="scan-tab" id="tabUpload" onclick="switchTab('upload')">
+              📄 Subir factura
+            </button>
+          </div>
+
+          <!-- ── Panel: Escanear ───────────────────────────────────── -->
+          <div id="scannerPanel" class="visible">
+            <video id="cameraView" autoplay muted playsinline></video>
+            <p class="camera-guide">Apunta al código de barras del albarán</p>
+
+            <div id="providerBadge"></div>
+
+            <div style="display:flex; gap:8px; margin-top:10px; align-items:center">
+              <input type="text" id="manualBarcode" placeholder="Nº albarán manual..."
+                     style="flex:1; padding:7px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px">
+              <button id="btnFetchManual"
+                      style="padding:7px 14px; background:#4a90d9; color:#fff; border:none;
+                             border-radius:5px; cursor:pointer; font-size:13px">
+                Buscar
+              </button>
+            </div>
+            <p style="font-size:11px;color:#aaa;margin:6px 0 0">
+              Si la cámara no lee el código, introdúcelo manualmente.
+            </p>
+          </div>
+
+          <!-- ── Panel: Subir (contenido existente) ───────────────── -->
+          <div id="uploadPanel" style="display:none">
           <div class="drop-zone" id="dropZone">
             <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp">
             <div class="drop-icon" id="dropIcon">📄</div>
@@ -319,6 +378,7 @@
             Analizando factura con IA…
           </div>
           <button class="btn-analyze" id="btnAnalyze" disabled>Analizar factura</button>
+          </div><!-- /#uploadPanel -->
         </div>
       </div>
     </section>
@@ -884,6 +944,116 @@ document.getElementById('ctrlRedondeo').addEventListener('change', () => {
     showResults(session.data, session.lineas, session.provKey, session.redondeo);
   } catch(e) { sessionStorage.removeItem(SESSION_KEY); }
 })();
+</script>
+
+<script>
+// ── Tab switcher ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const isScan = tab === 'scan';
+  document.getElementById('tabScan').classList.toggle('active', isScan);
+  document.getElementById('tabUpload').classList.toggle('active', !isScan);
+  document.getElementById('scannerPanel').classList.toggle('visible', isScan);
+  document.getElementById('uploadPanel').style.display = isScan ? 'none' : '';
+  if (isScan) {
+    _startScanner();
+  } else {
+    if (typeof BarcodeScanner !== 'undefined') BarcodeScanner.stopCamera();
+  }
+}
+
+// ── Cámara ────────────────────────────────────────────────────────────────────
+function _startScanner() {
+  if (typeof BarcodeScanner === 'undefined') {
+    _setBadge('error', '⚠ El scanner no se pudo cargar. Usa el input manual.');
+    return;
+  }
+  const video = document.getElementById('cameraView');
+  BarcodeScanner.startCamera(video, _onBarcodeDetected).catch(err => {
+    _setBadge('error', '⚠ ' + err.message);
+  });
+}
+
+function _onBarcodeDetected(numero) {
+  document.getElementById('manualBarcode').value = numero;
+  _fetchAlbaran(numero);
+}
+
+// ── Fetch albarán ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btnFetchManual').addEventListener('click', function() {
+    const numero = document.getElementById('manualBarcode').value.trim();
+    if (numero) _fetchAlbaran(numero);
+  });
+
+  document.getElementById('manualBarcode').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      const numero = this.value.trim();
+      if (numero) _fetchAlbaran(numero);
+    }
+  });
+
+  // Arrancar cámara al cargar
+  if (document.getElementById('tabScan').classList.contains('active')) {
+    _startScanner();
+  }
+
+  // Intentar decodificar barcode al subir foto en tab Upload (sin interrumpir el OCR)
+  const origFileInput = document.getElementById('fileInput');
+  if (origFileInput) {
+    origFileInput.addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file || typeof BarcodeScanner === 'undefined') return;
+      try {
+        const numero = await BarcodeScanner.decodeFromFile(file);
+        document.getElementById('manualBarcode').value = numero;
+        // No fetch automático — el usuario puede revisar el número primero
+      } catch (_) {
+        // Sin código de barras → continuar con OCR normal, sin interrumpir
+      }
+    });
+  }
+});
+
+async function _fetchAlbaran(numero) {
+  _setBadge('', '⏳ Buscando albarán ' + numero + '...');
+
+  let data;
+  try {
+    const resp = await fetch('/fetch_albaran', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numero }),
+    });
+    data = await resp.json();
+  } catch (err) {
+    _setBadge('error', '✗ Error de red: ' + err.message);
+    return;
+  }
+
+  if (data.error) {
+    _setBadge('error', '✗ ' + data.error);
+    return;
+  }
+
+  if (data.fallback === 'ocr') {
+    _setBadge('unknown', '⚠ Lab externo — sube la foto para procesar con OCR');
+    return;
+  }
+
+  // Datos del portal → rellenar tabla usando la función existente
+  const proveedor = data.proveedor || 'hefame';
+  _setBadge(proveedor, '✓ Albarán ' + numero + ' cargado desde portal');
+
+  showResults(data);
+}
+
+// ── Badge de proveedor ────────────────────────────────────────────────────────
+function _setBadge(cls, text) {
+  const badge = document.getElementById('providerBadge');
+  badge.className = '';
+  badge.textContent = text;
+  if (cls) badge.classList.add(cls);
+}
 </script>
 </body>
 </html>
