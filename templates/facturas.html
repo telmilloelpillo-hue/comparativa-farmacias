@@ -290,8 +290,9 @@
         margin-bottom: 8px; line-height: 1.35; color: var(--fg-1);
       }
 
-      /* Fila inferior: Cant. | IVA | PVP (ocultar CN y P.Neto) */
+      /* Fila inferior: Cant. | P.Neto | IVA | PVP */
       table.result-tbl tbody tr td:nth-child(3), /* Cant. */
+      table.result-tbl tbody tr td:nth-child(4), /* P.Neto Unit. */
       table.result-tbl tbody tr td:nth-child(5), /* IVA select */
       table.result-tbl tbody tr td:nth-child(6)  /* PVP */ {
         display: inline-flex !important;
@@ -301,6 +302,15 @@
       /* Etiqueta "×N" para cantidad */
       table.result-tbl tbody tr td:nth-child(3)::before {
         content: "×"; color: var(--fg-muted); margin-right: 3px; font-size: 11px;
+      }
+      /* Etiqueta "Neto:" antes del precio */
+      table.result-tbl tbody tr td:nth-child(4) {
+        font-size: 11px; color: var(--fg-muted);
+      }
+      table.result-tbl tbody tr td:nth-child(4)::before {
+        content: "Neto "; font-size: 10px; color: var(--fg-muted);
+        margin-right: 2px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.03em;
       }
 
       /* PVP input más cómodo al tacto */
