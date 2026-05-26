@@ -586,6 +586,7 @@
 // ── ESTADO ────────────────────────────────────────────────────────────────────
 let _proveedores = {};
 let _lineas = [];
+let _invoiceMeta = {};   // laboratorio, numero_factura, fecha
 let _selectedFile = null;
 let _previewURL = null;
 let _previewMime = '';
@@ -721,6 +722,11 @@ function clearSession() { sessionStorage.removeItem(SESSION_KEY); }
 // ── SHOW RESULTS ──────────────────────────────────────────────────────────────
 function showResults(data, savedLineas, provKey, redondeo) {
   _proveedores = data.proveedores || {};
+  _invoiceMeta = {
+    laboratorio:    data.proveedor      || '',
+    numero_factura: data.numero_factura || '',
+    fecha:          data.fecha          || '',
+  };
 
   if (savedLineas) {
     _lineas = savedLineas;
@@ -778,18 +784,90 @@ document.getElementById('btnNueva').addEventListener('click', () => {
 document.getElementById('btnExport').addEventListener('click', () => {
   const provKey  = document.getElementById('ctrlProveedor').value;
   const redondeo = document.getElementById('ctrlRedondeo').value;
-  const rows = [['CN', 'Descripción', 'Cantidad', 'Precio Neto Unitario', 'IVA', 'PVP']];
+  const provNombre = _proveedores[provKey]?.nombre || provKey;
+  const redondeoLabel = { ninguno: 'Sin redondeo', fin9550: 'Fin en ,95/,50', fin95: 'Fin en ,95', fin90: 'Fin en ,90' }[redondeo] || redondeo;
+  const n2  = v => Number(v).toFixed(2).replace('.', ',');  // formato español sin símbolo €
+  const eur = v => n2(v) + ' €';
+
+  const rows = [];
+
+  // ── 1. Cabecera del documento ──────────────────────────────────────────────
+  rows.push(['ALBARÁN / FACTURA']);
+  rows.push(['Laboratorio',          _invoiceMeta.laboratorio    || '—']);
+  rows.push(['Nº Albarán / Factura', _invoiceMeta.numero_factura || '—']);
+  rows.push(['Fecha',                _invoiceMeta.fecha          || '—']);
+  rows.push(['Tipo proveedor',       provNombre]);
+  rows.push(['Redondeo PVP',         redondeoLabel]);
+  rows.push([]);
+
+  // ── 2. Cabecera de columnas ────────────────────────────────────────────────
+  rows.push(['CN', 'Descripción', 'Cantidad', 'P. Neto Unit.', 'P. Neto Total', 'IVA', 'PVP Unit.', 'PVP Total', 'PVP Manual']);
+
+  // ── 3. Líneas de producto ──────────────────────────────────────────────────
+  const ivaGroups = {};   // { pct: { base: 0, cuota: 0 } }
+  let totalNeto = 0, totalPVP = 0;
+
   _lineas.forEach(l => {
-    const ivaKey   = l.ivaKey || defaultIvaKey(l.iva_porcentaje);
-    const pvpCalc  = calcPVP(l.precio_neto_unitario, ivaKey, provKey, redondeo);
-    const pvp      = (l.pvpManual !== null && l.pvpManual !== undefined) ? l.pvpManual : pvpCalc;
-    const ivaLabel = _proveedores[provKey]?.factores[ivaKey]?.etiqueta || ivaKey;
-    rows.push([l.cn || '', l.nombre, l.cantidad, l.precio_neto_unitario.toFixed(2), ivaLabel, pvp.toFixed(2)]);
+    const ivaKey    = l.ivaKey || defaultIvaKey(l.iva_porcentaje);
+    const pvpCalc   = calcPVP(l.precio_neto_unitario, ivaKey, provKey, redondeo);
+    const pvp       = (l.pvpManual != null) ? l.pvpManual : pvpCalc;
+    const ivaLabel  = _proveedores[provKey]?.factores[ivaKey]?.etiqueta || `${l.iva_porcentaje}%`;
+    const netoTotal = l.precio_neto_total ?? (l.precio_neto_unitario * l.cantidad);
+    const pvpTotal  = pvp * l.cantidad;
+    const pct       = l.iva_porcentaje || 0;
+
+    if (!ivaGroups[pct]) ivaGroups[pct] = { base: 0, cuota: 0, label: ivaLabel };
+    ivaGroups[pct].base  += netoTotal;
+    ivaGroups[pct].cuota += netoTotal * (pct / 100);
+    totalNeto += netoTotal;
+    totalPVP  += pvpTotal;
+
+    rows.push([
+      l.cn || '',
+      l.nombre,
+      l.cantidad,
+      n2(l.precio_neto_unitario),
+      n2(netoTotal),
+      ivaLabel,
+      n2(pvp),
+      n2(pvpTotal),
+      l.pvpManual != null ? 'Sí' : '',
+    ]);
   });
-  const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+
+  // ── 4. Resumen por tipo de IVA ─────────────────────────────────────────────
+  rows.push([]);
+  rows.push(['RESUMEN POR TIPO DE IVA']);
+  rows.push(['% IVA', 'Base Imponible', 'Cuota IVA', 'Total con IVA']);
+  let totalIva = 0;
+  Object.entries(ivaGroups)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .forEach(([pct, g]) => {
+      totalIva += g.cuota;
+      rows.push([`${pct}%`, eur(g.base), eur(g.cuota), eur(g.base + g.cuota)]);
+    });
+
+  // ── 5. Totales ─────────────────────────────────────────────────────────────
+  rows.push([]);
+  rows.push(['TOTALES']);
+  rows.push(['Total Neto (sin IVA)',      eur(totalNeto)]);
+  rows.push(['Total IVA',                 eur(totalIva)]);
+  rows.push(['Total Factura (con IVA)',   eur(totalNeto + totalIva)]);
+  rows.push(['Total PVP estimado',        eur(totalPVP)]);
+  rows.push([]);
+  rows.push([`Generado el ${new Date().toLocaleDateString('es-ES')} · Farmacias Barris & Zarzuelo`]);
+
+  // ── Generar fichero ────────────────────────────────────────────────────────
+  const csv  = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a'); a.href = url; a.download = 'factura_pvp.csv'; a.click();
+  const a    = document.createElement('a');
+  a.href = url;
+  const lab   = (_invoiceMeta.laboratorio    || 'factura').replace(/[^\wÀ-ɏ]/g, '_');
+  const num   = (_invoiceMeta.numero_factura || '').replace(/\W/g, '');
+  const fecha = (_invoiceMeta.fecha          || '').replace(/\//g, '');
+  a.download  = [lab, num, fecha].filter(Boolean).join('_') + '.csv';
+  a.click();
   URL.revokeObjectURL(url);
 });
 
