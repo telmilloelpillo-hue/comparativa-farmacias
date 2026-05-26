@@ -10,6 +10,7 @@ Patrón de uso:
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from typing import Optional
@@ -26,6 +27,9 @@ from bs4 import BeautifulSoup
 _PROVIDER_PATTERNS: list[tuple[str, str]] = [
     (r'(?i)^hef', 'hefame'),
     (r'(?i)^bid', 'bida'),
+    # Descomenta y ajusta si el código de barras usa prefijos numéricos:
+    # (r'^\d{10}$', 'hefame'),   # ej: Hefame usa números de 10 dígitos
+    # (r'^\d{9}$', 'bida'),      # ej: BIDA usa números de 9 dígitos
 ]
 
 
@@ -157,3 +161,52 @@ def _to_float(s: str) -> float:
 def _to_iva(s: str) -> int:
     m = re.search(r'\d+', s)
     return int(m.group()) if m else 21
+
+
+# ── Configuraciones de portal (rellenar con valores reales tras inspección de Tasks 4 y 5) ──
+
+HEFAME_CONFIG = PortalConfig(
+    login_url    = 'HEFAME_LOGIN_URL',
+    search_url   = 'HEFAME_SEARCH_URL',
+    user_field   = 'HEFAME_USER_FIELD',
+    pass_field   = 'HEFAME_PASS_FIELD',
+    albaran_param= 'HEFAME_ALBARAN_PARAM',
+    row_selector = 'HEFAME_ROW_SELECTOR',
+    cols         = {'cn': 0, 'desc': 1, 'qty': 2, 'price': 3, 'iva': 4},
+    pdf_selector = '',
+)
+
+BIDA_CONFIG = PortalConfig(
+    login_url    = 'BIDA_LOGIN_URL',
+    search_url   = 'BIDA_SEARCH_URL',
+    user_field   = 'BIDA_USER_FIELD',
+    pass_field   = 'BIDA_PASS_FIELD',
+    albaran_param= 'BIDA_ALBARAN_PARAM',
+    row_selector = 'BIDA_ROW_SELECTOR',
+    cols         = {'cn': 0, 'desc': 1, 'qty': 2, 'price': 3, 'iva': 4},
+    pdf_selector = '',
+)
+
+_REGISTRY: dict[str, tuple[PortalConfig, str, str]] = {
+    'hefame': (HEFAME_CONFIG, 'HEFAME_USER', 'HEFAME_PASS'),
+    'bida':   (BIDA_CONFIG,   'BIDA_USER',   'BIDA_PASS'),
+}
+
+_sessions: dict[str, PortalSession] = {}
+
+
+def get_session(provider: str) -> Optional[PortalSession]:
+    """Devuelve PortalSession singleton para el proveedor, o None si sin credenciales."""
+    if provider in _sessions:
+        return _sessions[provider]
+    entry = _REGISTRY.get(provider)
+    if entry is None:
+        return None
+    config, user_env, pass_env = entry
+    user   = os.environ.get(user_env, '').strip()
+    passwd = os.environ.get(pass_env, '').strip()
+    if not user or not passwd:
+        return None
+    session = PortalSession(config, user, passwd)
+    _sessions[provider] = session
+    return session

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from portal_session import detect_provider, PortalConfig, PortalSession
+from portal_session import detect_provider, PortalConfig, PortalSession, get_session
 
 
 def test_detect_hefame_uppercase():
@@ -190,3 +190,46 @@ def test_parse_descarga_pdf_si_selector_presente():
     assert result['pdf_bytes'] == pdf_bytes
     assert result['lineas'] == []
     assert result['numero_factura'] == 'HEF-004'
+
+
+def test_get_session_returns_none_sin_credenciales():
+    """Sin env vars → get_session devuelve None."""
+    import os
+    import portal_session
+    # Asegurar que no hay credenciales en entorno
+    for key in ('HEFAME_USER', 'HEFAME_PASS'):
+        os.environ.pop(key, None)
+    portal_session._sessions.clear()
+    assert get_session('hefame') is None
+
+
+def test_get_session_returns_session_con_credenciales(monkeypatch):
+    """Con env vars → get_session devuelve PortalSession."""
+    import portal_session
+    monkeypatch.setenv('HEFAME_USER', 'testuser')
+    monkeypatch.setenv('HEFAME_PASS', 'testpass')
+    # Limpiar singleton cache para el test
+    portal_session._sessions.clear()
+    result = get_session('hefame')
+    assert isinstance(result, PortalSession)
+    assert result.username == 'testuser'
+    assert result.password == 'testpass'
+    portal_session._sessions.clear()  # clean up
+
+
+def test_get_session_unknown_provider_returns_none():
+    import portal_session
+    portal_session._sessions.clear()
+    assert get_session('unknown_lab') is None
+
+
+def test_get_session_singleton(monkeypatch):
+    """Segunda llamada devuelve la misma instancia."""
+    import portal_session
+    monkeypatch.setenv('HEFAME_USER', 'u')
+    monkeypatch.setenv('HEFAME_PASS', 'p')
+    portal_session._sessions.clear()
+    s1 = get_session('hefame')
+    s2 = get_session('hefame')
+    assert s1 is s2
+    portal_session._sessions.clear()
