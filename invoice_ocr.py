@@ -440,30 +440,32 @@ def extract_with_qwen(image_bytes: bytes, ocr_text: str, api_key: str,
 
 def extract_with_openai(image_bytes: bytes, ocr_text: str,
                         api_key: str) -> dict:
-    """Extracción semántica con GPT-4.1-mini (OpenAI)."""
+    """Extracción semántica con GPT-4o (imagen original sin preprocessing)."""
     try:
         import openai as _openai
     except ImportError:
         raise RuntimeError('openai package not installed')
 
     client = _openai.OpenAI(api_key=api_key)
-    b64 = base64.b64encode(image_bytes).decode()
     prompt = _INVOICE_PROMPT
     if ocr_text:
-        prompt += f'\n\nTexto extraído por OCR (referencia adicional):\n"""\n{ocr_text}\n"""'
+        prompt += f'\n\nTexto nativo del PDF (referencia exacta):\n"""\n{ocr_text}\n"""'
+
+    # Construir content: imagen si hay bytes, texto siempre
+    content = []
+    if image_bytes:
+        b64 = base64.b64encode(image_bytes).decode()
+        content.append({
+            'type': 'image_url',
+            'image_url': {'url': f'data:image/jpeg;base64,{b64}', 'detail': 'high'},
+        })
+    content.append({'type': 'text', 'text': prompt})
 
     response = client.chat.completions.create(
         model='gpt-4o',
         max_tokens=4096,
         temperature=0.05,
-        messages=[{
-            'role': 'user',
-            'content': [
-                {'type': 'image_url',
-                 'image_url': {'url': f'data:image/jpeg;base64,{b64}', 'detail': 'high'}},
-                {'type': 'text', 'text': prompt},
-            ],
-        }],
+        messages=[{'role': 'user', 'content': content}],
     )
     return _clean_json(response.choices[0].message.content)
 
@@ -497,64 +499,75 @@ def process_invoice(file_bytes: bytes, mime: str,
                     qwen_endpoint: str | None = None,
                     openai_key: str | None = None) -> dict:
     """
-    Pipeline completo:
-      1. OpenCV preprocessing (imágenes) / extracción texto (PDFs)
-      2. PaddleOCR (si disponible)
-      3. GPT-4.1-mini (OpenAI)  →  Qwen2-VL  →  fallback Claude Haiku
+    Pipeline completo con dos rutas según el modelo disponible:
 
-    Devuelve dict con campos de factura + 'pipeline_used' para debug.
+    RUTA A — GPT-4o (si hay openai_key):
+      · Imagen original sin ningún preprocesado → GPT-4o la lee nativamente
+      · PDF: pdfplumber extrae texto limpio + imagen renderizada a 200 DPI sin OpenCV
+      · NO se pasa texto PaddleOCR (evita contaminar con OCR erróneo)
+
+    RUTA B — Fallback (Qwen / Claude Haiku):
+      · OpenCV preprocessing + PaddleOCR como texto auxiliar (modelos débiles lo necesitan)
     """
-    ocr_text = ''
     is_pdf = (mime == 'application/pdf')
 
+    # ── RUTA A: GPT-4o — imagen original, sin preprocessing ───────────────────
+    if openai_key:
+        if is_pdf:
+            import pdfplumber, io
+            # Texto nativo pdfplumber (limpio, sin OCR) como contexto adicional
+            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                pages_text = [p.extract_text() for p in pdf.pages[:3] if p.extract_text()]
+            pdf_text = '\n\n'.join(pages_text)
+            # Imagen a 200 DPI sin OpenCV
+            image_bytes = pdf_first_page_image(file_bytes, dpi=200)
+            if not image_bytes:
+                # PDF sin imagen renderizable: mandar texto solo
+                result = extract_with_openai(b'', pdf_text, openai_key)
+                result['pipeline_used'] = 'pdfplumber+gpt-4o'
+                return result
+            result = extract_with_openai(image_bytes, pdf_text, openai_key)
+            result['pipeline_used'] = 'pdfplumber+gpt-4o'
+        else:
+            # Foto: mandar bytes originales directamente, sin OpenCV, sin PaddleOCR
+            result = extract_with_openai(file_bytes, '', openai_key)
+            result['pipeline_used'] = 'gpt-4o-direct'
+        return result
+
+    # ── RUTA B: Fallback con OpenCV + PaddleOCR ───────────────────────────────
+    ocr_text = ''
     if is_pdf:
-        # Extrae texto nativo con pdfplumber
         import pdfplumber, io
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-            pages_text = []
-            for page in pdf.pages[:3]:   # primeras 3 páginas
-                t = page.extract_text()
-                if t:
-                    pages_text.append(t)
+            pages_text = [p.extract_text() for p in pdf.pages[:3] if p.extract_text()]
             ocr_text = '\n\n'.join(pages_text)
-        # Renderiza primera página para visión
         image_bytes = pdf_first_page_image(file_bytes)
         if not image_bytes:
-            image_bytes = file_bytes   # fallback: mandar PDF directamente
+            image_bytes = file_bytes
             preprocessed = False
         else:
             image_bytes = preprocess_image(image_bytes)
             preprocessed = True
     else:
-        # Imagen: preprocessing completo
         image_bytes = preprocess_image(file_bytes)
         preprocessed = True
-        # PaddleOCR sobre imagen preprocesada
         ocr_text = run_paddleocr(image_bytes)
 
-    # Análisis estructural (FASES 1–8 de invoice_structure) — siempre opcional
     try:
         from invoice_structure import analyze_document as _analyze_struct
-        _paddle_boxes = (run_paddleocr_boxes(image_bytes)
-                         if _PADDLE_OK and not is_pdf else [])
+        _paddle_boxes = run_paddleocr_boxes(image_bytes) if _PADDLE_OK and not is_pdf else []
         _struct = _analyze_struct(image_bytes, _paddle_boxes or None)
         if _struct.prompt_context:
-            ocr_text = (_struct.prompt_context
-                        + ('\n\n' + ocr_text if ocr_text else ''))
+            ocr_text = _struct.prompt_context + ('\n\n' + ocr_text if ocr_text else '')
     except Exception:
-        pass  # nunca bloquea el pipeline principal
+        pass
 
-    # Semántica: OpenAI GPT-4.1-mini → Qwen2-VL → Claude Haiku
     ocr_prefix = 'opencv+' + ('paddleocr+' if _PADDLE_OK and not is_pdf else '')
 
-    if openai_key and image_bytes:
-        result = extract_with_openai(image_bytes, ocr_text, openai_key)
-        result['pipeline_used'] = ocr_prefix + 'gpt-4o'
-    elif qwen_key and image_bytes and not (is_pdf and not preprocessed):
+    if qwen_key and image_bytes and not (is_pdf and not preprocessed):
         result = extract_with_qwen(image_bytes, ocr_text, qwen_key, qwen_endpoint)
         result['pipeline_used'] = ocr_prefix + 'qwen2-vl'
     elif is_pdf and not preprocessed:
-        # PDF sin imagen: mandar PDF binario a Claude (ruta original)
         import anthropic
         client = anthropic.Anthropic(api_key=anthropic_key)
         b64 = base64.b64encode(file_bytes).decode()
