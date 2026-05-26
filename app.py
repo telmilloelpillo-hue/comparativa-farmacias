@@ -125,6 +125,9 @@ def check_auth():
     if request.endpoint in ('login', 'static'):
         return
     if not session.get('authenticated'):
+        # API endpoints that expect JSON get 401; browser pages get redirect
+        if request.is_json or request.path.startswith('/fetch_'):
+            return jsonify({'error': 'no auth'}), 401
         return redirect(url_for('login'))
 
 # ── Rutas ──────────────────────────────────────────────────────────────────────
@@ -757,6 +760,35 @@ def leer_factura():
         return jsonify({'error': f'No se pudo parsear la respuesta de la IA: {e}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/fetch_albaran', methods=['POST'])
+def fetch_albaran():
+    if not session.get('authenticated'):
+        return jsonify({'error': 'no auth'}), 401
+
+    data = request.get_json(silent=True) or {}
+    numero = (data.get('numero') or '').strip()
+    if not numero:
+        return jsonify({'error': 'Número de albarán requerido'}), 400
+
+    from portal_session import detect_provider, get_session as get_portal_session
+
+    provider = detect_provider(numero)
+    if provider == 'unknown':
+        return jsonify({'fallback': 'ocr', 'numero': numero})
+
+    portal = get_portal_session(provider)
+    if portal is None:
+        return jsonify({'fallback': 'ocr', 'numero': numero, 'reason': 'no_credentials'})
+
+    try:
+        result = portal.fetch_albaran(numero)
+        result['proveedores'] = _CONFIG_PROVEEDORES
+        return jsonify(result)
+    except Exception as exc:
+        app.logger.warning('Portal %s error para %s: %s', provider, numero, exc)
+        return jsonify({'fallback': 'ocr', 'numero': numero, 'reason': str(exc)})
 
 
 def _read_env_file() -> dict:
