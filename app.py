@@ -784,6 +784,7 @@ def fetch_albaran():
 
     try:
         result = portal.fetch_albaran(numero)
+        result.pop('pdf_bytes', None)   # bytes no son JSON-serializables
         result['proveedores'] = _CONFIG_PROVEEDORES
         return jsonify(result)
     except Exception as exc:

@@ -78,3 +78,23 @@ def test_portal_error_devuelve_fallback_ocr(client):
     data = rv.get_json()
     assert data['fallback'] == 'ocr'
     assert 'timeout' in data.get('reason', '')
+
+
+def test_pdf_bytes_no_se_serializa_en_respuesta(client):
+    """Si el portal devuelve pdf_bytes (bytes), la respuesta JSON no debe fallar."""
+    mock_session = MagicMock()
+    mock_session.fetch_albaran.return_value = {
+        'lineas': [],
+        'numero_factura': 'HEF-005',
+        'fecha': '',
+        'pdf_bytes': b'%PDF-fake-content',  # bytes que no son JSON-serializables
+    }
+    with patch('portal_session.get_session', return_value=mock_session), \
+         patch('portal_session.detect_provider', return_value='hefame'):
+        rv = client.post('/fetch_albaran', json={'numero': 'HEF-005'},
+                         content_type='application/json')
+    assert rv.status_code == 200
+    data = rv.get_json()
+    assert 'pdf_bytes' not in data
+    assert data['numero_factura'] == 'HEF-005'
+    assert 'proveedores' in data
