@@ -349,6 +349,35 @@ EJEMPLO SUAVINEX (columnas: Cod.Mater. | Descripción | Cajas | UDS/Caja | UDS |
 
   217167 | S SEL PORTADOCUMENTOS WONDERLAND LIB | 0 | 0 | 1 | 0,000 | — | 0,000 | 0,00
   → cn="217167", cantidad=1, precio_neto_unitario=0, sin_valor_comercial=true, iva_porcentaje=0
+
+EJEMPLO CINFA (columnas: Código | Descripción | Unidades | PVL | %Dto | PVL Neto | %IVA | PVP+IVA | Imp.Bruto | Fec.Caduc | Lote):
+  REGLA CINFA — hay 11 columnas. Lee cada fila de izquierda a derecha sin saltar columnas:
+  · precio_neto_unitario = columna "PVL Neto" (precio unitario DESPUÉS del descuento)
+  · cantidad = columna "Unidades"
+  · iva_porcentaje = columna "%IVA" — COPIA EL VALOR EXACTO (puede ser 21% o 10%)
+  · precio_neto_total = PVL Neto × Unidades (calcula tú, NO uses Imp.Bruto que es PVL×Uds sin descuento)
+
+  2239678 | FLS CORRECTOR JUANETE TM PIE | 1 | 14,57 | 20% | 11,66 | 21% | | 14,57 | Nov-2030 | 0251101698
+  → cn="2239678", cantidad=1, precio_neto_unitario=11.66, precio_neto_total=11.66, iva_porcentaje=21
+
+  2132832 | FLS PACK FRÍO CALOR MAX | 3 | 9,00 | 20% | 7,20 | 21% | | 27,00 | Jun-2029 | 20250625
+  → cn="2132832", cantidad=3, precio_neto_unitario=7.20, precio_neto_total=21.60, iva_porcentaje=21
+
+  2105904 | MUÑE META NEOPRENO | 3 | 9,24 | 16% | 7,76 | 10% | | 27,72 | Ene-2031 | A003
+  → cn="2105904", cantidad=3, precio_neto_unitario=7.76, precio_neto_total=23.28, iva_porcentaje=10
+  ¡ATENCIÓN! La columna %IVA muestra 10% → usa 10%, aunque el producto sea ortopédico
+
+  4996166 | VENDA CO BL 4,5M X 7,5CM | 5 | 2,49 | 15% | 2,12 | 10% | 3,80 | 12,45 | Ago-2028 | 2509171
+  → cn="4996166", cantidad=5, precio_neto_unitario=2.12, precio_neto_total=10.60, iva_porcentaje=10
+
+  ARTÍCULOS PROMOCIONALES Cinfa (precio 0,00, código empieza por EX0 o 0006):
+  EX023937 | EXP BE+ MED ANTIESTRIAS | 1 | 0,00 | 0% | → cn="EX023937", cantidad=1, precio_neto_unitario=0, sin_valor_comercial=true, iva_porcentaje=0
+  0006275 | FLS PLANTILLA FASCITIS DISPL | 1 | 0,00 | 0% | → cn="0006275", cantidad=1, precio_neto_unitario=0, sin_valor_comercial=true, iva_porcentaje=0
+
+REGLA GLOBAL CRÍTICA — IVA DESDE COLUMNA:
+  Si el documento tiene columna "%IVA" o "% IVA" con valores explícitos por línea,
+  SIEMPRE usa ese valor exactamente. NUNCA sobreescribas con 21% por defecto.
+  La tabla de IVA de la regla 7 solo aplica cuando NO hay columna %IVA en el documento.
 """
 
 
@@ -424,7 +453,7 @@ def extract_with_openai(image_bytes: bytes, ocr_text: str,
         prompt += f'\n\nTexto extraído por OCR (referencia adicional):\n"""\n{ocr_text}\n"""'
 
     response = client.chat.completions.create(
-        model='gpt-4.1-mini',
+        model='gpt-4o',
         max_tokens=4096,
         temperature=0.05,
         messages=[{
@@ -520,7 +549,7 @@ def process_invoice(file_bytes: bytes, mime: str,
 
     if openai_key and image_bytes:
         result = extract_with_openai(image_bytes, ocr_text, openai_key)
-        result['pipeline_used'] = ocr_prefix + 'gpt-4.1-mini'
+        result['pipeline_used'] = ocr_prefix + 'gpt-4o'
     elif qwen_key and image_bytes and not (is_pdf and not preprocessed):
         result = extract_with_qwen(image_bytes, ocr_text, qwen_key, qwen_endpoint)
         result['pipeline_used'] = ocr_prefix + 'qwen2-vl'
