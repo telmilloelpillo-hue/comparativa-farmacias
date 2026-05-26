@@ -1,0 +1,76 @@
+<h2>Arquitectura del sistema — Enfoque C</h2>
+<p class="subtitle">3 capas bien separadas que se pueden cambiar sin afectar las otras</p>
+
+<div class="mockup">
+  <div class="mockup-header">Flujo completo — de escaneo a PDF</div>
+  <div class="mockup-body" style="font-size:13px;line-height:2">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+
+      <div style="background:#e8f4fd;border-radius:8px;padding:12px;border-top:3px solid #4a90d9">
+        <div style="font-weight:700;font-size:12px;text-transform:uppercase;color:#4a90d9;margin-bottom:8px">① CAPA FRONTEND</div>
+        <div style="font-size:12px;line-height:1.7">
+          📷 <strong>Cámara en tiempo real</strong><br>
+          &nbsp;&nbsp;ZXing-js (WebAssembly)<br>
+          &nbsp;&nbsp;Lee 1D/2D del video stream<br><br>
+          🖼️ <strong>Subida de foto</strong><br>
+          &nbsp;&nbsp;Misma UI actual + decode<br><br>
+          ⌨️ <strong>Input manual</strong><br>
+          &nbsp;&nbsp;Fallback si no se lee<br><br>
+          🔍 <strong>Detección de proveedor</strong><br>
+          &nbsp;&nbsp;Por prefijo del número
+        </div>
+      </div>
+
+      <div style="background:#e8fde8;border-radius:8px;padding:12px;border-top:3px solid #2ecc71">
+        <div style="font-weight:700;font-size:12px;text-transform:uppercase;color:#2ecc71;margin-bottom:8px">② CAPA BACKEND</div>
+        <div style="font-size:12px;line-height:1.7">
+          🔐 <strong>SessionManager</strong><br>
+          &nbsp;&nbsp;Login Hefame / BIDA<br>
+          &nbsp;&nbsp;Cookie cache en memoria<br>
+          &nbsp;&nbsp;Auto re-login si expira<br><br>
+          🌐 <strong>PortalFetcher</strong><br>
+          &nbsp;&nbsp;GET albaran por número<br>
+          &nbsp;&nbsp;Intenta descarga PDF<br>
+          &nbsp;&nbsp;Si no → parsea HTML<br><br>
+          📄 <strong>PDFBuilder</strong><br>
+          &nbsp;&nbsp;Reconstruye con reportlab
+        </div>
+      </div>
+
+      <div style="background:#fdf3e8;border-radius:8px;padding:12px;border-top:3px solid #e67e22">
+        <div style="font-weight:700;font-size:12px;text-transform:uppercase;color:#e67e22;margin-bottom:8px">③ FALLBACK OCR</div>
+        <div style="font-size:12px;line-height:1.7">
+          🔄 <strong>Pipeline existente</strong><br>
+          &nbsp;&nbsp;invoice_ocr.py intacto<br>
+          &nbsp;&nbsp;Para labs sin portal<br><br>
+          🏷️ <strong>Metadata del escaneo</strong><br>
+          &nbsp;&nbsp;Número albarán guardado<br>
+          &nbsp;&nbsp;aunque use OCR<br><br>
+          ✅ <strong>Resultado unificado</strong><br>
+          &nbsp;&nbsp;Misma tabla en facturas.html<br>
+          &nbsp;&nbsp;Sin cambio en UI de resultados
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:12px;font-family:monospace;font-size:12px">
+      <div style="color:#888;margin-bottom:6px">// Flujo de decisión en backend</div>
+      <div>scan_barcode(número)</div>
+      <div style="padding-left:16px;color:#2ecc71">├─ prefijo Hefame → SessionManager.hefame.fetch(número)</div>
+      <div style="padding-left:32px;color:#2ecc71">├─ PDF disponible → devolver PDF ✅</div>
+      <div style="padding-left:32px;color:#e67e22">└─ solo HTML → PDFBuilder.from_html() ✅</div>
+      <div style="padding-left:16px;color:#4a90d9">├─ prefijo BIDA → SessionManager.bida.fetch(número)</div>
+      <div style="padding-left:32px">(misma lógica)</div>
+      <div style="padding-left:16px;color:#e67e22">└─ desconocido → invoice_ocr.process_invoice() ✅</div>
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top:16px;background:#f9f9f9;border-radius:6px;padding:12px 16px;font-size:13px">
+  <strong>Nuevos archivos a crear:</strong>
+  <code>portal_session.py</code> — SessionManager + PortalFetcher<br>
+  <strong>Archivos a modificar:</strong>
+  <code>app.py</code> — nueva ruta <code>POST /fetch_albaran</code> · <code>templates/facturas.html</code> — añadir scanner UI
+</div>

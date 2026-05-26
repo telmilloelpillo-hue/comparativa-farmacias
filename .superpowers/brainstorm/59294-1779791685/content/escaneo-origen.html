@@ -1,0 +1,52 @@
+<h2>¿Cómo llega el código de barras a la app?</h2>
+<p class="subtitle">El método de captura define toda la arquitectura del sistema</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Foto desde el móvil</h3>
+      <p>Haces una foto al albarán con el móvil y la subes a la web. La app detecta el código de barras en la imagen automáticamente antes de pasar al OCR.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Sin hardware adicional</li><li>Flujo ya conocido (ya subes fotos)</li></ul></div>
+        <div class="cons"><h4>Inconvenientes</h4><ul><li>Un paso extra (foto → subir)</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Cámara en tiempo real (navegador)</h3>
+      <p>El navegador abre la cámara del móvil o webcam y escanea el código de barras en tiempo real sin necesidad de subir ningún archivo.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Instantáneo, como un lector de pistola</li><li>Flujo más parecido a programas de farmacia</li></ul></div>
+        <div class="cons"><h4>Inconvenientes</h4><ul><li>Requiere permiso cámara en navegador</li><li>Más complejo de implementar</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Pistola lectora USB</h3>
+      <p>Conectas una pistola lectora de códigos de barras al ordenador. Funciona como teclado: escaneas y el código aparece en un campo de texto.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Rapidísimo y fiable</li><li>Sin procesado de imagen</li><li>Hardware barato (20-50€)</li></ul></div>
+        <div class="cons"><h4>Inconvenientes</h4><ul><li>Hay que tener la pistola</li><li>Solo funciona en PC/Mac, no en móvil</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Combinación: pistola + foto</h3>
+      <p>Pistola lectora para el ordenador, foto/cámara para el móvil. La app acepta ambas formas según el dispositivo.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Máxima flexibilidad</li><li>Optimizado para cada contexto</li></ul></div>
+        <div class="cons"><h4>Inconvenientes</h4><ul><li>Más complejidad de implementar</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

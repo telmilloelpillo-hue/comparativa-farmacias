@@ -1,0 +1,77 @@
+<h2>Diseño final — Resumen completo</h2>
+<p class="subtitle">Todo lo que vamos a construir. Confirma antes de escribir el spec.</p>
+
+<div class="section">
+  <h3>📦 Archivos nuevos</h3>
+  <div style="font-family:monospace;font-size:12px;background:#f5f5f5;padding:12px;border-radius:6px;line-height:2">
+    <span style="color:#2ecc71">portal_session.py</span>   — SessionManager: login, cookie cache, fetch albarán, parse HTML<br>
+    <span style="color:#2ecc71">static/js/barcode_scanner.js</span> — ZXing-js wrapper: cámara + decode foto
+  </div>
+</div>
+
+<div class="section">
+  <h3>✏️ Archivos modificados</h3>
+  <div style="font-family:monospace;font-size:12px;background:#f5f5f5;padding:12px;border-radius:6px;line-height:2">
+    <span style="color:#4a90d9">app.py</span>          — nueva ruta <code>POST /fetch_albaran</code><br>
+    <span style="color:#4a90d9">templates/facturas.html</span> — tabs Escanear / Subir + UI cámara<br>
+    <span style="color:#4a90d9">requirements.txt</span> — añadir <code>beautifulsoup4</code><br>
+    <span style="color:#4a90d9">.env</span>            — añadir HEFAME_USER, HEFAME_PASS, BIDA_USER, BIDA_PASS
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔄 Flujo de la nueva ruta <code>POST /fetch_albaran</code></h3>
+  <div style="font-size:12px;font-family:monospace;background:#1a1a2e;color:#e0e0e0;padding:14px;border-radius:6px;line-height:1.9">
+    <span style="color:#aaa"># 1. Recibe número de albarán del frontend</span><br>
+    numero = request.json["numero"]<br><br>
+    <span style="color:#aaa"># 2. Detecta proveedor por prefijo</span><br>
+    proveedor = detect_provider(numero)  <span style="color:#aaa"># "hefame" | "bida" | "unknown"</span><br><br>
+    <span style="color:#aaa"># 3a. Hefame o BIDA → portal session</span><br>
+    <span style="color:#f39c12">if</span> proveedor != "unknown":<br>
+    &nbsp;&nbsp;lineas = SessionManager(proveedor).fetch_albaran(numero)<br>
+    &nbsp;&nbsp;<span style="color:#f39c12">return</span> jsonify(lineas)  <span style="color:#aaa"># misma estructura que leer_factura</span><br><br>
+    <span style="color:#aaa"># 3b. Lab externo → OCR pipeline existente (si vino foto)</span><br>
+    <span style="color:#f39c12">else</span>:<br>
+    &nbsp;&nbsp;<span style="color:#f39c12">return</span> jsonify({"fallback": "ocr", "numero": numero})
+  </div>
+</div>
+
+<div class="section">
+  <h3>📷 Frontend — Tab "Escanear albarán"</h3>
+  <div style="font-size:12px;line-height:1.8;background:#f5f5f5;padding:12px;border-radius:6px">
+    1. ZXing-js carga desde CDN (WebAssembly, sin instalación)<br>
+    2. <code>getUserMedia</code> abre cámara → frames a ZXing cada 300ms<br>
+    3. Al detectar barcode: <strong>beep + vibración</strong>, cámara se para<br>
+    4. Muestra número + proveedor detectado (Hefame / BIDA / Lab externo)<br>
+    5. Botón "Buscar albarán" → llama a <code>POST /fetch_albaran</code><br>
+    6. Tab "Subir archivo" → comportamiento actual intacto<br>
+    7. Input manual siempre visible debajo del visor como fallback
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔐 SessionManager (portal_session.py)</h3>
+  <div style="font-size:12px;line-height:1.8;background:#f5f5f5;padding:12px;border-radius:6px">
+    • Singleton por proveedor (una instancia Hefame, una BIDA)<br>
+    • Credenciales desde <code>.env</code> (HEFAME_USER / HEFAME_PASS)<br>
+    • Cookie cacheada en memoria → &lt;1s por petición si válida<br>
+    • Auto re-login si respuesta 401/redirect a login<br>
+    • Fetch albarán: intenta descarga PDF directa primero → parsea HTML si no hay PDF<br>
+    • Si el portal no está disponible → lanza excepción → app.py hace fallback a OCR
+  </div>
+</div>
+
+<div class="section">
+  <h3>✅ Verificación</h3>
+  <div style="font-size:12px;line-height:1.8;background:#f5f5f5;padding:12px;border-radius:6px">
+    1. Abrir <code>/facturas</code> → ver tabs "Escanear" y "Subir archivo"<br>
+    2. Escanear albarán Hefame real → tabla se rellena sin OCR<br>
+    3. Subir foto de albarán lab externo → OCR funciona igual que antes<br>
+    4. Introducir número manualmente → mismo resultado que escaneo<br>
+    5. Simular cookie expirada → re-login automático transparente
+  </div>
+</div>
+
+<div style="background:#fffbe6;border:1px solid #f0c040;border-radius:6px;padding:12px 16px;font-size:13px;margin-top:4px">
+  <strong>⚠️ Nota importante:</strong> Para mapear el HTML de Hefame/BIDA necesitamos inspeccionar sus portales una vez durante implementación. El scraper se ajusta a su estructura real — no podemos saberla de antemano.
+</div>

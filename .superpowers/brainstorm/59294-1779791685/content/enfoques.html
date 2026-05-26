@@ -1,0 +1,74 @@
+<h2>3 enfoques de arquitectura</h2>
+<p class="subtitle">Cómo combinar el escaneo, el portal de Hefame/BIDA y el fallback OCR</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f5f5f5;padding:14px;font-size:12px;font-family:monospace;line-height:1.8">
+      📷 Cámara → <strong>ZXing-js</strong> (navegador)<br>
+      ↓ número de albarán<br>
+      🐍 Backend: <strong>requests</strong> + cookie<br>
+      → Login Hefame/BIDA (si expiró)<br>
+      → Buscar albarán por número<br>
+      → Descargar PDF oficial<br>
+      ─────────────────<br>
+      ❌ Si falla → OCR actual
+    </div>
+    <div class="card-body">
+      <h3>A — HTTP ligero + descarga PDF</h3>
+      <p>Escaneo en el navegador con ZXing-js. El backend usa <code>requests</code> con sesión cacheada para buscar el albarán en el portal y descargarlo como PDF. Para otros labs: OCR.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Muy ligero en Render (sin navegador)</li><li>Rápido (&lt;2s si cookie válida)</li><li>PDF 100% oficial sin OCR</li></ul></div>
+        <div class="cons"><h4>Riesgo</h4><ul><li>Si Hefame cambia su HTML o añade bot-protection → se rompe</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f5f5f5;padding:14px;font-size:12px;font-family:monospace;line-height:1.8">
+      📷 Cámara → <strong>ZXing-js</strong> (navegador)<br>
+      ↓ número de albarán<br>
+      🎭 Backend: <strong>Playwright</strong> headless<br>
+      → Navega a Hefame/BIDA real<br>
+      → Login visual completo<br>
+      → Descarga PDF<br>
+      ─────────────────<br>
+      ❌ Si falla → OCR actual
+    </div>
+    <div class="card-body">
+      <h3>B — Playwright (navegador real)</h3>
+      <p>Playwright automatiza un navegador Chromium real. Más robusto ante cambios del portal, soporta JS pesado y posibles CAPTCHAs.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Más resistente a cambios del portal</li><li>Funciona en portales JS-heavy</li></ul></div>
+        <div class="cons"><h4>Riesgo</h4><ul><li>~150MB extra en Render</li><li>Lento (~5-10s por albarán)</li><li>Caro en plan gratuito</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#fff8e6;padding:14px;font-size:12px;font-family:monospace;line-height:1.8;border:1px solid #f0c040">
+      📷 Cámara / foto → <strong>ZXing-js</strong><br>
+      ↓ detecta proveedor por prefijo<br>
+      ├─ Hefame/BIDA → <strong>requests</strong> + cookie<br>
+      │   ├─ PDF directo → ✅<br>
+      │   └─ HTML → reconstruir PDF<br>
+      └─ Otro lab → <strong>OCR actual</strong><br>
+      ─────────────────<br>
+      + input manual del número
+    </div>
+    <div class="card-body">
+      <h3>C — Híbrido inteligente ⭐ Recomendado</h3>
+      <p>Como A, pero detecta el proveedor automáticamente por el formato del número de albarán (prefijo Hefame vs BIDA). Si no descarga PDF directo, reconstruye desde HTML. Fallback a OCR para labs externos. Incluye campo manual si el código no se lee bien.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Ligero en Render (sin Playwright)</li><li>Cubre Hefame + BIDA + otros labs</li><li>Robusto: 3 niveles de fallback</li><li>No depende de un solo camino</li></ul></div>
+        <div class="cons"><h4>Riesgo</h4><ul><li>Necesita inspeccionar el portal de Hefame una vez para mapear su HTML</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:20px;background:#f0f7ff;padding:12px 16px;border-radius:6px;border-left:3px solid #4a90d9;font-size:13px">
+  <strong>Nota sobre el "agente siempre conectado":</strong>
+  El enfoque C y A usan un <em>SessionManager</em> en Python — no un proceso extra. La cookie de Hefame/BIDA vive en memoria del servidor. Si Render reinicia (ocurre en plan gratuito), hace login automático al primer escaneo. Latencia: &lt;1s con cookie válida, ~3s si hace re-login.
+</div>

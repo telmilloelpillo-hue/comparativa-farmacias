@@ -1,0 +1,47 @@
+<h2>Con el número de albarán... ¿de dónde vienen los datos?</h2>
+<p class="subtitle">El código de barras lineal solo tiene un número. Para generar el PDF necesitamos los datos de los productos en algún sitio.</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Portal web del proveedor</h3>
+      <p>Hefame, BIDA, Cofares... tienen portales web donde puedes buscar un albarán por número. La app haría login con tus credenciales y descargaría el albarán automáticamente.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Datos 100% correctos, sin OCR</li><li>PDF oficial del proveedor</li></ul></div>
+        <div class="cons"><h4>Inconvenientes</h4><ul><li>Requiere credenciales por proveedor</li><li>Los portales pueden bloquear scraping</li><li>Depende de acceso a internet</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Escaneamos CN de cada producto uno a uno</h3>
+      <p>Como hacen los programas de farmacia: escanas el código de barras de cada <strong>caja individual</strong> recibida. Cada escaneo añade una línea a la tabla. Al final generas el PDF del albarán reconstruido.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Sin depender de portales externos</li><li>Confirmas físicamente lo recibido</li><li>CN → nombre del producto conocido</li></ul></div>
+        <div class="cons"><h4>Inconvenientes</h4><ul><li>Hay que escanear cada caja manualmente</li><li>Lento si el pedido es grande</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Foto del albarán + código de barras como ancla</h3>
+      <p>Se sigue procesando la foto con OCR/IA como ahora, pero el código de barras del documento sirve para identificar unívocamente el albarán, evitar duplicados, y etiquetar el resultado.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ventajas</h4><ul><li>Mejora el flujo actual sin cambios radicales</li><li>El código actúa como ID de referencia</li></ul></div>
+        <div class="cons"><h4>Inconvenientes</h4><ul><li>El OCR sigue siendo la fuente de datos</li><li>No elimina errores de lectura</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:24px;background:#fffbe6;padding:12px 16px;border-radius:6px;border-left:3px solid #f0c040">
+  <span class="label">Contexto</span>
+  <p style="margin:4px 0 0">En Hefame y BIDA el código de barras del <em>documento</em> (albarán) suele ser el número de albarán. El código de barras de cada <em>caja</em> es el CN (Código Nacional) del medicamento — distinto.</p>
+</div>

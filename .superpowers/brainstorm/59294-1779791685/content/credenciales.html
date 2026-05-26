@@ -1,0 +1,43 @@
+<h2>¿Qué acceso tienes a los portales de proveedores?</h2>
+<p class="subtitle">Para conectar con Hefame/BIDA necesitamos saber con qué contamos</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Tengo usuario y contraseña en el portal de Hefame (y/o BIDA)</h3>
+      <p>Puedo acceder manualmente a su web ahora mismo. La app haría el mismo login automáticamente y buscaría el albarán por número.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Solo tengo acceso a Hefame, no a BIDA (o viceversa)</h3>
+      <p>Funciona igualmente — cubrimos el proveedor principal, y para el otro seguimos con OCR como ahora.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>No uso el portal web, pero sé que existe</h3>
+      <p>Habría que crear una cuenta primero. También podríamos explorar si Hefame/BIDA tienen una API oficial para farmacias clientes.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:20px;background:#f0f7ff;padding:12px 16px;border-radius:6px;border-left:3px solid #4a90d9">
+  <span class="label">Cómo funcionaría el agente de sesión</span>
+  <p style="margin:6px 0 0;font-size:14px">
+    No es un navegador corriendo 24/7. La app guarda la cookie de sesión de Hefame en memoria. Al escanear un albarán de Hefame, usa esa cookie. Si expiró, hace login automático con las credenciales guardadas en <code>.env</code>. Sin proceso extra, sin coste en Render.
+  </p>
+  <div style="margin-top:8px;font-family:monospace;font-size:12px;background:#fff;padding:8px;border-radius:4px;color:#333">
+    HEFAME_USER=tu_usuario<br>
+    HEFAME_PASS=tu_contraseña<br>
+    BIDA_USER=...<br>
+    BIDA_PASS=...
+  </div>
+</div>

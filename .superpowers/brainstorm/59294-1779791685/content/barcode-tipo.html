@@ -1,0 +1,59 @@
+<h2>¿Qué tipo de código tienen los albaranes?</h2>
+<p class="subtitle">Necesito saber qué datos contiene el código para definir si podemos generar el PDF localmente o necesitamos consultar al proveedor</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f8f8;padding:16px;text-align:center;font-family:monospace">
+      <div style="font-size:11px;letter-spacing:8px;border-bottom:3px solid #000;padding-bottom:4px">||||||||| ||| |||||||||| |||| |||</div>
+      <div style="font-size:10px;margin-top:4px;color:#333">8470000123456</div>
+      <div style="margin-top:8px;font-size:11px;color:#666">Code 128 / Code 39 / EAN-13</div>
+    </div>
+    <div class="card-body">
+      <h3>Código de barras lineal</h3>
+      <p>Solo contiene un número (p.ej. el número de albarán o código de artículo). Para generar el PDF habría que buscar los datos en el portal del proveedor (Hefame, BIDA...).</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f8f8;padding:16px;text-align:center">
+      <div style="display:inline-block;width:80px;height:80px;background:
+        repeating-linear-gradient(0deg,#000 0px,#000 4px,#fff 4px,#fff 8px),
+        repeating-linear-gradient(90deg,#000 0px,#000 4px,#fff 4px,#fff 8px);
+        background-blend-mode:multiply">
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#666">QR Code</div>
+    </div>
+    <div class="card-body">
+      <h3>QR Code</h3>
+      <p>Puede contener texto largo, URLs, o datos estructurados (JSON, XML). Algunos proveedores incluyen todos los datos del albarán en el QR. Potencialmente no necesita API externa.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f8f8;padding:16px;text-align:center">
+      <div style="display:inline-block;width:120px;height:60px;background:
+        repeating-linear-gradient(90deg,#000 0px,#000 2px,#fff 2px,#fff 4px,#000 4px,#000 6px,#fff 6px,#fff 10px);
+        border:2px solid #333">
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#666">PDF417 / DataMatrix</div>
+    </div>
+    <div class="card-body">
+      <h3>Código 2D de alta densidad</h3>
+      <p>PDF417 o DataMatrix: común en albaranes farmacéuticos. Puede contener varias líneas de productos, cantidades y precios directamente codificados. Ideal para generar PDF sin API.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="d" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f8f8f8;padding:12px;text-align:center;font-size:11px;color:#555">
+      <div style="border:1px dashed #aaa;padding:8px;border-radius:4px">
+        🤷 No lo sé exactamente.<br>Tengo albaranes de<br><strong>Hefame / BIDA / Cofares</strong><br>y algunos de laboratorios
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>No estoy seguro</h3>
+      <p>Diferentes proveedores usan distintos formatos. Podemos diseñar la app para detectar el tipo automáticamente y adaptarse.</p>
+    </div>
+  </div>
+
+</div>
