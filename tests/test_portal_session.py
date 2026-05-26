@@ -141,3 +141,52 @@ def test_skip_filas_sin_suficientes_celdas(config):
 
     result = session.fetch_albaran('HEF-002')
     assert len(result['lineas']) == 1  # Solo la fila con 5 celdas
+
+
+def test_to_float_spanish_thousands_separator(config):
+    """Precio como '1.234,56' (separador de miles español) debe parsearse correctamente."""
+    html = """<html><body><table id="productos">
+      <tr class="linea"><td>1234567</td><td>Producto</td><td>2</td><td>1.234,56</td><td>21%</td></tr>
+    </table></body></html>"""
+    session = PortalSession(config, 'user', 'pass')
+    session._session = MagicMock()
+    session._session.get.return_value = _make_response(html)
+
+    result = session.fetch_albaran('HEF-003')
+    assert result['lineas'][0]['precio_neto_unitario'] == 1234.56
+
+
+def test_parse_descarga_pdf_si_selector_presente():
+    """Si hay pdf_selector y el enlace devuelve content-type PDF → pdf_bytes en resultado."""
+    config_pdf = PortalConfig(
+        login_url='http://portal.test/login',
+        search_url='http://portal.test/albaran',
+        user_field='usuario',
+        pass_field='clave',
+        albaran_param='num',
+        row_selector='table tr',
+        cols={'cn': 0, 'desc': 1, 'qty': 2, 'price': 3, 'iva': 4},
+        pdf_selector='a.pdf-download',
+    )
+    html_with_link = """<html><body>
+      <a class="pdf-download" href="/descargar/albaran.pdf">Descargar PDF</a>
+    </body></html>"""
+
+    pdf_bytes = b'%PDF-fake'
+    pdf_response = MagicMock()
+    pdf_response.ok = True
+    pdf_response.content = pdf_bytes
+    pdf_response.headers = {'content-type': 'application/pdf'}
+
+    main_response = _make_response(html_with_link, url='http://portal.test/albaran?num=HEF-004')
+
+    mock_s = MagicMock()
+    mock_s.get.side_effect = [main_response, pdf_response]
+
+    session = PortalSession(config_pdf, 'user', 'pass')
+    session._session = mock_s
+
+    result = session.fetch_albaran('HEF-004')
+    assert result['pdf_bytes'] == pdf_bytes
+    assert result['lineas'] == []
+    assert result['numero_factura'] == 'HEF-004'

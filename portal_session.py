@@ -11,8 +11,10 @@ Patrón de uso:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
+
+from urllib.parse import urlparse, urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -77,7 +79,7 @@ class PortalSession:
             timeout=15,
         )
         # Sesión expirada → redirect a login o código 401/403
-        if resp.status_code in (401, 403) or 'login' in resp.url.lower():
+        if resp.status_code in (401, 403) or urlparse(resp.url).path == urlparse(self.config.login_url).path:
             self._session = None
             self._login()
             resp = self._session.get(
@@ -85,6 +87,10 @@ class PortalSession:
                 params={self.config.albaran_param: numero},
                 timeout=15,
             )
+            if resp.status_code in (401, 403) or urlparse(resp.url).path == urlparse(self.config.login_url).path:
+                raise RuntimeError(
+                    f'Re-login failed for {self.config.login_url!r} — verifica credenciales'
+                )
         resp.raise_for_status()
         return resp
 
@@ -102,7 +108,8 @@ class PortalSession:
         if self.config.pdf_selector:
             link = soup.select_one(self.config.pdf_selector)
             if link and link.get('href'):
-                pdf_resp = self._session.get(link['href'], timeout=20)
+                pdf_url = urljoin(resp.url, link['href'])
+                pdf_resp = self._session.get(pdf_url, timeout=20)
                 ct = pdf_resp.headers.get('content-type', '')
                 if pdf_resp.ok and 'pdf' in ct:
                     return {'pdf_bytes': pdf_resp.content, 'lineas': [],
@@ -139,7 +146,10 @@ def _to_int(s: str) -> int:
 
 def _to_float(s: str) -> float:
     try:
-        return float(re.sub(r'[^\d,.]', '', s).replace(',', '.'))
+        cleaned = re.sub(r'[^\d,.]', '', s)
+        if ',' in cleaned:
+            cleaned = cleaned.replace('.', '').replace(',', '.')
+        return float(cleaned)
     except ValueError:
         return 0.0
 
