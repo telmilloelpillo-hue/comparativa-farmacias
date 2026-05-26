@@ -323,7 +323,7 @@
             <div id="providerBadge"></div>
 
             <div style="display:flex; gap:8px; margin-top:10px; align-items:center">
-              <input type="text" id="manualBarcode" placeholder="Nº albarán manual..."
+              <input type="text" id="manualBarcode" placeholder="Escanea o escribe el Nº albarán..."
                      style="flex:1; padding:7px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px">
               <button id="btnFetchManual"
                       style="padding:7px 14px; background:#4a90d9; color:#fff; border:none;
@@ -956,6 +956,8 @@ function switchTab(tab) {
   document.getElementById('uploadPanel').style.display = isScan ? 'none' : '';
   if (isScan) {
     _startScanner();
+    // Auto-foco para lectores físicos (emulación teclado)
+    setTimeout(() => document.getElementById('manualBarcode').focus(), 100);
   } else {
     if (typeof BarcodeScanner !== 'undefined') BarcodeScanner.stopCamera();
   }
@@ -992,10 +994,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Arrancar cámara al cargar
+  // Arrancar cámara al cargar y enfocar input para lector físico
   if (document.getElementById('tabScan').classList.contains('active')) {
     _startScanner();
+    setTimeout(() => document.getElementById('manualBarcode').focus(), 150);
   }
+
+  // ── Lector físico de código de barras (USB/Bluetooth, emulación teclado) ──────
+  // Los lectores físicos envían todos los caracteres en <50ms y terminan con Enter.
+  // Captura esa ráfaga desde cualquier parte de la página cuando el tab Escanear está activo.
+  let _hwBuffer = '';
+  let _hwTimer  = null;
+  document.addEventListener('keydown', function(e) {
+    // Solo actuar si el tab Escanear está activo
+    if (!document.getElementById('tabScan').classList.contains('active')) return;
+    // No interceptar si el foco está en otro input/textarea (p.ej. el buscador)
+    const active = document.activeElement;
+    const inOtherInput = active && active.id !== 'manualBarcode' &&
+                         (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+    if (inOtherInput) return;
+
+    if (e.key === 'Enter') {
+      if (_hwBuffer.length > 3) {  // mínimo 4 caracteres para evitar falsos positivos
+        const num = _hwBuffer;
+        _hwBuffer = '';
+        clearTimeout(_hwTimer);
+        document.getElementById('manualBarcode').value = num;
+        _fetchAlbaran(num);
+      }
+      return;
+    }
+
+    if (e.key.length === 1) {  // carácter imprimible
+      _hwBuffer += e.key;
+      clearTimeout(_hwTimer);
+      // Limpiar buffer si el siguiente carácter tarda >100ms (tipeo manual, no lector)
+      _hwTimer = setTimeout(() => { _hwBuffer = ''; }, 100);
+    }
+  });
 
   // Intentar decodificar barcode al subir foto en tab Upload (sin interrumpir el OCR)
   const origFileInput = document.getElementById('fileInput');
