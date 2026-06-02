@@ -499,47 +499,24 @@ def process_invoice(file_bytes: bytes, mime: str,
                     qwen_endpoint: str | None = None,
                     openai_key: str | None = None) -> dict:
     """
-    Pipeline completo con dos rutas según el modelo disponible:
+    Pipeline completo:
+      1. OpenCV preprocessing (imágenes) / extracción texto (PDFs)
+      2. PaddleOCR (si disponible)
+      3. GPT-4o (OpenAI) → Qwen2-VL → fallback Claude Haiku
 
-    RUTA A — GPT-4o (si hay openai_key):
-      · Imagen original sin ningún preprocesado → GPT-4o la lee nativamente
-      · PDF: pdfplumber extrae texto limpio + imagen renderizada a 200 DPI sin OpenCV
-      · NO se pasa texto PaddleOCR (evita contaminar con OCR erróneo)
-
-    RUTA B — Fallback (Qwen / Claude Haiku):
-      · OpenCV preprocessing + PaddleOCR como texto auxiliar (modelos débiles lo necesitan)
+    Devuelve dict con campos de factura + 'pipeline_used' para debug.
     """
+    ocr_text = ''
     is_pdf = (mime == 'application/pdf')
 
-    # ── RUTA A: GPT-4o — imagen original, sin preprocessing ───────────────────
-    if openai_key:
-        if is_pdf:
-            import pdfplumber, io
-            # Texto nativo pdfplumber (limpio, sin OCR) como contexto adicional
-            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-                pages_text = [p.extract_text() for p in pdf.pages[:3] if p.extract_text()]
-            pdf_text = '\n\n'.join(pages_text)
-            # Imagen a 200 DPI sin OpenCV
-            image_bytes = pdf_first_page_image(file_bytes, dpi=200)
-            if not image_bytes:
-                # PDF sin imagen renderizable: mandar texto solo
-                result = extract_with_openai(b'', pdf_text, openai_key)
-                result['pipeline_used'] = 'pdfplumber+gpt-4o'
-                return result
-            result = extract_with_openai(image_bytes, pdf_text, openai_key)
-            result['pipeline_used'] = 'pdfplumber+gpt-4o'
-        else:
-            # Foto: mandar bytes originales directamente, sin OpenCV, sin PaddleOCR
-            result = extract_with_openai(file_bytes, '', openai_key)
-            result['pipeline_used'] = 'gpt-4o-direct'
-        return result
-
-    # ── RUTA B: Fallback con OpenCV + PaddleOCR ───────────────────────────────
-    ocr_text = ''
     if is_pdf:
         import pdfplumber, io
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-            pages_text = [p.extract_text() for p in pdf.pages[:3] if p.extract_text()]
+            pages_text = []
+            for page in pdf.pages[:3]:
+                t = page.extract_text()
+                if t:
+                    pages_text.append(t)
             ocr_text = '\n\n'.join(pages_text)
         image_bytes = pdf_first_page_image(file_bytes)
         if not image_bytes:
@@ -555,16 +532,21 @@ def process_invoice(file_bytes: bytes, mime: str,
 
     try:
         from invoice_structure import analyze_document as _analyze_struct
-        _paddle_boxes = run_paddleocr_boxes(image_bytes) if _PADDLE_OK and not is_pdf else []
+        _paddle_boxes = (run_paddleocr_boxes(image_bytes)
+                         if _PADDLE_OK and not is_pdf else [])
         _struct = _analyze_struct(image_bytes, _paddle_boxes or None)
         if _struct.prompt_context:
-            ocr_text = _struct.prompt_context + ('\n\n' + ocr_text if ocr_text else '')
+            ocr_text = (_struct.prompt_context
+                        + ('\n\n' + ocr_text if ocr_text else ''))
     except Exception:
         pass
 
     ocr_prefix = 'opencv+' + ('paddleocr+' if _PADDLE_OK and not is_pdf else '')
 
-    if qwen_key and image_bytes and not (is_pdf and not preprocessed):
+    if openai_key and image_bytes:
+        result = extract_with_openai(image_bytes, ocr_text, openai_key)
+        result['pipeline_used'] = ocr_prefix + 'gpt-4o'
+    elif qwen_key and image_bytes and not (is_pdf and not preprocessed):
         result = extract_with_qwen(image_bytes, ocr_text, qwen_key, qwen_endpoint)
         result['pipeline_used'] = ocr_prefix + 'qwen2-vl'
     elif is_pdf and not preprocessed:
