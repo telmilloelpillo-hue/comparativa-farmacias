@@ -8,16 +8,15 @@ from app import app as flask_app
 def client():
     flask_app.config['TESTING'] = True
     with flask_app.test_client() as c:
-        with c.session_transaction() as sess:
-            sess['authenticated'] = True
         yield c
 
 
-def test_sin_autenticacion():
+def test_validacion_disponible_sin_login():
     with flask_app.test_client() as c:
-        rv = c.post('/fetch_albaran', json={'numero': 'HEF-001'},
+        rv = c.post('/fetch_albaran', json={},
                     content_type='application/json')
-    assert rv.status_code == 401
+    assert rv.status_code == 400
+    assert rv.get_json()['error'] == 'Número de albarán requerido'
 
 
 def test_sin_numero_devuelve_400(client):

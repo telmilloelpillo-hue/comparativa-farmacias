@@ -4,40 +4,26 @@ tags: [auth, backend, seguridad]
 
 # Sesión y Auth
 
-## Mecanismo
-Contraseña única compartida entre las dos farmacias.
-Flask session cookie firmada con `secret_key`.
+## Acceso público
+La web y las rutas API se abren directamente, sin contraseña ni indicador
+`authenticated`. Se retiraron el filtro global de login y las comprobaciones
+de autenticación de las rutas individuales.
 
-```python
-PASSWORD = "farmacias2026"
-app.secret_key = 'farmacias_barris_zarzuelo_2026'
+## Sesión de comparativa
+La cookie de sesión de Flask sigue firmada con `secret_key`. Conserva el token
+de la comparativa, el laboratorio y los datos de anotaciones para las descargas.
+Esta sesión representa el trabajo activo en el navegador.
 
-@app.before_request
-def check_auth():
-    if request.endpoint in ('login', 'static'):
-        return
-    if not session.get('authenticated'):
-        return redirect(url_for('login'))
-```
+## Enlaces antiguos
+- `GET/POST /login` redirige a `/`.
+- `GET /logout` ejecuta `session.clear()` y vuelve a `/`.
 
-## Rutas públicas
-- `GET/POST /login`
-- `GET /static/*`
+Las plantillas no muestran botones de cerrar sesión. Las rutas de comparación,
+facturas y encargos mantienen su validación habitual de archivos y parámetros.
 
-Todo lo demás requiere `session['authenticated'] = True`.
-
-## Login
-`POST /login` con `password` en form-data.
-Si coincide → `session['authenticated'] = True` → redirect a `/`.
-Si no → render login con error.
-
-## Logout
-`GET /logout` → `session.clear()` → redirect a `/login`.
-
-## Seguridad
-- No hay usuarios individuales ni roles
-- Secret key hardcodeada (funcional, no crítico para uso interno)
-- Para producción en Render, podría moverse a variable de entorno (ver [[Config y Deploy]])
+## Comprobaciones
+`tests/test_public_access.py` comprueba páginas y API con un cliente nuevo,
+incluida la compatibilidad de `/login` y el reinicio de `/logout`.
 
 ## Relaciones
 - [[App Flask]] — `check_auth()` hook global

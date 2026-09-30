@@ -302,6 +302,12 @@
     .panel-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
     .panel-code { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); font-weight: 700; letter-spacing: 0.05em; }
     .panel-desc { font-size: 0.8rem; font-weight: 600; color: var(--text); line-height: 1.4; margin-top: 0.2rem; flex: 1; }
+    .source-review { margin-top: 0.6rem; font-size: 0.72rem; line-height: 1.45; }
+    .source-review summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+    .source-review-list { max-height: 180px; overflow-y: auto; margin-top: 0.45rem; }
+    .source-review-item { padding: 0.45rem 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+    .source-review-label { font-weight: 600; color: var(--muted); }
+    .source-review-warning { color: #92400e; margin: 0.3rem 0; }
     .panel-close {
       background: none; border: 1px solid var(--border); border-radius: 5px;
       font-size: 0.9rem; cursor: pointer; color: var(--muted);
@@ -819,7 +825,6 @@
       <span class="btn-text-short">PDF</span>
     </a>
     <a href="/" class="btn btn-ghost">&#10010; Nueva</a>
-    <a class="logout" href="/logout">Cerrar sesión</a>
   </div>
 </header>
 
@@ -971,20 +976,20 @@
           <td class="td-desc sticky-col-2">{{ r.description }}{% if r.needs_review %} <span class="warn-badge" title="{{ r.warnings | join(' · ') }}">&#9888;</span>{% endif %}</td>
 
           <!-- F1 -->
-          <td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ r.stock1 if r.status != 'only2' else '—' }}</td>
-          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.smin1 }}</td>
-          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1 }}</td>
-          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1_prev }}</td>
-          {% if has_sit %}<td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ r.s365_1 }}</td>{% endif %}
-          <td id="pedido1-{{ r.code }}" class="{{ 'cell-pedido' if pedido1_val else ('cell-muted' if r.status == 'only2') }}"><span>{{ pedido1_val if pedido1_val else '—' }}</span>{% if r.status != 'only2' %}<button class="btn-qadd" id="qadd1-{{ r.code }}" onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','z')">+</button>{% endif %}</td>
+          <td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ ('Revisar' if r.stock1 is none else r.stock1) if r.status != 'only2' else '—' }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.smin1 if r.smin1 is not none else 'Revisar' }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1 if r.total1 is not none else 'Revisar' }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only2' }}">{{ r.total1_prev if r.total1_prev is not none else 'Revisar' }}</td>
+          {% if has_sit %}<td class="{{ 'cell-parado' if r.parado1 else ('cell-muted' if r.status == 'only2') }}">{{ r.s365_1 if r.s365_1 is not none else 'Revisar' }}</td>{% endif %}
+          <td id="pedido1-{{ r.code }}" class="{{ 'cell-pedido' if pedido1_val else ('cell-muted' if r.status == 'only2') }}"><span>{{ 'Revisar' if r.pedido1 is none and r.status != 'only2' else (pedido1_val if pedido1_val else '—') }}</span>{% if r.status != 'only2' %}<button class="btn-qadd" id="qadd1-{{ r.code }}" {{ 'disabled' if r.pedido1 is none }} onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','z')">+</button>{% endif %}</td>
 
           <!-- F2 -->
-          <td class="col-divider {{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.stock2 if r.status != 'only1' else '—' }}</td>
-          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.smin2 }}</td>
-          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2 }}</td>
-          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2_prev }}</td>
-          {% if has_sit %}<td class="{{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.s365_2 }}</td>{% endif %}
-          <td id="pedido2-{{ r.code }}" class="{{ 'cell-pedido' if pedido2_val else ('cell-muted' if r.status == 'only1') }}"><span>{{ pedido2_val if pedido2_val else '—' }}</span>{% if r.status != 'only1' %}<button class="btn-qadd" id="qadd2-{{ r.code }}" onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','b')">+</button>{% endif %}</td>
+          <td class="col-divider {{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ ('Revisar' if r.stock2 is none else r.stock2) if r.status != 'only1' else '—' }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.smin2 if r.smin2 is not none else 'Revisar' }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2 if r.total2 is not none else 'Revisar' }}</td>
+          <td class="{{ 'cell-muted' if r.status == 'only1' }}">{{ r.total2_prev if r.total2_prev is not none else 'Revisar' }}</td>
+          {% if has_sit %}<td class="{{ 'cell-parado' if r.parado2 else ('cell-muted' if r.status == 'only1') }}">{{ r.s365_2 if r.s365_2 is not none else 'Revisar' }}</td>{% endif %}
+          <td id="pedido2-{{ r.code }}" class="{{ 'cell-pedido' if pedido2_val else ('cell-muted' if r.status == 'only1') }}"><span>{{ 'Revisar' if r.pedido2 is none and r.status != 'only1' else (pedido2_val if pedido2_val else '—') }}</span>{% if r.status != 'only1' %}<button class="btn-qadd" id="qadd2-{{ r.code }}" {{ 'disabled' if r.pedido2 is none }} onclick="event.stopPropagation();quickAddPedido('{{ r.code }}','b')">+</button>{% endif %}</td>
 
         </tr>
         {% endfor %}
@@ -1006,6 +1011,10 @@
           </div>
           <button class="panel-close" onclick="closePanel()">&#10005;</button>
         </div>
+        <details class="source-review" id="sourceReview" hidden>
+          <summary id="sourceReviewSummary">Ver origen en los PDFs</summary>
+          <div class="source-review-list" id="sourceReviewList"></div>
+        </details>
       </div>
 
       <div class="panel-tabs">
@@ -1154,10 +1163,26 @@
 <!-- ── DATA + SCRIPT ── -->
 <script>
 const PRODUCTS   = {{ results | tojson }};
+const COMP_TOKEN = {{ comp_token | tojson }};
 const NAME1      = {{ name1 | tojson }};
 const NAME2      = {{ name2 | tojson }};
 const LAB        = {{ lab   | tojson }};
 const HAS_SIT    = {{ 'true' if (has_sit1 or has_sit2) else 'false' }};
+
+function escapeHTML(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, character =>
+    ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[character]));
+}
+
+function numericValue(value) {
+  if (value == null || value === '' || value === '—' || value === '⚠️') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function displayNumeric(value) {
+  return value === '—' ? '—' : (numericValue(value) === null ? 'Revisar' : value);
+}
 
 /// pedido manual: { "CODE_z": qty, "CODE_b": qty }
 // Persisted in localStorage under key "pedidos_<LAB>" so it survives reload
@@ -1266,12 +1291,17 @@ function resetSort() {
 
 // ─── SPARKLINE ────────────────────────────────────────────────────────────────
 function renderSparkline(container, curValues, prevValues, color) {
+  if (!Array.isArray(curValues) || curValues.some(v => numericValue(v) === null) ||
+      (Array.isArray(prevValues) && prevValues.some(v => numericValue(v) === null))) {
+    container.textContent = 'Revisar los meses pendientes de lectura en el PDF original.';
+    return;
+  }
   const cur  = (curValues  || []).map(Number);
   const prev = (prevValues || []).map(Number);
   // Últimos 6 meses del año anterior + 12 meses del año actual
   const prev6 = prev.slice(6); // Jul–Dic del año anterior
   const allData = prev6.length === 6 ? [...prev6, ...cur] : cur;
-  const hasPrev = prev6.length === 6 && prev6.some(v => v > 0);
+  const hasPrev = prev6.length === 6 && prev6.some(v => v !== 0);
   const splitIdx = hasPrev ? 6 : 0; // índice donde empieza el año actual
 
   if (allData.every(v => v === 0)) {
@@ -1282,8 +1312,12 @@ function renderSparkline(container, curValues, prevValues, color) {
   const W = 360, H = 52;
   const n = allData.length;
   const max = Math.max(...allData, 1);
-  const toX = i => (i / (n - 1)) * (W - 6) + 3;
-  const toY = v => H - 4 - ((v / max) * (H - 10));
+  const min = Math.min(...allData, 0);
+  const range = max - min;
+  const toX = i => (i / Math.max(n - 1, 1)) * (W - 6) + 3;
+  const toY = v => H - 4 - (((v - min) / range) * (H - 10));
+  // For returns, the area meets zero and both signs remain inside the plot.
+  const fillBaseline = min < 0 ? toY(0) : H - 2;
 
   const gid = 'sg' + color.replace('#','') + Math.random().toString(36).slice(2,5);
 
@@ -1297,7 +1331,7 @@ function renderSparkline(container, curValues, prevValues, color) {
     `${toX(splitIdx + i).toFixed(1)},${toY(v).toFixed(1)}`
   );
   const fillPath = curFill.length > 1
-    ? `M ${curFill[0]} L ${curFill.join(' L ')} L ${toX(n-1).toFixed(1)},${(H-2).toFixed(1)} L ${toX(splitIdx).toFixed(1)},${(H-2).toFixed(1)} Z`
+    ? `M ${curFill[0]} L ${curFill.join(' L ')} L ${toX(n-1).toFixed(1)},${fillBaseline.toFixed(1)} L ${toX(splitIdx).toFixed(1)},${fillBaseline.toFixed(1)} Z`
     : '';
 
   // Línea del año anterior (prev6)
@@ -1308,7 +1342,7 @@ function renderSparkline(container, curValues, prevValues, color) {
     : '';
 
   // Puntos del año actual
-  const curDots = allData.slice(splitIdx).map((v, i) => v > 0
+  const curDots = allData.slice(splitIdx).map((v, i) => v !== 0
     ? `<circle cx="${toX(splitIdx + i).toFixed(1)}" cy="${toY(v).toFixed(1)}" r="2" fill="${color}"/>`
     : '').join('');
 
@@ -1317,6 +1351,9 @@ function renderSparkline(container, curValues, prevValues, color) {
     ? `<line x1="${toX(splitIdx).toFixed(1)}" y1="2" x2="${toX(splitIdx).toFixed(1)}" y2="${H-2}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,2"/>`
     : '';
 
+  const zeroLine = min < 0
+    ? `<line x1="3" y1="${toY(0).toFixed(1)}" x2="${W-3}" y2="${toY(0).toFixed(1)}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,2"/>`
+    : '';
   const labels = hasPrev ? MONTH_LABELS : MONTH_LABELS.slice(6);
 
   container.innerHTML = `
@@ -1328,6 +1365,7 @@ function renderSparkline(container, curValues, prevValues, color) {
         </linearGradient>
       </defs>
       ${divLine}
+      ${zeroLine}
       ${fillPath ? `<path d="${fillPath}" fill="url(#${gid})" stroke="none"/>` : ''}
       ${hasPrev ? `<polyline points="${prevLine}" fill="none" stroke="${color}" stroke-width="1.2" stroke-dasharray="3,2" stroke-linecap="round" opacity="0.4"/>` : ''}
       <polyline points="${curPts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
@@ -1338,6 +1376,10 @@ function renderSparkline(container, curValues, prevValues, color) {
 
 // ─── ALERTAS (sin emojis) ─────────────────────────────────────────────────────
 function computeAlerts(months, stock, totalAnual) {
+  if (stock === null || totalAnual === null || !Array.isArray(months) ||
+      months.some(v => numericValue(v) === null)) {
+    return [{ cls: 'ab-orange', text: 'Datos pendientes de revisión en el PDF original' }];
+  }
   const mc   = (months || []).map(Number);
   const last3 = mc.slice(-3), prev3 = mc.slice(-6,-3);
   const s3  = last3.reduce((a,b)=>a+b,0);
@@ -1364,22 +1406,23 @@ function computeAlerts(months, stock, totalAnual) {
 // ─── PANEL RENDER ─────────────────────────────────────────────────────────────
 function renderFarmTab(suffix, r) {
   const isZ    = suffix === 'z';
-  const stock  = parseInt(r[isZ ? 'stock1' : 'stock2'])   || 0;
+  const stockRaw = r[isZ ? 'stock1' : 'stock2'];
+  const stock  = numericValue(stockRaw);
   const smin   = r[isZ ? 'smin1'  : 'smin2'];
   const totCur = r[isZ ? 'total1' : 'total2'];
   const totPrev= r[isZ ? 'total1_prev' : 'total2_prev'];
   const s365   = r[isZ ? 's365_1' : 's365_2'];
-  const months     = r[isZ ? 'months1_current' : 'months2_current'] || Array(12).fill(0);
+  const months     = r[isZ ? 'months1_current' : 'months2_current'];
   const prevMonths = r[isZ ? 'months1_prev'    : 'months2_prev']    || [];
   const color      = isZ ? '#c0392b' : '#1a6fa8';
 
   const baseCards = [
-    { label: 'Stock actual',     value: stock === 0 ? stock : stock, cls: stock === 0 && parseInt(totCur) > 0 ? 'red' : '' },
-    { label: 'Stock minimo',     value: smin  === '—' || smin  == null ? '—' : smin },
-    { label: 'Ventas ' + r.year_current, value: totCur  === '—' ? '—' : totCur },
-    { label: 'Ventas ' + r.year_prev,    value: totPrev === '—' ? '—' : totPrev },
+    { label: 'Stock actual',     value: displayNumeric(stockRaw), cls: stock === 0 && numericValue(totCur) > 0 ? 'red' : '' },
+    { label: 'Stock minimo',     value: displayNumeric(smin) },
+    { label: 'Ventas ' + r.year_current, value: displayNumeric(totCur) },
+    { label: 'Ventas ' + r.year_prev,    value: displayNumeric(totPrev) },
   ];
-  if (HAS_SIT) baseCards.push({ label: 'Stock parado 365d', value: s365 === '—' ? '—' : s365, cls: s365 !== '—' && parseInt(s365) > 0 ? 'blue' : '' });
+  if (HAS_SIT) baseCards.push({ label: 'Stock parado 365d', value: displayNumeric(s365), cls: numericValue(s365) > 0 ? 'blue' : '' });
 
   document.getElementById('base-' + suffix).innerHTML = baseCards.map(c =>
     `<div class="base-card">
@@ -1390,7 +1433,7 @@ function renderFarmTab(suffix, r) {
 
   renderSparkline(document.getElementById('spark-' + suffix), months, prevMonths, color);
 
-  const totalAnual = parseInt(totCur) || 0;
+  const totalAnual = numericValue(totCur);
   const alerts = computeAlerts(months, stock, totalAnual);
   document.getElementById('alerts-' + suffix).innerHTML = alerts.map(a =>
     `<span class="alert-badge ${a.cls}">${a.text}</span>`
@@ -1405,7 +1448,7 @@ function renderFarmTab(suffix, r) {
   const input = document.getElementById('mpedido-' + suffix);
   input.value = saved != null && saved > 0 ? saved : '';
   const hint = document.getElementById('psugerido-' + suffix);
-  if (hint) hint.textContent = 'Sugerido (' + mesesPedido + 'm): ' + calcPedidoSugerido(r, suffix, mesesPedido);
+  if (hint) hint.textContent = pedidoHint(r, suffix, mesesPedido);
   updatePedidoCurrent(suffix, r.code);
 }
 
@@ -1420,6 +1463,74 @@ function updatePedidoCurrent(suffix, code) {
 }
 
 // ─── OPEN / CLOSE PANEL ───────────────────────────────────────────────────────
+function renderSourceReview(r) {
+  const details = document.getElementById('sourceReview');
+  const list = document.getElementById('sourceReviewList');
+  const sources = Array.isArray(r.sources) ? r.sources : [];
+  const candidates = Array.isArray(r.description_candidates) ? r.description_candidates : [];
+  const warnings = Array.isArray(r.warnings) ? r.warnings : [];
+  const entriesByOrigin = new Map();
+  [...sources, ...candidates, r.description_source].forEach(source => {
+    if (!source || typeof source !== 'object' || Array.isArray(source)) return;
+    const key = JSON.stringify([source.file, source.page, source.document_type,
+      source.pharmacy_index, source.pharmacy, source.bbox, source.description]);
+    // Keep both original and corrected names, merging repeated metadata. The
+    // selected source takes precedence so its visual-reading method is shown.
+    entriesByOrigin.set(key, source);
+  });
+  const entries = [...entriesByOrigin.values()];
+  list.replaceChildren();
+  details.open = false;
+  details.hidden = !entries.length && !warnings.length;
+  document.getElementById('sourceReviewSummary').textContent =
+    warnings.length ? 'Revisar lectura y origen en los PDFs' : 'Ver origen en los PDFs';
+  warnings.forEach(warning => {
+    const line = document.createElement('p');
+    line.className = 'source-review-warning';
+    line.textContent = warning;
+    list.appendChild(line);
+  });
+  entries.forEach(source => {
+    const item = document.createElement('div');
+    item.className = 'source-review-item';
+    const label = document.createElement('div');
+    label.className = 'source-review-label';
+    const type = source.document_type === 'situation' ? 'Informe de situación' : 'Estadísticas de ventas';
+    const selected = r.description_source &&
+      r.description_source.page === source.page &&
+      r.description_source.document_type === source.document_type &&
+      r.description_source.pharmacy_index === source.pharmacy_index &&
+      r.description_source.file === source.file &&
+      r.description_source.description === source.description &&
+      JSON.stringify(r.description_source.bbox) === JSON.stringify(source.bbox);
+    label.textContent = [source.pharmacy, type, source.page ? 'pág. ' + source.page : '',
+      selected ? 'Descripción elegida' : '',
+      source.method === 'vision' ? 'Lectura visual con IA' : ''].filter(Boolean).join(' · ');
+    item.appendChild(label);
+    if (source.file) {
+      const file = document.createElement('div');
+      file.textContent = source.file;
+      item.appendChild(file);
+    }
+    const description = document.createElement('div');
+    description.textContent = source.description || 'Descripción pendiente de revisión';
+    item.appendChild(description);
+    const pharmacyIndex = Number(source.pharmacy_index);
+    const pageNumber = Number(source.page);
+    if ([1, 2].includes(pharmacyIndex) && Number.isInteger(pageNumber) && pageNumber > 0 &&
+        ['sales', 'situation'].includes(source.document_type)) {
+      const link = document.createElement('a');
+      const which = (source.document_type === 'situation' ? 'sit' : 'pdf') + pharmacyIndex;
+      link.href = '/buscador_pdf/' + encodeURIComponent(COMP_TOKEN) + '/' + which + '#page=' + pageNumber;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = 'Abrir página original';
+      item.appendChild(link);
+    }
+    list.appendChild(item);
+  });
+}
+
 function openPanel(idx) {
   selectedIdx = idx;
   const r = PRODUCTS[idx];
@@ -1429,6 +1540,7 @@ function openPanel(idx) {
 
   document.getElementById('panelCode').textContent = r.code;
   document.getElementById('panelDesc').textContent = r.description || '—';
+  renderSourceReview(r);
   document.getElementById('decisionPanel').classList.add('open');
 
   renderFarmTab('z', r);
@@ -1514,11 +1626,19 @@ function updateTopbarBadge() {
 // ─── PEDIDO MONTH SELECTOR ────────────────────────────────────────────────────
 function calcPedidoSugerido(r, suffix, n) {
   const isZ    = suffix === 'z';
-  const totCur = parseInt(r[isZ ? 'total1' : 'total2'])          || 0;
-  const totPrv = parseInt(r[isZ ? 'total1_prev' : 'total2_prev']) || 0;
-  const stock  = parseInt(r[isZ ? 'stock1' : 'stock2'])           || 0;
+  const farmIdx = isZ ? 1 : 2;
+  if (r['pedido_no_calculable' + farmIdx] || r['pedidoNoCalculable' + farmIdx]) return null;
+  const totCur = numericValue(r[isZ ? 'total1' : 'total2']);
+  const totPrv = numericValue(r[isZ ? 'total1_prev' : 'total2_prev']);
+  const stock  = numericValue(r[isZ ? 'stock1' : 'stock2']);
+  if (totCur === null || totPrv === null || stock === null) return null;
   const v12m   = totCur + totPrv;
   return Math.max(0, Math.ceil(v12m * n / 12) - stock);
+}
+
+function pedidoHint(r, suffix, n) {
+  const qty = calcPedidoSugerido(r, suffix, n);
+  return qty === null ? 'Pedido sugerido pendiente de revisión del PDF.' : 'Sugerido (' + n + 'm): ' + qty;
 }
 
 function setMesesPedido(n) {
@@ -1531,7 +1651,7 @@ function setMesesPedido(n) {
     const r = PRODUCTS[selectedIdx];
     ['z', 'b'].forEach(suffix => {
       const hint = document.getElementById('psugerido-' + suffix);
-      if (hint) hint.textContent = 'Sugerido (' + n + 'm): ' + calcPedidoSugerido(r, suffix, mesesPedido);
+      if (hint) hint.textContent = pedidoHint(r, suffix, mesesPedido);
     });
   }
 }
@@ -1548,7 +1668,9 @@ function recalcTablePedidos() {
       const isOnlyOther = (suffix === 'z' && r.status === 'only2') ||
                           (suffix === 'b' && r.status === 'only1');
       const span = cell.querySelector('span');
-      if (span) span.textContent = newVal > 0 ? newVal : '—';
+      if (span) span.textContent = newVal === null && !isOnlyOther ? 'Revisar' : (newVal > 0 ? newVal : '—');
+      const quickAdd = document.getElementById('qadd' + farmIdx + '-' + r.code);
+      if (quickAdd) quickAdd.disabled = newVal === null;
       cell.className = newVal > 0 ? 'cell-pedido' : (isOnlyOther ? 'cell-muted' : '');
     });
   });
@@ -1624,7 +1746,7 @@ function openModal() {
   document.getElementById('pedidoTableBody').innerHTML = rows.map(r =>
     `<tr>
       <td style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted);font-weight:700">${r.code}</td>
-      <td style="text-align:left">${r.desc}</td>
+      <td style="text-align:left">${escapeHTML(r.desc)}</td>
       <td>${r.qz > 0 ? r.qz : '—'}</td>
       <td>${r.qb > 0 ? r.qb : '—'}</td>
       <td style="font-weight:800;color:#1e293b">${r.tot}</td>
@@ -1689,12 +1811,12 @@ function exportCSV() {
     const kb  = manualPedidos[p.code + '_b'] || 0;
     const parts = [
       p.code, `"${(p.description||'').replace(/"/g,'""')}"`,
-      p.stock1, p.smin1, p.total1, p.total1_prev,
-      ...(hasSit ? [p.s365_1] : []),
-      kz > 0 ? kz : (p.pedido1 || 0),
-      p.stock2, p.smin2, p.total2, p.total2_prev,
-      ...(hasSit ? [p.s365_2] : []),
-      kb > 0 ? kb : (p.pedido2 || 0),
+      ...[p.stock1, p.smin1, p.total1, p.total1_prev].map(displayNumeric),
+      ...(hasSit ? [displayNumeric(p.s365_1)] : []),
+      kz > 0 ? kz : displayNumeric(calcPedidoSugerido(p, 'z', mesesPedido)),
+      ...[p.stock2, p.smin2, p.total2, p.total2_prev].map(displayNumeric),
+      ...(hasSit ? [displayNumeric(p.s365_2)] : []),
+      kb > 0 ? kb : displayNumeric(calcPedidoSugerido(p, 'b', mesesPedido)),
     ];
     return parts.join(',');
   }).join('\n');
@@ -1801,7 +1923,7 @@ function renderRepartoTab() {
     const prodsHtml = order.products.map(p => `
       <div class="reparto-prod-row">
         <div>
-          <div class="reparto-prod-name">${p.descripcion}</div>
+          <div class="reparto-prod-name">${escapeHTML(p.descripcion)}</div>
           <div class="reparto-prod-code">${p.codigo}</div>
         </div>
         <div class="reparto-num red">${p.pedido_zarzuelo || 0}</div>
@@ -1817,8 +1939,8 @@ function renderRepartoTab() {
         </div>
         <div class="reparto-col-header${isRecent ? ' recent' : ''}">
           <span>Producto</span>
-          <span style="color:var(--z)">${NAME1}</span>
-          <span style="color:var(--b)">${NAME2}</span>
+          <span style="color:var(--z)">${escapeHTML(NAME1)}</span>
+          <span style="color:var(--b)">${escapeHTML(NAME2)}</span>
           <span>Total</span>
         </div>
         ${prodsHtml}
@@ -1905,7 +2027,7 @@ function buildStep2Cards() {
     return `
       <tr id="rcard-${code}">
         <td>
-          <div class="step2-td-prod-name">${p.description || code}</div>
+          <div class="step2-td-prod-name">${escapeHTML(p.description || code)}</div>
           <div class="step2-td-prod-code">${code}</div>
         </td>
         <td class="step2-td-total" id="rtotal-${code}">${total}</td>
@@ -1932,8 +2054,8 @@ function buildStep2Cards() {
       <thead><tr>
         <th>Producto</th>
         <th>Total</th>
-        <th style="color:#fed7aa">${NAME1}</th>
-        <th style="color:#93c5fd">${NAME2}</th>
+        <th style="color:#fed7aa">${escapeHTML(NAME1)}</th>
+        <th style="color:#93c5fd">${escapeHTML(NAME2)}</th>
         <th></th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -1997,7 +2119,7 @@ function buildStep3View() {
     const total = repartoTotals[code] || 0;
     return `
       <div class="step3-product">
-        <div class="step3-prod-name">${p.description || code}</div>
+        <div class="step3-prod-name">${escapeHTML(p.description || code)}</div>
         <div class="step3-alloc alloc-z">${NAME1} <strong>${alloc.z}</strong></div>
         <div class="step3-alloc alloc-b">${NAME2} <strong>${alloc.b}</strong></div>
         <div class="step3-alloc alloc-total">Total <strong>${total}</strong></div>
@@ -2232,7 +2354,7 @@ applySearch();
 <script>
 (function () {
   const input = document.getElementById('inputAnotacion');
-  const COMP_TOKEN = '{{ comp_token }}';
+  const COMP_TOKEN = {{ comp_token | tojson }};
 
   input.addEventListener('change', function () {
     if (!input.files.length) return;
@@ -2288,8 +2410,8 @@ applySearch();
       const tr = document.createElement('tr');
       tr.dataset.idx = i;
       tr.innerHTML = `
-        <td>${item.code}</td>
-        <td>${item.description}</td>
+        <td>${escapeHTML(item.code)}</td>
+        <td>${escapeHTML(item.description)}</td>
         <td><input class="anot-qty-input" type="number" min="0" value="${item.qty}" data-idx="${i}"></td>
       `;
       tbody.appendChild(tr);

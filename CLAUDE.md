@@ -59,8 +59,8 @@ GET  /dashboard     → HTML interactivo plotly (requiere comp_token en session)
 GET  /informe       → descarga PDF ejecutivo con gráficos (requiere comp_token en session)
 GET  /facturas      → facturas.html
 POST /leer_factura  → sube factura → pdfplumber extrae → haiku parsea → JSON
-GET/POST /login     → auth por contraseña
-GET  /logout
+GET/POST /login     → redirige al inicio (compatibilidad con enlaces antiguos)
+GET  /logout       → reinicia la sesión de comparativa y vuelve al inicio
 ```
 
 ## Lógica IA (`app.py` ~línea 500+)
@@ -79,9 +79,10 @@ Dos proveedores: `hefame_bida` y `laboratorio`. Cada uno tiene factores PVP por 
 Fórmula: `PVP = precio_neto_unitario × factor`
 El usuario puede editar PVP manualmente en la tabla (campo `pvpManual`).
 
-## Auth
-Contraseña única: `"farmacias2026"`. Flask session con secret key hardcodeada.
-`check_auth()` en `before_request` protege todas las rutas excepto `/login` y `/static`.
+## Sesión y acceso
+La web y sus rutas API son públicas y no piden contraseña.
+Flask session conserva la comparativa activa y sus descargas; no acredita usuarios.
+`/login` redirige al inicio y `/logout` borra la sesión y vuelve al inicio.
 
 ## Frontend facturas.html (complejo)
 - Layout CSS grid: upload state vs results state
@@ -94,4 +95,5 @@ Contraseña única: `"farmacias2026"`. Flask session con secret key hardcodeada.
 - `docs/` contiene notas Obsidian con detalles de cada feature → leer antes de tocar algo nuevo
 - No hay base de datos: todo es estado en memoria o archivos temporales
 - PDFs de ventas formato: columnas Código | Descripción | Stock | S.min | Año | Total | Ene…Dic
-- Pendiente: mejorar lectura de PDFs con descripciones multi-línea (pdfplumber en curso)
+- Regresiones del lector: `tests/test_pdf_parser.py` genera PDFs con distintos formatos.
+  Los originales revisados se prueban con `PHARMACY_PDF_FIXTURE_DIR`; no se versionan.

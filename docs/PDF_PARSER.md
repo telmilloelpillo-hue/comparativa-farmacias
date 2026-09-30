@@ -2,126 +2,57 @@
 tags: [backend, pdf, debug, parser]
 ---
 
-# PDF Parser — Guía de diagnóstico
+# PDF Parser — extracción y revisión
 
-## Estructura esperada de la tabla de estadísticas
+`pdf_parser.py` lee estadísticas de ventas e informes de situación. La detección de farmacia, tipo de documento y laboratorio conserva su comportamiento anterior.
 
-```
-Código | Descripción | Stock | S.mín | Año | Ene | Feb | … | Dic | Total
-```
+## Límites de cada producto
 
-- **Código**: 6 chars alfanuméricos en x ≈ 20–60
-- **Descripción**: texto en x ≈ 63–315
-- **Stock / S.mín**: enteros en x ≈ 216 / 244 (pero varía por lab)
-- **Año**: "20XX" en x ≈ 255–268 (pero varía por lab)
-- **12 meses**: columnas equidistantes a la derecha del año
-- **Total**: suma de meses, en x ≈ 318 (pero varía por lab)
+`_layout` identifica las columnas en la cabecera de **cada página** y usa los rectángulos de las celdas cuando existen. Si no reconoce la tabla, aplica una lectura aproximada con el aviso `columnas_no_reconocidas`; esos datos no se consideran verificados.
 
-Hay dos patrones de layout:
-- **Patrón A**: código + datos en la misma fila (año, meses, total)
-- **Patrón B**: código + descripción en una fila; datos en la fila siguiente
+`_product_blocks` delimita los productos mediante códigos y bandas de fondo. Sin bandas, usa la separación entre líneas y las filas de año. Si no puede decidir un límite con claridad, marca `limites_fila_inciertos`. Cada fragmento pertenece a un bloque: no se concatenan líneas mediante búsquedas hacia el producto anterior o siguiente.
 
----
+`_description` recoge todas las líneas dentro de la celda de descripción. Los encabezados y los pies quedan fuera del cuerpo de la tabla. No se eliminan tamaños, colores, números de tono ni otras partes legítimas del nombre.
 
-## Cómo funciona la detección de columnas (3 niveles)
+## Cifras desconocidas y validación
 
-### Nivel 1 — Cabecera de página (`_detect_columns`)
-Busca palabras como "Ene", "Feb", "Mar"… en la cabecera de la tabla.
-Si encuentra ≥ 6 meses, deduce todas las posiciones X desde ahí.
-**Falla si:** el PDF usa "ENE", "ene.", "enero", o no tiene cabecera estándar.
+- `_integer` conserva signos negativos y cantidades grandes; un campo ilegible se devuelve como `None`, nunca como cero.
+- Se conserva el total impreso y se compara exactamente con la suma de los doce meses. Una diferencia produce `total_discrepancia`.
+- Stock, mínimo, meses o totales ausentes quedan señalados con `campo_ausente`.
+- Los códigos repetidos conservan sus procedencias y generan un aviso.
+- Los datos numéricos o límites dudosos impiden calcular pedidos automáticos. La interfaz y los PDF muestran «Revisar» para cantidades desconocidas.
+- Un PDF de ventas sin productos legibles detiene la comparativa con un error que identifica la farmacia.
 
-Desde la versión actual: matching **case-insensitive** + strip de `.` → cubre "ENE", "Ene.", "ene".
+## Descripciones y procedencia
 
-### Nivel 2 — Inferencia desde datos (`_detect_columns_from_data`)
-Escanea las primeras 10 filas con código de producto.
-Busca el cluster "20XX" (año) como ancla → deriva el resto de posiciones por offset.
-**Funciona sin cabecera.** Requiere ≥ 3 filas con año visible.
+`compare_products` consulta las descripciones de ventas y situación de ambas farmacias. Prioriza candidatos con límites fiables y nombres válidos; una cadena más larga no gana por su longitud. Las diferencias entre fuentes se muestran para revisión.
 
-### Nivel 3 — Posiciones hardcoded (último recurso)
-Valores calibrados para el formato de estadísticas original:
-`STOCK_X=216, SMIN_X=244, YEAR_X0=255, YEAR_X1=268, TOTAL_X=318, MONTH_X=[357…794]`
-**Peligroso si el PDF tiene layout diferente** — puede leer el año como mes.
+Cada resultado conserva `sources`, `description_candidates` y `description_source`, con archivo, página, coordenadas, farmacia y tipo de informe. El panel del producto permite abrir la página original. Los nombres de archivo corresponden a los documentos subidos, no a archivos temporales internos.
 
----
+Las descripciones se imprimen completas con altura de fila adaptable en los PDF de comparativa, plantilla y pedido.
 
-## Síntomas y causas de errores
+## Lectura visual alternativa
 
-### Total = año + ventas reales (ej: 2129 en lugar de 103)
-**Causa**: `_detect_columns` falla (nivel 1), `_detect_columns_from_data` falla (nivel 2),
-y el fallback hardcodeado pone MONTH_X[0]=357 justo donde el PDF tiene la columna de año.
-El año "2026" se lee como Enero → total = 2026 + ventas_reales.
+Si hay una clave Anthropic configurada, `_apply_vision_fallback` envía recortes de las filas dudosas a la lectura visual, con un máximo de ocho filas por documento. Solo acepta el mismo código y una estructura válida; los meses deben tener doce valores y cuadrar con el total impreso. No sobrescribe cifras ya verificadas para reparar únicamente un nombre.
 
-**Fixes activos:**
-- `_month_value` rechaza cualquier valor ≥ 1900 (el año nunca puede ser una venta mensual)
-- Capa 3: si total ≥ 1500, elimina meses con valor ≥ 500
+Los errores del servicio o renderizador y las respuestas rechazadas quedan como avisos. Un nombre ausente en el propio original, como `8` o `07/2026`, no se completa por imaginación. Las filas que no se resuelven mantienen su estado de revisión.
 
-### S.365 muestra año en vez de stock (ej: 2028)
-**Causa**: `extract_situation` lee la fecha de caducidad "07/2028" y el "2028" cae
-en la franja X del stock (410–445 px).
-**Fix**: `extract_situation` rechaza valores ≥ 1900 como stock.
+Este mecanismo no garantiza todos los formatos posibles. Un documento nuevo con cabeceras, códigos o estructura desconocidos requiere revisión y un ejemplo visual antes de ampliar el lector. Los PDF completamente escaneados sin texto todavía necesitan una extracción visual completa aparte.
 
-### Descripción vacía
-**Causas posibles:**
-1. El código está en la última línea de un bloque multi-línea → el backward scan
-   sube hasta 5 filas recogiendo descripciones sin código propio.
-2. El PDF no tiene descripción en la hoja de ventas → se usa la descripción del
-   informe de situación como fallback (`compare_products`).
-3. **`extract_situation` no encuentra el producto** porque la columna Código está
-   en una posición X distinta a los rangos hardcodeados.
-   **Fix**: `_detect_situation_columns(words)` detecta las posiciones X de
-   "Código", "Descripción", "Stock", "Caducidad" desde la cabecera de cada página.
-   Si no encuentra cabecera, usa rangos amplios de fallback (código: x=30–110).
+## Pruebas
 
-### Pedido = ~500 (ej: 506, 507, 528)
-**Causa derivada**: si total_current = 2027, entonces
-`pedido = ceil(2027/4) - stock = 507 - stock`. Fijando el total corrige el pedido.
-
----
-
-## Diagnóstico de un PDF nuevo
+Desde la raíz del proyecto, usando el Python del entorno instalado:
 
 ```bash
-# Desde la raíz del proyecto
-venv/bin/python3 -c "
-from pdf_parser import diagnose_pdf
-diagnose_pdf('ruta/al/archivo.pdf')
-"
+bin/python -B -m pytest -q -p no:cacheprovider
 ```
 
-La salida muestra por página:
-- Si `_detect_columns` encontró cabecera (OK / None)
-- Palabras del encabezado con sus posiciones X
-- Primeros 5 productos con sus clusters de dígitos y posición X
-- Si `_detect_columns_from_data` infirió las columnas correctamente
+Las pruebas sintéticas cubren descripciones de varias líneas, códigos al principio o al final del bloque, páginas sin bandas, columnas desplazadas, negativos, cifras grandes, totales discrepantes, campos desconocidos, procedencia y respuestas visuales inválidas. El flujo de cuatro documentos comprueba subida, comparación, resultados y descarga sin contraseña.
 
-### Qué buscar en la salida
+Los originales privados de Interapothek no están en el repositorio. Para habilitar las regresiones verificadas visualmente:
 
-```
-=== PÁGINA 1 ===
-  _detect_columns → None (no header found)
-  Header words: [('ENE', 354), ('FEB', 394), ('MAR', 434), ...]
-  123456  yr=2026  clusters=[(1, 218), (0, 247), (2026, 354), (5, 394), ...]
-  _detect_columns_from_data → OK
-    year=[346.0-366.0]  months: ['394', '434', '474', ...]
+```bash
+PHARMACY_PDF_FIXTURE_DIR=/ruta/a/los/cuatro/originales bin/python -B -m pytest -q -p no:cacheprovider
 ```
 
-- `_detect_columns → None` + header words con "ENE": el PDF usa mayúsculas (debería capturarse con el fix case-insensitive).
-- Cluster `(2026, 354)` en x=354 y MONTH_X[0]=357: confirma el bug de año-como-mes.
-- `_detect_columns_from_data → OK` con year=[346-366]: nivel 2 resuelve el problema.
-
----
-
-## Labs probados
-
-| Lab | Formato | Nivel usado | Notas |
-|-----|---------|-------------|-------|
-| Eucerin | Patrón A estándar | Nivel 1 | Funcionando |
-| Pierre Fabre | Mayúsculas + year ~x354 | Nivel 2 | Fix case-insensitive + year-anchor |
-| _(nuevo)_ | — | — | Ejecutar `diagnose_pdf` primero |
-
----
-
-## Relaciones
-- [[Feature Comparativa]] — flujo completo de comparativa
-- [[PDF Processing]] — notas generales de extracción
-- [[Scripts Análisis]] — uso de los datos extraídos
+Se han comprobado, entre otros, agua de 5000 ml, algodón de 50 g, cepillo coral, lipgloss Nº3, devoluciones negativas y stock negativo. Las ventas coinciden con los totales originales: Zarzuelo 539/1034 y Barris 700/1863 para 2026/2025.

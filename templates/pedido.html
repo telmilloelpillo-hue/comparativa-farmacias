@@ -202,6 +202,7 @@
   </div>
 
   <!-- SUMMARY -->
+  <p id="reviewNotice" hidden style="color:#92400e;background:#fef9c3;padding:0.6rem;border-radius:5px"></p>
   <div class="summary-grid" id="summaryGrid"></div>
 
   <!-- TAB: Pedido completo -->
@@ -262,8 +263,21 @@ const NAME2 = {{ name2 | tojson }};
 
 document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
 
+function escapeHTML(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, character =>
+    ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[character]));
+}
+
+function numericValue(value) {
+  if (value == null || value === '' || value === '—' || value === '⚠️') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function computeKPIs(months, stock, leadTime, safetyStock, horizon) {
-  const mc = (months || []).map(Number);
+  if (stock === null || !Array.isArray(months) || months.length !== 12 ||
+      months.some(value => numericValue(value) === null)) return null;
+  const mc = months.map(Number);
   const last3 = mc.slice(-3);
   const prev3 = mc.slice(-6, -3);
   const sum3  = last3.reduce((a,b) => a+b, 0);
@@ -301,14 +315,16 @@ function rebuild() {
 
   // Build rows
   const rows = [];
+  let pendingReview = 0;
 
   PRODUCTS.forEach(p => {
     // Farmacia 1
     if (farm === 'both' || farm === 'z') {
       if (p.status !== 'only2') {
-        const stock = parseInt(p.stock1) || 0;
-        const kpis  = computeKPIs(p.months1_current, stock, lt, ss, hz);
-        if (kpis.pedidoRec >= min) {
+        const stock = numericValue(p.stock1);
+        const kpis = p.pedido_no_calculable1 ? null : computeKPIs(p.months1_current, stock, lt, ss, hz);
+        if (kpis === null) pendingReview++;
+        if (kpis !== null && kpis.pedidoRec >= min) {
           rows.push({
             code: p.code, description: p.description,
             farm: NAME1, farmKey: 'z',
@@ -321,9 +337,10 @@ function rebuild() {
     // Farmacia 2
     if (farm === 'both' || farm === 'b') {
       if (p.status !== 'only1') {
-        const stock = parseInt(p.stock2) || 0;
-        const kpis  = computeKPIs(p.months2_current, stock, lt, ss, hz);
-        if (kpis.pedidoRec >= min) {
+        const stock = numericValue(p.stock2);
+        const kpis = p.pedido_no_calculable2 ? null : computeKPIs(p.months2_current, stock, lt, ss, hz);
+        if (kpis === null) pendingReview++;
+        if (kpis !== null && kpis.pedidoRec >= min) {
           rows.push({
             code: p.code, description: p.description,
             farm: NAME2, farmKey: 'b',
@@ -342,6 +359,9 @@ function rebuild() {
 
   renderTables(rows);
   renderSummary(rows, lt, hz);
+  const notice = document.getElementById('reviewNotice');
+  notice.hidden = pendingReview === 0;
+  notice.textContent = pendingReview + ' lectura(s) pendiente(s) de revisar en la comparativa. No se calcula un pedido automático con datos incompletos.';
 }
 
 function renderSummary(rows, lt, hz) {
@@ -352,7 +372,7 @@ function renderSummary(rows, lt, hz) {
   const farmLines = Object.entries(byFarm).map(([f, q]) => `${f}: ${q}`).join(' · ');
 
   document.getElementById('summaryGrid').innerHTML = `
-    <div class="sum-card"><div class="sum-label">Productos a pedir</div><div class="sum-value">${rows.length}</div><div class="sum-sub">${farmLines}</div></div>
+    <div class="sum-card"><div class="sum-label">Productos a pedir</div><div class="sum-value">${rows.length}</div><div class="sum-sub">${escapeHTML(farmLines)}</div></div>
     <div class="sum-card"><div class="sum-label">Unidades totales</div><div class="sum-value">${total}</div><div class="sum-sub">lead time ${lt}d · horizonte ${hz}m</div></div>
     <div class="sum-card"><div class="sum-label">Urgencia alta</div><div class="sum-value" style="color:#dc2626">${altos}</div><div class="sum-sub">por debajo del punto de pedido</div></div>
     <div class="sum-card"><div class="sum-label">Urgencia media</div><div class="sum-value" style="color:#ea580c">${rows.filter(r=>r.urgencia==='medio').length}</div><div class="sum-sub">cobertura ajustada</div></div>
@@ -367,11 +387,11 @@ function renderTables(rows) {
     const urgClass = `urg-${r.urgencia}`;
     const urgLabel = r.urgencia === 'alto' ? '🔴 Alto' : r.urgencia === 'medio' ? '🟡 Medio' : '🟢 Bajo';
     const farmColor = r.farmKey === 'z' ? 'var(--z)' : 'var(--b)';
-    return `<tr data-search="${r.code} ${r.description.toUpperCase()} ${r.farm.toUpperCase()}">
+    return `<tr data-search="${escapeHTML(r.code)} ${escapeHTML(r.description.toUpperCase())} ${escapeHTML(r.farm.toUpperCase())}">
       <td class="td-code">${r.code}</td>
       <td class="td-desc">
-        ${r.description}
-        <span style="font-size:0.65rem;font-weight:600;color:${farmColor};margin-left:0.4rem">${r.farm}</span>
+        ${escapeHTML(r.description)}
+        <span style="font-size:0.65rem;font-weight:600;color:${farmColor};margin-left:0.4rem">${escapeHTML(r.farm)}</span>
       </td>
       <td>${r.stock}</td>
       <td>${r.avgMonthly > 0 ? r.avgMonthly.toFixed(1) : '—'}</td>
@@ -399,9 +419,9 @@ function renderTables(rows) {
     exportRows = Object.values(combined).sort((a,b) => a.maxUrg - b.maxUrg || b.qty - a.qty);
   }
 
-  const exportHTML = exportRows.map(r => `<tr data-search="${r.code} ${r.description.toUpperCase()}">
+  const exportHTML = exportRows.map(r => `<tr data-search="${escapeHTML(r.code)} ${escapeHTML(r.description.toUpperCase())}">
     <td class="td-code">${r.code}</td>
-    <td class="td-desc">${r.description}</td>
+    <td class="td-desc">${escapeHTML(r.description)}</td>
     <td class="qty">${r.qty}</td>
   </tr>`).join('');
   document.getElementById('exportTable').innerHTML = exportHTML;

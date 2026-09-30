@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template, send_file, session, redirect, url_for, jsonify
 import os, tempfile, uuid, json, threading
 from datetime import datetime
+from xml.sax.saxutils import escape as xml_escape
 
 try:
     from dotenv import load_dotenv
@@ -86,7 +87,6 @@ app.secret_key = 'farmacias_barris_zarzuelo_2026'
 _progress_store = {}
 
 # ── Configuración ──────────────────────────────────────────────────────────────
-PASSWORD             = "farmacias2026"
 PEDIDOS_DIR          = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pedidos')
 os.makedirs(PEDIDOS_DIR, exist_ok=True)
 MAX_PDF_MB           = 20
@@ -104,31 +104,20 @@ C_WARNING   = colors.HexColor('#fef9c3')
 C_PARADO    = colors.HexColor('#ffe0b2')   # naranja suave → stock parado
 C_PEDIDO    = colors.HexColor('#dcfce7')   # verde suave → pedido > 0
 
-# ── Login ──────────────────────────────────────────────────────────────────────
+def _pdf_value(value):
+    """Distinguish an unread figure from zero or a non-applicable column."""
+    return 'Revisar' if value is None or value == '⚠️' else str(value)
+
+
+# ── Compatibilidad de enlaces antiguos ─────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    error = None
-    if request.method == 'POST':
-        if request.form.get('password') == PASSWORD:
-            session['authenticated'] = True
-            return redirect(url_for('index'))
-        error = 'Contraseña incorrecta'
-    return render_template('login.html', error=error)
+    return redirect(url_for('index'))
 
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('login'))
-
-@app.before_request
-def check_auth():
-    if request.endpoint in ('login', 'static'):
-        return
-    if not session.get('authenticated'):
-        # API endpoints that expect JSON get 401; browser pages get redirect
-        if request.is_json or request.path.startswith('/fetch_'):
-            return jsonify({'error': 'no auth'}), 401
-        return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 # ── Rutas ──────────────────────────────────────────────────────────────────────
 @app.route('/')
@@ -223,7 +212,10 @@ def comparar():
         args=(job_token, tmp1.name, tmp2.name,
               tmp_sit1.name if tmp_sit1 else None,
               tmp_sit2.name if tmp_sit2 else None,
-              name1, name2, has_sit1, has_sit2),
+              name1, name2, has_sit1, has_sit2,
+              {'pdf1': file1.filename, 'pdf2': file2.filename,
+               'sit1': sit1.filename if has_sit1 else None,
+               'sit2': sit2.filename if has_sit2 else None}),
         daemon=True,
     )
     t.start()
@@ -232,12 +224,21 @@ def comparar():
 
 
 def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
-                    name1, name2, has_sit1, has_sit2):
+                    name1, name2, has_sit1, has_sit2, source_files=None):
+    source_files = dict(source_files or {})
     store = _progress_store[job_token]
 
     def upd(pct, step):
         store['pct']  = min(int(pct), 99)
         store['step'] = step
+
+    def require_sales_products(products, pharmacy):
+        if not products:
+            raise ValueError(
+                f'No se han podido leer productos del PDF de ventas de {pharmacy}. '
+                'Comprueba que el PDF contiene una tabla de productos con texto legible '
+                'y vuelve a subirlo.'
+            )
 
     try:
         with app.app_context():
@@ -253,6 +254,8 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
                 path_sit1, path_sit2 = path_sit2, path_sit1
                 name1, name2         = name2, name1
                 has_sit1, has_sit2   = has_sit2, has_sit1
+                for first, second in [('pdf1', 'pdf2'), ('sit1', 'sit2')]:
+                    source_files[first], source_files[second] = source_files.get(second), source_files.get(first)
 
             upd(2, 'Detectando laboratorio…')
             lab1 = detect_lab(path1)
@@ -271,6 +274,7 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
                     f'Leyendo ventas — {name1} ({pg}/{total} páginas)')
             _akey = _get_api_key()
             products1 = extract_products(path1, on_page=cb1, anthropic_key=_akey)
+            require_sales_products(products1, name1)
 
             # PDF 2
             upd(pct_pdf1_end + 1, f'Leyendo ventas — {name2} (página 1…)')
@@ -278,18 +282,32 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
                 upd(pct_pdf1_end + (pct_pdf2_end - pct_pdf1_end) * pg / total,
                     f'Leyendo ventas — {name2} ({pg}/{total} páginas)')
             products2 = extract_products(path2, on_page=cb2, anthropic_key=_akey)
+            require_sales_products(products2, name2)
 
             # Situaciones (opcionales)
             situation1 = situation2 = None
             pct_now = pct_pdf2_end
             if has_sit1:
                 upd(pct_now + 1, f'Leyendo situación — {name1}…')
-                situation1 = extract_situation(path_sit1)
+                situation1 = extract_situation(path_sit1, anthropic_key=_akey)
                 pct_now += 10
             if has_sit2:
                 upd(pct_now + 1, f'Leyendo situación — {name2}…')
-                situation2 = extract_situation(path_sit2)
+                situation2 = extract_situation(path_sit2, anthropic_key=_akey)
                 pct_now += 10
+
+            # Preserve the original upload name for each extraction source.
+            for products, which in [(products1, 'pdf1'), (products2, 'pdf2'),
+                                    (situation1, 'sit1'), (situation2, 'sit2')]:
+                if products and source_files.get(which):
+                    filename = os.path.basename(source_files[which])
+                    for product in products.values():
+                        source_entries = (product.get('sources', [])
+                                          + product.get('description_candidates', [])
+                                          + [product.get('description_source')])
+                        for source in source_entries:
+                            if isinstance(source, dict):
+                                source['file'] = filename
 
             upd(pct_now + 2, 'Comparando productos…')
             results = compare_products(
@@ -310,12 +328,8 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
 
             upd(93, 'Guardando datos…')
 
-            def _jsonable(v):
-                if v is None or v == '—' or v == '⚠️':
-                    return str(v)
-                return v
-
-            safe_results = [{k: _jsonable(v) for k, v in r.items()} for r in results]
+            # JSON null remains an unread value; it must never become zero.
+            safe_results = results
             lab_slug = (lab1.replace(' ', '_').replace('-', '_')
                             .replace("'", '').replace('é', 'e')
                             .replace('à', 'a').replace('ó', 'o'))
@@ -424,8 +438,6 @@ def pedido():
 
 @app.route('/pedido_pdf', methods=['POST'])
 def pedido_pdf():
-    if not session.get('authenticated'):
-        return jsonify({'error': 'no auth'}), 401
     data  = request.get_json(force=True)
     lab   = data.get('lab',   'Farmacia')
     name1 = data.get('name1', 'Farmacia 1')
@@ -446,8 +458,6 @@ def pedido_pdf():
 
 @app.route('/save_pedido_pdf', methods=['POST'])
 def save_pedido_pdf():
-    if not session.get('authenticated'):
-        return jsonify({'error': 'no auth'}), 401
     data     = request.get_json(force=True)
     order_id = data.get('order_id', '')
     lab      = data.get('lab',      'Farmacia')
@@ -464,8 +474,6 @@ def save_pedido_pdf():
 
 @app.route('/pedido_file/<pdf_id>')
 def pedido_file(pdf_id):
-    if not session.get('authenticated'):
-        return redirect(url_for('login'))
     safe_id  = ''.join(c if c.isalnum() or c in '-_' else '_' for c in pdf_id)
     pdf_path = os.path.join(PEDIDOS_DIR, f'{safe_id}.pdf')
     if not os.path.exists(pdf_path):
@@ -483,9 +491,6 @@ def procesar_anotaciones():
     para leer los números escritos a mano en la columna verde.
     Devuelve JSON con la lista de productos + cantidades extraídas.
     """
-    if not session.get('authenticated'):
-        return jsonify({'error': 'no auth'}), 401
-
     token = request.form.get('token') or session.get('comp_token')
     if not token:
         return jsonify({'error': 'Sin sesión de comparativa activa'}), 400
@@ -610,8 +615,6 @@ def procesar_anotaciones():
 @app.route('/pedido_anotacion_pdf', methods=['POST'])
 def pedido_anotacion_pdf():
     """Genera PDF de pedido a partir de los ítems revisados (código, descripción, cantidad)."""
-    if not session.get('authenticated'):
-        return jsonify({'error': 'no auth'}), 401
     data  = request.get_json(force=True)
     items = data.get('items', [])
     lab   = data.get('lab', session.get('anotacion_lab', 'Farmacia'))
@@ -663,9 +666,6 @@ def encargos():
 
 @app.route('/pregunta', methods=['POST'])
 def pregunta():
-    if not session.get('authenticated'):
-        return jsonify({'error': 'no auth'}), 401
-
     if not _ai_available():
         return jsonify({'answer': 'IA no configurada. Añade ANTHROPIC_API_KEY como variable de entorno.'})
 
@@ -715,16 +715,11 @@ def pregunta():
 
 @app.route('/facturas')
 def facturas():
-    if not session.get('authenticated'):
-        return redirect(url_for('login'))
     return render_template('facturas.html')
 
 
 @app.route('/leer_factura', methods=['POST'])
 def leer_factura():
-    if not session.get('authenticated'):
-        return jsonify({'error': 'no auth'}), 401
-
     if not _ai_available():
         return jsonify({'error': 'IA no configurada. Añade ANTHROPIC_API_KEY como variable de entorno.'}), 503
 
@@ -764,9 +759,6 @@ def leer_factura():
 
 @app.route('/fetch_albaran', methods=['POST'])
 def fetch_albaran():
-    if not session.get('authenticated'):
-        return jsonify({'error': 'no auth'}), 401
-
     data = request.get_json(silent=True) or {}
     numero = (data.get('numero') or '').strip()
     if not numero:
@@ -862,7 +854,7 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     def hdr(text, size=7.5, bold=True):
         fn = 'Helvetica-Bold' if bold else 'Helvetica'
         return Paragraph(
-            f'<font name="{fn}" size="{size}">{text}</font>',
+            f'<font name="{fn}" size="{size}">{xml_escape(str(text))}</font>',
             ParagraphStyle('_h', leading=size+2, alignment=1, textColor=colors.white))
 
     # ── Cabeceras ─────────────────────────────────────────────────────────────
@@ -914,42 +906,38 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
         ]
 
     def _fmt(v):
-        if v in ('—', '⚠️') or v is None: return str(v) if v else '⚠️'
-        return str(v)
+        return _pdf_value(v)
 
     data = [row_farmacia, row_cols]
     row_meta = []
 
     for r in results:
         idx = len(data)
-        desc_text = r['description']
+        desc_text = str(r.get('description') or '')
         # strip characters unsupported by Helvetica (e.g. ■ → black square in PDF)
         desc_text = desc_text.replace('\u25a0', '').replace('\u25cf', '').replace('\u25aa', '').strip()
-        max_desc = 48 if show_s365 else 52
-        if len(desc_text) > max_desc:
-            desc_text = desc_text[:max_desc-2] + '…'
-        warn_flag = ' ⚠' if r['needs_review'] else ''
-        desc_para = Paragraph(desc_text + warn_flag, cell_style)
+        warn_flag = ' [revisar]' if r['needs_review'] else ''
+        desc_para = Paragraph(xml_escape(desc_text + warn_flag), cell_style)
 
         if show_s365:
             row = [
                 r['code'], desc_para,
                 _fmt(r['stock1']), _fmt(r['smin1']),
                 _fmt(r['total1']), _fmt(r['total1_prev']), _fmt(r.get('s365_1','—')),
-                str(r.get('pedido1', 0)),
+                _fmt(r.get('pedido1')),
                 _fmt(r['stock2']), _fmt(r['smin2']),
                 _fmt(r['total2']), _fmt(r['total2_prev']), _fmt(r.get('s365_2','—')),
-                str(r.get('pedido2', 0)),
+                _fmt(r.get('pedido2')),
             ]
         else:
             row = [
                 r['code'], desc_para,
                 _fmt(r['stock1']), _fmt(r['smin1']),
                 _fmt(r['total1']), _fmt(r['total1_prev']),
-                str(r.get('pedido1', 0)),
+                _fmt(r.get('pedido1')),
                 _fmt(r['stock2']), _fmt(r['smin2']),
                 _fmt(r['total2']), _fmt(r['total2_prev']),
-                str(r.get('pedido2', 0)),
+                _fmt(r.get('pedido2')),
             ]
         data.append(row)
         row_meta.append((idx, r['status'], r['needs_review'],
@@ -1008,9 +996,9 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
             if show_s365:
                 ts.add('BACKGROUND', (s365_2_col,idx), (s365_2_col,idx), C_PARADO)
 
-        if pedido1 > 0:
+        if pedido1 is not None and pedido1 > 0:
             ts.add('BACKGROUND', (pedido1_col,idx), (pedido1_col,idx), C_PEDIDO)
-        if pedido2 > 0:
+        if pedido2 is not None and pedido2 > 0:
             ts.add('BACKGROUND', (pedido2_col,idx), (pedido2_col,idx), C_PEDIDO)
 
     table.setStyle(ts)
@@ -1043,7 +1031,8 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     ]))
 
     # ── Título ────────────────────────────────────────────────────────────────
-    title_data = [[Paragraph(title_text, title_style), Paragraph(stats_text, sub_style)]]
+    title_data = [[Paragraph(xml_escape(title_text), title_style),
+                   Paragraph(xml_escape(stats_text), sub_style)]]
     title_table = Table(title_data, colWidths=[9.5*cm, 18.3*cm])
     title_table.setStyle(TableStyle([
         ('BACKGROUND',(0,0),(-1,0),C_HEADER),
@@ -1133,7 +1122,7 @@ def _build_logistics_table(results, name1, name2,
             try:
                 return int(str(v)) == 0
             except (ValueError, TypeError):
-                return v == '—'
+                return False
 
         if p1 and _stock_zero(s2):
             casos_traspaso.append({
@@ -1153,12 +1142,12 @@ def _build_logistics_table(results, name1, name2,
 
     def log_hdr(text, color=colors.white, size=7, bg=None):
         return Paragraph(
-            f'<font name="Helvetica-Bold" size="{size}" color="{"white" if color==colors.white else "#1c1a17"}">{text}</font>',
+            f'<font name="Helvetica-Bold" size="{size}" color="{"white" if color==colors.white else "#1c1a17"}">{xml_escape(str(text))}</font>',
             ParagraphStyle('lh', leading=size+2, alignment=1))
 
     def log_cell(text, size=6.5):
         return Paragraph(
-            f'<font name="Helvetica" size="{size}">{text}</font>',
+            f'<font name="Helvetica" size="{size}">{xml_escape(str(text))}</font>',
             ParagraphStyle('lc', leading=size+1.5, textColor=colors.HexColor('#1c1a17')))
 
     section_title_style = ParagraphStyle('sct',
@@ -1184,7 +1173,7 @@ def _build_logistics_table(results, name1, name2,
             t_data.append([
                 log_cell(c['code']), log_cell(c['description']),
                 log_cell(c['origen']), log_cell(c['destino']),
-                log_cell(str(c['stock_origen'])),
+                log_cell(_pdf_value(c['stock_origen'])),
             ])
         t = Table(t_data, colWidths=[1.8*cm, 9*cm, 3*cm, 3*cm, 2.5*cm])
         t.setStyle(TableStyle([
@@ -1213,7 +1202,7 @@ def _build_logistics_table(results, name1, name2,
         for c in casos_exceso:
             e_data.append([
                 log_cell(c['code']), log_cell(c['description']),
-                log_cell(str(c['stock1'])), log_cell(str(c['stock2'])),
+                log_cell(_pdf_value(c['stock1'])), log_cell(_pdf_value(c['stock2'])),
             ])
         t = Table(e_data, colWidths=[1.8*cm, 10*cm, 3*cm, 3*cm])
         t.setStyle(TableStyle([
@@ -1243,7 +1232,7 @@ def _build_logistics_table(results, name1, name2,
         for c in casos_caducidad:
             c_data.append([
                 log_cell(c['code']), log_cell(c['description']),
-                log_cell(c['farmacia']), log_cell(str(c['stock'])),
+                log_cell(c['farmacia']), log_cell(_pdf_value(c['stock'])),
                 log_cell(c['caducidad']),
                 log_cell(str(c['meses']) if c['meses'] > 0 else '¡Este mes!'),
             ])
@@ -1304,7 +1293,7 @@ def _generate_pedido_anotacion_pdf(items, output_path, lab):
         fontName='Helvetica-Bold', fontSize=8)
 
     story = [
-        Paragraph(f'PEDIDO — {lab.upper()}', title_st),
+        Paragraph(xml_escape(f'PEDIDO — {lab.upper()}'), title_st),
         Paragraph(f'Generado el {fecha_str} · Cantidades extraídas de plantilla Apple Pencil', sub_st),
     ]
 
@@ -1318,7 +1307,7 @@ def _generate_pedido_anotacion_pdf(items, output_path, lab):
     for item in items:
         table_data.append([
             item.get('code', ''),
-            Paragraph(item.get('description', ''), desc_st),
+            Paragraph(xml_escape(str(item.get('description') or '')), desc_st),
             str(item.get('qty', 0)),
         ])
 
@@ -1398,11 +1387,11 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab,
         textColor=colors.white)
 
     story = [
-        Paragraph(f'PLANTILLA DE PEDIDO — {lab.upper()}', title_st),
+        Paragraph(xml_escape(f'PLANTILLA DE PEDIDO — {lab.upper()}'), title_st),
         Paragraph(
-            f'Generado el {fecha_str}  ·  {name1} vs {name2}  ·  '
+            xml_escape(f'Generado el {fecha_str}  ·  {name1} vs {name2}  ·  '
             'Escribe la cantidad a pedir en la columna verde con Apple Pencil. '
-            'Deja la celda vacía si no quieres pedir ese producto.',
+            'Deja la celda vacía si no quieres pedir ese producto.'),
             sub_st,
         ),
     ]
@@ -1444,8 +1433,8 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab,
 
     # ── Fila 0: cabecera de farmacia ───────────────────────────────────────────
     farm_row = (['', '', '']
-                + [Paragraph(f'● {name1}', hdr_c_st)] + [''] * (n_farm - 1)
-                + [Paragraph(f'● {name2}', hdr_c_st)] + [''] * (n_farm - 1))
+                + [Paragraph(xml_escape(f'● {name1}'), hdr_c_st)] + [''] * (n_farm - 1)
+                + [Paragraph(xml_escape(f'● {name2}'), hdr_c_st)] + [''] * (n_farm - 1))
 
     # ── Fila 1: cabecera de columnas ───────────────────────────────────────────
     if show_s365:
@@ -1474,53 +1463,50 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab,
     )
 
     table_data = [farm_row, col_row]
-    row_heights = [14, 13]
+    min_row_heights = [14, 13]
 
     def _v(v):
-        if v in ('—', '⚠️', None): return '—'
+        if v in ('—', '⚠️', None): return _pdf_value(v)
         try:
             return str(int(v))
         except (ValueError, TypeError):
             return str(v)
 
     for r in results:
-        desc = r.get('description', '')
-        max_chars = 50 if show_s365 else 56
-        if len(desc) > max_chars:
-            desc = desc[:max_chars - 2] + '…'
+        desc = str(r.get('description') or '')
 
-        p1 = r.get('pedido1', 0) or 0
-        p2 = r.get('pedido2', 0) or 0
+        p1 = r.get('pedido1')
+        p2 = r.get('pedido2')
 
         if show_s365:
             row = [
                 '',                          # columna verde — VACÍA
                 r['code'],
-                Paragraph(desc, desc_st),
+                Paragraph(xml_escape(desc), desc_st),
                 _v(r.get('stock1')), _v(r.get('smin1')),
                 _v(r.get('total1')), _v(r.get('total1_prev')),
                 _v(r.get('s365_1')),
-                str(p1) if p1 else '—',
+                _v(p1) if p1 is None or p1 else '—',
                 _v(r.get('stock2')), _v(r.get('smin2')),
                 _v(r.get('total2')), _v(r.get('total2_prev')),
                 _v(r.get('s365_2')),
-                str(p2) if p2 else '—',
+                _v(p2) if p2 is None or p2 else '—',
             ]
         else:
             row = [
                 '',                          # columna verde — VACÍA
                 r['code'],
-                Paragraph(desc, desc_st),
+                Paragraph(xml_escape(desc), desc_st),
                 _v(r.get('stock1')), _v(r.get('smin1')),
                 _v(r.get('total1')), _v(r.get('total1_prev')),
-                str(p1) if p1 else '—',
+                _v(p1) if p1 is None or p1 else '—',
                 _v(r.get('stock2')), _v(r.get('smin2')),
                 _v(r.get('total2')), _v(r.get('total2_prev')),
-                str(p2) if p2 else '—',
+                _v(p2) if p2 is None or p2 else '—',
             ]
 
         table_data.append(row)
-        row_heights.append(22)
+        min_row_heights.append(22)
 
     n = len(table_data)
     last_col = n_cols_total - 1
@@ -1565,7 +1551,8 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab,
         ('RIGHTPADDING',  (0, 0), (-1, -1),  4),
     ])
 
-    table = Table(table_data, colWidths=col_widths, rowHeights=row_heights, repeatRows=2)
+    table = Table(table_data, colWidths=col_widths,
+                  minRowHeights=min_row_heights, repeatRows=2)
     table.setStyle(ts)
     story.append(table)
     doc.build(story)
@@ -1611,7 +1598,7 @@ def _generate_pedido_pdf(rows, output_path, lab, name1, name2):
         fontName='Helvetica-Bold', fontSize=8)
 
     story = [
-        Paragraph(f'PEDIDO — {lab.upper()}', title_st),
+        Paragraph(xml_escape(f'PEDIDO — {lab.upper()}'), title_st),
         Paragraph(f'Generado el {fecha_str}', sub_st),
     ]
 
@@ -1620,8 +1607,8 @@ def _generate_pedido_pdf(rows, output_path, lab, name1, name2):
     table_data = [[
         Paragraph('Código',  hdr_left_st),
         Paragraph('Descripción', hdr_left_st),
-        Paragraph(name1, hdr_st),
-        Paragraph(name2, hdr_st),
+        Paragraph(xml_escape(name1), hdr_st),
+        Paragraph(xml_escape(name2), hdr_st),
         Paragraph('Total',  hdr_st),
     ]]
 
@@ -1631,7 +1618,7 @@ def _generate_pedido_pdf(rows, output_path, lab, name1, name2):
         tot = r.get('tot', 0) or 0
         table_data.append([
             r.get('code', ''),
-            Paragraph(r.get('desc', ''), desc_st),
+            Paragraph(xml_escape(str(r.get('desc') or '')), desc_st),
             str(qz) if qz > 0 else '—',
             str(qb) if qb > 0 else '—',
             str(tot),
@@ -1689,15 +1676,16 @@ def buscador():
     available = {w: os.path.exists(
         os.path.join(tempfile.gettempdir(), f'buscador_{token}_{w}.pdf')
     ) for w in ('pdf1', 'pdf2', 'sit1', 'sit2')}
-    def _num(v):
-        try: return float(v or 0)
-        except: return 0
-    diff_codes = [
-        r['code'] for r in data.get('results', [])
-        if r.get('status') != 'both'
-        or _num(r.get('stock1')) != _num(r.get('stock2'))
-        or abs(_num(r.get('total1')) - _num(r.get('total2'))) > 10
-    ]
+    def _different_or_uncertain(r):
+        if r.get('status') != 'both' or r.get('needs_review'):
+            return True
+        try:
+            s1, s2, t1, t2 = [float(r[key]) for key in ('stock1', 'stock2', 'total1', 'total2')]
+        except (ValueError, TypeError, KeyError):
+            return True
+        return s1 != s2 or abs(t1 - t2) > 10
+
+    diff_codes = [r['code'] for r in data.get('results', []) if _different_or_uncertain(r)]
     return render_template('buscador.html',
                            comp_token=token,
                            available=available,
