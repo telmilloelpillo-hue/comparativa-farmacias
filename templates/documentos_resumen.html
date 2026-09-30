@@ -1,0 +1,18 @@
+{% if document_summaries|default([]) or document_warnings|default([]) %}
+<section aria-label="Documentos comparados" style="margin:0 0 10px;font-size:0.8rem;line-height:1.5">
+  {% if document_warnings|default([]) %}
+  <div id="documentWarnings" role="status" style="color:#92400e;background:#fef9c3;padding:8px 12px;border:1px solid #fcd34d;border-radius:5px">
+    {% for warning in document_warnings %}<p style="margin:2px 0">{{ warning }}</p>{% endfor %}
+    {% if periods_differ|default(false) %}<p style="margin:4px 0 0">Revisa los periodos antes de usar el pedido sugerido.</p>{% endif %}
+  </div>
+  {% endif %}
+  {% if document_summaries|default([]) %}
+  <details style="padding:6px 0">
+    <summary style="cursor:pointer">Documentos y periodos comparados</summary>
+    {% for document in document_summaries %}
+    <p style="margin:5px 0"><strong>{{ document.label }}</strong>: {{ document.detail }}<br><span style="color:#6b7280">{{ document.file }}</span></p>
+    {% endfor %}
+  </details>
+  {% endif %}
+</section>
+{% endif %}

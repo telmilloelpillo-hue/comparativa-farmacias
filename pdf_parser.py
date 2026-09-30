@@ -7,7 +7,6 @@ ambiguous data stays unknown and is surfaced for review instead of becoming 0.
 import math as _math
 import re
 import unicodedata
-from datetime import date as _date
 from pathlib import Path
 from statistics import median
 
@@ -21,6 +20,14 @@ _FOOTER_RE = re.compile(
     r'agrupar\s+por\b|laboratorio\s*:|stock\s+actual\s*:|articulos\s+sin\s+movimientos\b)',
     re.IGNORECASE,
 )
+
+
+class DocumentProducts(dict):
+    """A product mapping with document checks kept outside product rows."""
+
+    def __init__(self, *args, metadata=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.metadata = metadata or {}
 
 
 def _normal(text):
@@ -313,8 +320,205 @@ def _insert_product(products, code, product):
     products[code] = winner
 
 
+def _declared_period(pages):
+    """Read printed criteria without treating the report date as its period."""
+    text = '\n'.join(page.extract_text() or '' for page in pages)
+    normalized = _normal(text)
+    def criterion(label):
+        match = re.search(r'(?m)^\s*' + label + r'\s*:\s*(.+)$', normalized)
+        return match.group(1).strip() if match else None
+    def printed_date(label):
+        raw = criterion(label)
+        if not raw:
+            return None
+        match = re.fullmatch(r'(?:(0?[1-9]|[12]\d|3[01])/)?(0?[1-9]|1[0-2])/(\d{4})', raw)
+        if not match:
+            return None
+        day, month, year = match.groups()
+        return (f'{int(day):02d}/' if day else '') + f'{int(month):02d}/{year}'
+    days = re.search(r'articulos\s+sin\s+movimientos\s+desde\s+hace\s*:\s*(\d+)', normalized)
+    current_month = criterion('mes actual')
+    period = {'from': printed_date('desde'), 'to': printed_date('hasta'),
+              'current_month': (current_month in ('s', 'si', 'sí')) if current_month is not None else None}
+    criteria = {'inactive_days': int(days.group(1)) if days else None,
+                'stock_filter': criterion('stock actual'),
+                'inactive_from': printed_date('desde'), 'inactive_to': printed_date('hasta')}
+    return period, criteria
+
+
+def _year_summary(page, layout):
+    """The annual summary has its own columns; product coordinates don't apply."""
+    words = page.extract_words(x_tolerance=2, y_tolerance=1.5)
+    headers = [w for w in words if _normal(w['text']).rstrip(': .') in ('ano', 'año')
+               and w['top'] >= layout['bottom']]
+    for header in headers:
+        line_words = [w for w in words if abs(w['top'] - header['top']) <= 3]
+        named = {_MONTH_ALIASES.get(_normal(w['text']).rstrip(': .'), _normal(w['text']).rstrip(': .')): w
+                 for w in line_words}
+        names = ['ano', 'total'] + list(_MONTH_NAMES)
+        if not all(name in named for name in names):
+            continue
+        centers = [(named[name]['x0'] + named[name]['x1']) / 2 for name in names]
+        bounds = {}
+        for i, name in enumerate(names):
+            cell = _cell_rectangle(page, named[name], header['top'])
+            left = (centers[i - 1] + centers[i]) / 2 if i else centers[0] - (centers[1] - centers[0]) / 2
+            right = (centers[i] + centers[i + 1]) / 2 if i + 1 < len(names) else centers[-1] + (centers[-1] - centers[-2]) / 2
+            bounds[name] = (cell['x0'] - .15, cell['x1'] + .15) if cell else (left, right)
+        result = []
+        for line in _physical_lines(page.chars):
+            if line['top'] <= header['bottom']:
+                continue
+            year = _integer(_zone(line, bounds['ano']))
+            if year is not None and 1900 <= year <= 2199:
+                result.append({'year': year, 'total': _integer(_zone(line, bounds['total'])),
+                               'months': [_integer(_zone(line, bounds[name])) for name in _MONTH_NAMES]})
+            elif result:
+                break
+        return result
+    return []
+
+
+def _sum_complete(values):
+    values = list(values)
+    return sum(values) if all(type(value) is int for value in values) else None
+
+
+def _document_metadata(pdf_path, pages, layouts, observations, products, kind):
+    """Validate cumulative source totals; never use them to replace row values."""
+    period, criteria = _declared_period(pages)
+    header = detect_pdf_header(pdf_path)
+    metadata = {'file': Path(pdf_path).name, 'document_type': header['type'],
+                'pharmacy': header['pharmacy'], 'page_count': len(pages),
+                'period': period, 'criteria': criteria, 'pages': [], 'warnings': [],
+                'order_unsafe': False, 'years': [], 'totals': {}}
+    cumulative = []
+    all_years = set()
+    def warn(page_info, code, message, *, expected=None, actual=None, unsafe=False):
+        warning = {'code': code, 'message': message, 'page': page_info['page']}
+        if expected is not None:
+            warning['expected'] = expected
+        if actual is not None:
+            warning['actual'] = actual
+        page_info['warnings'].append(warning)
+        metadata['warnings'].append(warning)
+        metadata['order_unsafe'] = metadata['order_unsafe'] or unsafe
+    for index, (page, layout, observed) in enumerate(zip(pages, layouts, observations)):
+        cumulative.extend(observed)
+        lines = _physical_lines(page.chars)
+        normalized = _normal(page.extract_text() or '')
+        has_product_text = any(re.match(r'^\s*[0-9A-Z]{6}\s+', _text(line['chars'])) for line in lines)
+        has_table_header = any('descripcion' in (text := _normal(_text(line['chars'])))
+                               and ('codigo' in text or 'stock' in text) for line in lines)
+        criteria_page = ('criterios de seleccion' in normalized or 'laboratorio:' in normalized) and not observed and bool(layout['warnings']) and not has_product_text and not has_table_header
+        page_info = {'page': index + 1, 'kind': 'criteria' if criteria_page else 'table' if not layout['warnings'] else 'unrecognized',
+                     'product_count': len(observed), 'footer_checks': [], 'year_summary': [], 'warnings': []}
+        metadata['pages'].append(page_info)
+        empty_footer = next((line for line in lines if layout['bottom'] - 2 <= line['top']
+                             and re.match(r'^totales?\b', _normal(_text(line['chars'])))
+                             and _integer(_zone(line, layout['bounds']['stock'])) == 0), None)
+        explicitly_empty = (not layout['warnings'] and not has_product_text
+                            and not any(_text(_zone(line, layout['bounds']['description'])) for line in layout['lines'])
+                            and empty_footer is not None)
+        if explicitly_empty and kind == 'sales':
+            explicitly_empty = (_integer(_zone(empty_footer, layout['bounds']['total'])) == 0
+                                and all(_integer(_zone(empty_footer, col)) == 0 for col in layout['bounds']['months']))
+        if not observed and not criteria_page and not explicitly_empty:
+            warn(page_info, 'pagina_sin_productos',
+                 f'Página {index + 1}: no se han podido extraer productos; revisa el original.', unsafe=True)
+        elif layout['warnings'] and not criteria_page:
+            warn(page_info, 'columnas_no_reconocidas',
+                 f'Página {index + 1}: las columnas no se reconocen con seguridad.', unsafe=True)
+        # The code column is inspected beyond the body too: a premature footer
+        # boundary must not hide another product without a document warning.
+        visible_codes = [re.sub(r'\s+', '', _text(_zone(line, layout['bounds']['code'])))
+                         for line in lines if line['top'] > layout['top']]
+        visible_count = sum(bool(_CODE_RE.fullmatch(code)) for code in visible_codes)
+        if not criteria_page and visible_count > len(observed):
+            warn(page_info, 'filas_no_extraidas',
+                 f'Página {index + 1}: hay {visible_count} códigos visibles y se han extraído {len(observed)} filas.',
+                 expected=visible_count, actual=len(observed), unsafe=True)
+        if criteria_page:
+            continue
+        footer_end = min((line['top'] for line in lines if line['top'] > layout['bottom']
+                          and (re.match(r'^ano\s+total\b', _normal(_text(line['chars'])))
+                               or re.match(r'^(?:criterios\s+de\s+seleccion|laboratorio\s*:|agrupar\s+por\s*:)', _normal(_text(line['chars']))))),
+                         default=float(page.height))
+        for line in lines:
+            text = _normal(_text(line['chars']))
+            if not layout['bottom'] - 2 <= line['top'] < footer_end or not re.match(r'^(?:totales?\b|suma\s+y\s+sigue\b)', text):
+                continue
+            if _CODE_RE.fullmatch(re.sub(r'\s+', '', _text(_zone(line, layout['bounds']['code'])))):
+                continue
+            printed = {'stock': _integer(_zone(line, layout['bounds']['stock']))}
+            calculated = {'stock': _sum_complete(p.get('stock') for p in cumulative)}
+            if kind == 'sales':
+                printed['total'] = _integer(_zone(line, layout['bounds']['total']))
+                printed['months'] = [_integer(_zone(line, col)) for col in layout['bounds']['months']]
+                calculated['total'] = _sum_complete(p.get('total_' + suffix) for p in cumulative for suffix in ('current', 'prev'))
+                calculated['months'] = [_sum_complete(p['months_' + suffix][i] for p in cumulative for suffix in ('current', 'prev')) for i in range(12)]
+            if not any(value is not None for value in printed.values() if not isinstance(value, list)):
+                continue
+            discrepancies = []
+            for field in ('stock', 'total'):
+                if field in printed and printed[field] is not None and printed[field] != calculated[field]:
+                    discrepancies.append(field)
+            if kind == 'sales':
+                discrepancies.extend(f'mes_{i + 1}' for i, (a, b) in enumerate(zip(printed['months'], calculated['months'])) if a is not None and a != b)
+            page_info['footer_checks'].append({'printed': printed, 'calculated': calculated, 'matches': not discrepancies})
+            if discrepancies:
+                warn(page_info, 'total_documento_discrepancia',
+                     f'Página {index + 1}: el acumulado impreso no coincide con las filas extraídas ({", ".join(discrepancies)}).',
+                     expected=printed, actual=calculated, unsafe=True)
+        if kind == 'sales':
+            all_years.update(year for line in layout['lines']
+                             if (year := _integer(_zone(line, layout['bounds']['year']))) is not None and 1900 <= year <= 2199)
+            page_info['year_summary'] = _year_summary(page, layout)
+            for summary in page_info['year_summary']:
+                year = summary['year']
+                all_years.add(year)
+                matching = [(p, suffix) for p in cumulative for suffix in ('current', 'prev') if p.get('year_' + suffix) == year]
+                calculated = {'total': _sum_complete(p.get('total_' + suffix) for p, suffix in matching),
+                              'months': [_sum_complete(p['months_' + suffix][i] for p, suffix in matching) for i in range(12)]}
+                summary['calculated'] = calculated
+                matches = (summary['total'] is None or summary['total'] == calculated['total']) and all(a is None or a == b for a, b in zip(summary['months'], calculated['months']))
+                summary['matches'] = matches
+                if not matches:
+                    warn(page_info, 'resumen_anual_discrepancia',
+                         f'Página {index + 1}: el resumen del año {year} no coincide con las ventas extraídas.',
+                         expected={'total': summary['total'], 'months': summary['months']}, actual=calculated, unsafe=True)
+    if kind == 'sales':
+        metadata['totals']['by_year'] = {str(year): _sum_complete(p.get('total_' + suffix) for p in products.values() for suffix in ('current', 'prev') if p.get('year_' + suffix) == year) for year in sorted(all_years)}
+    metadata['years'] = sorted(all_years)
+    metadata['totals']['stock'] = _sum_complete(p.get('stock') for p in products.values())
+    if not products and metadata['order_unsafe']:
+        metadata['totals']['stock'] = None
+        if kind == 'sales':
+            metadata['totals']['by_year'] = {str(year): None for year in all_years}
+    metadata['product_count'] = len(products)
+    if metadata['order_unsafe']:
+        for product in products.values():
+            product['_document_order_unsafe'] = True
+    return metadata
+
+
+def compare_document_metadata(products1, products2, situation1=None, situation2=None):
+    documents = {key: getattr(value, 'metadata', {}) for key, value in
+                 (('pdf1', products1), ('pdf2', products2), ('sit1', situation1), ('sit2', situation2)) if value is not None}
+    warnings = [f'{document.get("file", key)}: {warning["message"]}'
+                for key, document in documents.items() for warning in document.get('warnings', [])]
+    p1, p2 = (documents.get(key, {}).get('period', {}) for key in ('pdf1', 'pdf2'))
+    periods_differ = bool(p1.get('from') and p1.get('to') and p2.get('from') and p2.get('to')
+                          and (p1['from'], p1['to'], p1.get('current_month')) != (p2['from'], p2['to'], p2.get('current_month')))
+    if periods_differ:
+        current_note = ' La opción «Mes actual» también difiere entre los documentos.' if p1.get('current_month') != p2.get('current_month') else ''
+        name1, name2 = (documents.get(key, {}).get('pharmacy') or fallback for key, fallback in (('pdf1', 'Farmacia 1'), ('pdf2', 'Farmacia 2')))
+        warnings.append(f'Los periodos o criterios de ventas son distintos: {name1}, {p1["from"]}–{p1["to"]}; {name2}, {p2["from"]}–{p2["to"]}.{current_note} Las cifras conservan el periodo de cada PDF.')
+    return {'documents': documents, 'document_warnings': warnings, 'periods_differ': periods_differ}
+
+
 def extract_products(pdf_path, on_page=None, anthropic_key=None):
-    products = {}
+    products = DocumentProducts()
     with pdfplumber.open(pdf_path) as pdf:
         layouts = [_layout(page, 'sales') for page in pdf.pages]
         years = set()
@@ -323,8 +527,11 @@ def extract_products(pdf_path, on_page=None, anthropic_key=None):
                 year = _integer(_zone(line, layout['bounds']['year']))
                 if year is not None and 1900 <= year <= 2199:
                     years.add(year)
-        year_current = max(years, default=_date.today().year)
-        year_prev = sorted(years)[-2] if len(years) > 1 else year_current - 1
+        for page, layout in zip(pdf.pages, layouts):
+            years.update(row['year'] for row in _year_summary(page, layout))
+        year_current = max(years, default=None)
+        year_prev = sorted(years)[-2] if len(years) > 1 else year_current - 1 if year_current is not None else None
+        observations = [[] for _ in pdf.pages]
         for page_index, (page, layout) in enumerate(zip(pdf.pages, layouts)):
             if on_page:
                 on_page(page_index + 1, len(pdf.pages))
@@ -338,7 +545,7 @@ def extract_products(pdf_path, on_page=None, anthropic_key=None):
                 numeric_rows = {}
                 for line in block['lines']:
                     year = _integer(_zone(line, bounds['year']))
-                    if year in (year_current, year_prev):
+                    if year is not None and year in (year_current, year_prev):
                         if year in numeric_rows:
                             warnings.append(f'ano_duplicado:{year}')
                         else:
@@ -363,8 +570,13 @@ def extract_products(pdf_path, on_page=None, anthropic_key=None):
                            'sources': [source], 'description_source': source,
                            'description_candidates': [dict(source, warnings=list(warnings))]}
                 _validate_product(product)
+                if year_current is None:
+                    product['warnings'].append('ano_no_reconocido')
+                    product['needs_review'] = True
                 product['description_candidates'][0]['warnings'] = list(product['warnings'])
+                observations[page_index].append(product)
                 _insert_product(products, code, product)
+        products.metadata = _document_metadata(pdf_path, pdf.pages, layouts, observations, products, 'sales')
     if anthropic_key:
         try:
             _apply_vision_fallback(pdf_path, products, year_current, year_prev, anthropic_key)
@@ -374,10 +586,13 @@ def extract_products(pdf_path, on_page=None, anthropic_key=None):
 
 
 def extract_situation(pdf_path, anthropic_key=None):
-    products = {}
+    products = DocumentProducts()
     with pdfplumber.open(pdf_path) as pdf:
+        layouts = []
+        observations = [[] for _ in pdf.pages]
         for page_index, page in enumerate(pdf.pages):
             layout = _layout(page, 'situation')
+            layouts.append(layout)
             bounds = layout['bounds']
             for block in _product_blocks(page, layout):
                 code = block['anchor']['code']
@@ -399,7 +614,9 @@ def extract_situation(pdf_path, anthropic_key=None):
                            'warnings': warnings, 'needs_review': bool(warnings), '_page_idx': page_index,
                            'sources': [source], 'description_source': source,
                            'description_candidates': [dict(source, warnings=list(warnings))]}
+                observations[page_index].append(product)
                 _insert_product(products, code, product)
+        products.metadata = _document_metadata(pdf_path, pdf.pages, layouts, observations, products, 'situation')
     # The optional visual reader handles situation rows as well as sales rows.
     if anthropic_key:
         try:
@@ -553,7 +770,7 @@ def _order_unsafe(product):
         return False
     numerical_prefixes = ('campo_ausente:', 'total_discrepancia:', 'columnas_no_reconocidas',
                           'limites_fila_inciertos', 'codigo_duplicado:', 'ano_duplicado:')
-    return any(w.startswith(numerical_prefixes) for w in product.get('warnings', []))
+    return bool(product.get('_document_order_unsafe')) or any(w.startswith(numerical_prefixes) for w in product.get('warnings', []))
 
 
 def calculate_pedido(product):
@@ -572,6 +789,40 @@ def _desc_similarity(a, b):
         return 0.0
     wa, wb = set(_normal(a).split()), set(_normal(b).split())
     return len(wa & wb) / max(len(wa), len(wb))
+
+
+def _presentation_signature(description):
+    """Normalize quantities for warnings only; preserve the original name."""
+    units = {'ml': ('volume_ml', 1), 'cl': ('volume_ml', 10), 'l': ('volume_ml', 1000),
+             'mg': ('mass_g', .001), 'g': ('mass_g', 1), 'gr': ('mass_g', 1), 'kg': ('mass_g', 1000),
+             'capsula': ('capsules', 1), 'capsulas': ('capsules', 1), 'caps': ('capsules', 1),
+             'comprimido': ('tablets', 1), 'comprimidos': ('tablets', 1), 'comp': ('tablets', 1)}
+    text = _normal(description)
+    result = {}
+    for match in re.finditer(r'(?<![\d.,])(\d+(?:[.,]\d+)?)\s*(ml|cl|l|mg|kg|gr|g|capsulas?|caps|comprimidos?|comp)\b', text):
+        number, unit = match.groups()
+        if re.fullmatch(r'[1-9]\d{0,2}(?:\.\d{3})+', number):
+            number = number.replace('.', '')
+        quantity = float(number.replace(',', '.'))
+        category, factor = units[unit]
+        result.setdefault(category, set()).add(round(quantity * factor, 6))
+    for match in re.finditer(r'\b(?:spf|fps)\s*[-:]?\s*(\d+)\+?', text):
+        result.setdefault('spf', set()).add(int(match.group(1)))
+    return result
+
+
+def _presentations_conflict(descriptions):
+    signatures = [_presentation_signature(description) for description in descriptions]
+    for i, first in enumerate(signatures):
+        for second in signatures[i + 1:]:
+            dimensions = {'volume_ml', 'mass_g'}
+            first_dimensions, second_dimensions = first.keys() & dimensions, second.keys() & dimensions
+            if first_dimensions and second_dimensions and not first_dimensions & second_dimensions:
+                # Mass and volume cannot be equated without a source density.
+                return True
+            if any(not first[field].intersection(second[field]) for field in first.keys() & second.keys()):
+                return True
+    return False
 
 
 def _description_choice(entries):
@@ -608,18 +859,26 @@ def _description_choice(entries):
 
 def compare_products(products1, products2, name1='Farmacia 1', name2='Farmacia 2', situation1=None, situation2=None):
     sit1, sit2 = situation1 or {}, situation2 or {}
+    document_unsafe1 = any(getattr(document, 'metadata', {}).get('order_unsafe', False)
+                           for document in (products1, situation1) if document is not None)
+    document_unsafe2 = any(getattr(document, 'metadata', {}).get('order_unsafe', False)
+                           for document in (products2, situation2) if document is not None)
     all_codes = set(products1) | set(products2) | set(sit1) | set(sit2)
     year_values = [p.get('year_current') for p in list(products1.values()) + list(products2.values()) if p.get('year_current')]
-    year_current = max(year_values, default=_date.today().year)
-    year_prev = year_current - 1
+    year_current = max(year_values, default=None)
+    year_prev = year_current - 1 if year_current is not None else None
     def value(product, field, fallback='—'):
         return fallback if product is None else product.get(field)
+    def annual_value(product, year, field, fallback):
+        if product is None or year is None:
+            return fallback
+        for suffix in ('current', 'prev'):
+            if product.get('year_' + suffix) == year:
+                return product.get(field + '_' + suffix)
+        return fallback
     def totals(product):
-        if product is None:
-            return '—', '—'
-        if product.get('year_current', year_current) == year_prev:
-            return '—', product.get('total_current')
-        return product.get('total_current'), product.get('total_prev')
+        return (annual_value(product, year_current, 'total', '—'),
+                annual_value(product, year_prev, 'total', '—'))
     results = []
     for code in all_codes:
         p1, p2, s1, s2 = products1.get(code), products2.get(code), sit1.get(code), sit2.get(code)
@@ -629,6 +888,8 @@ def compare_products(products1, products2, name1='Farmacia 1', name2='Farmacia 2
         good_descriptions = [c.get('description', '') for c in candidates if not _description_suspicious(c.get('description', ''))]
         if any(_desc_similarity(description, other) < .5 for other in good_descriptions):
             warnings.append('desc_inconsistente:revisar_fuentes')
+        if _presentations_conflict(good_descriptions):
+            warnings.append('presentacion_inconsistente:revisar_fuentes')
         for product, _, pharmacy in entries:
             if product:
                 warnings.extend(f'{pharmacy}:{w}' for w in product.get('warnings', []))
@@ -636,8 +897,8 @@ def compare_products(products1, products2, name1='Farmacia 1', name2='Farmacia 2
         total2, prev2 = totals(p2)
         has1, has2 = bool(p1 or s1), bool(p2 or s2)
         pedido1, pedido2 = calculate_pedido(p1), calculate_pedido(p2)
-        pedido_no_calculable1 = bool((p1 and pedido1 is None) or _order_unsafe(s1))
-        pedido_no_calculable2 = bool((p2 and pedido2 is None) or _order_unsafe(s2))
+        pedido_no_calculable1 = bool(document_unsafe1 or (p1 and pedido1 is None) or _order_unsafe(s1))
+        pedido_no_calculable2 = bool(document_unsafe2 or (p2 and pedido2 is None) or _order_unsafe(s2))
         results.append({
             'code': code, 'description': description,
             'status': 'both' if has1 and has2 else 'only1' if has1 else 'only2',
@@ -653,10 +914,10 @@ def compare_products(products1, products2, name1='Farmacia 1', name2='Farmacia 2
             'warnings': _unique(warnings), 'needs_review': bool(warnings),
             'parado1': s1 is not None, 'parado2': s2 is not None,
             'caducidad1': value(s1, 'caducidad', ''), 'caducidad2': value(s2, 'caducidad', ''),
-            'months1_current': value(p1, 'months_current', [0] * 12),
-            'months1_prev': value(p1, 'months_prev', [0] * 12),
-            'months2_current': value(p2, 'months_current', [0] * 12),
-            'months2_prev': value(p2, 'months_prev', [0] * 12),
+            'months1_current': annual_value(p1, year_current, 'months', [None] * 12),
+            'months1_prev': annual_value(p1, year_prev, 'months', [None] * 12),
+            'months2_current': annual_value(p2, year_current, 'months', [None] * 12),
+            'months2_prev': annual_value(p2, year_prev, 'months', [None] * 12),
             'sources': sources, 'description_source': description_source,
             'description_candidates': candidates,
         })

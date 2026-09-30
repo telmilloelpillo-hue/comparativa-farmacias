@@ -910,8 +910,8 @@
   <!-- TABLE -->
   <div class="table-section" id="tableSection">
     {% set has_sit = has_sit1 or has_sit2 %}
-    {% set yr_cur  = results[0].year_current if results else current_year %}
-    {% set yr_prev = results[0].year_prev    if results else (current_year - 1) %}
+    {% set yr_cur  = (results[0].year_current or '?') if results else current_year %}
+    {% set yr_prev = (results[0].year_prev or '?') if results else (current_year - 1) %}
 
     {# Column index mapping (0-based visible cols):
        0=Código  1=Descripción
@@ -923,6 +923,7 @@
     {% set p2_base = p1_ped + 1 %}
     {% set p2_ped  = p2_base + 4 + (1 if has_sit else 0) %}
 
+    {% include 'documentos_resumen.html' %}
     {% set n_review = results | selectattr('needs_review') | list | length %}
     {% if n_review > 0 %}
     <p style="margin:0 0 6px;font-size:0.8rem;color:#92400e;background:#fef9c3;padding:4px 10px;border-radius:4px;border:1px solid #fcd34d">
@@ -942,14 +943,14 @@
           <th class="th-z sortable" data-col="{{ p1_base+1 }}"   onclick="sortTable({{ p1_base+1 }})">S.min <span class="sort-icon"></span></th>
           <th class="th-z sortable" data-col="{{ p1_base+2 }}"   onclick="sortTable({{ p1_base+2 }})">V.{{ yr_cur }} <span class="sort-icon"></span></th>
           <th class="th-z sortable" data-col="{{ p1_base+3 }}"   onclick="sortTable({{ p1_base+3 }})">V.{{ yr_prev }} <span class="sort-icon"></span></th>
-          {% if has_sit %}<th class="th-z sortable" data-col="{{ p1_base+4 }}" onclick="sortTable({{ p1_base+4 }})">S.365 <span class="sort-icon"></span></th>{% endif %}
+          {% if has_sit %}<th class="th-z sortable" data-col="{{ p1_base+4 }}" onclick="sortTable({{ p1_base+4 }})" title="Stock sin movimientos según los criterios del informe de situación">Parado <span class="sort-icon"></span></th>{% endif %}
           <th class="th-z sortable" data-col="{{ p1_ped }}"      onclick="sortTable({{ p1_ped }})">Pedido <span class="sort-icon"></span></th>
 
           <th class="th-b col-divider sortable" data-col="{{ p2_base }}"   onclick="sortTable({{ p2_base }})">Stock <span class="sort-icon"></span></th>
           <th class="th-b sortable" data-col="{{ p2_base+1 }}"             onclick="sortTable({{ p2_base+1 }})">S.min <span class="sort-icon"></span></th>
           <th class="th-b sortable" data-col="{{ p2_base+2 }}"             onclick="sortTable({{ p2_base+2 }})">V.{{ yr_cur }} <span class="sort-icon"></span></th>
           <th class="th-b sortable" data-col="{{ p2_base+3 }}"             onclick="sortTable({{ p2_base+3 }})">V.{{ yr_prev }} <span class="sort-icon"></span></th>
-          {% if has_sit %}<th class="th-b sortable" data-col="{{ p2_base+4 }}" onclick="sortTable({{ p2_base+4 }})">S.365 <span class="sort-icon"></span></th>{% endif %}
+          {% if has_sit %}<th class="th-b sortable" data-col="{{ p2_base+4 }}" onclick="sortTable({{ p2_base+4 }})" title="Stock sin movimientos según los criterios del informe de situación">Parado <span class="sort-icon"></span></th>{% endif %}
           <th class="th-b sortable" data-col="{{ p2_ped }}"                onclick="sortTable({{ p2_ped }})">Pedido <span class="sort-icon"></span></th>
         </tr>
       </thead>
@@ -1419,10 +1420,10 @@ function renderFarmTab(suffix, r) {
   const baseCards = [
     { label: 'Stock actual',     value: displayNumeric(stockRaw), cls: stock === 0 && numericValue(totCur) > 0 ? 'red' : '' },
     { label: 'Stock minimo',     value: displayNumeric(smin) },
-    { label: 'Ventas ' + r.year_current, value: displayNumeric(totCur) },
-    { label: 'Ventas ' + r.year_prev,    value: displayNumeric(totPrev) },
+    { label: 'Ventas ' + (r.year_current ?? '(revisar año)'), value: displayNumeric(totCur) },
+    { label: 'Ventas ' + (r.year_prev ?? '(revisar año)'),    value: displayNumeric(totPrev) },
   ];
-  if (HAS_SIT) baseCards.push({ label: 'Stock parado 365d', value: displayNumeric(s365), cls: numericValue(s365) > 0 ? 'blue' : '' });
+  if (HAS_SIT) baseCards.push({ label: 'Stock sin movimientos', value: displayNumeric(s365), cls: numericValue(s365) > 0 ? 'blue' : '' });
 
   document.getElementById('base-' + suffix).innerHTML = baseCards.map(c =>
     `<div class="base-card">
@@ -1793,13 +1794,13 @@ function downloadPedidoPDF() {
 // ─── CSV EXPORT ───────────────────────────────────────────────────────────────
 function exportCSV() {
   const hasSit = HAS_SIT;
-  const yr0 = PRODUCTS[0] ? PRODUCTS[0].year_current : new Date().getFullYear();
-  const yr1 = PRODUCTS[0] ? PRODUCTS[0].year_prev    : new Date().getFullYear() - 1;
+  const yr0 = PRODUCTS[0] ? (PRODUCTS[0].year_current ?? '?') : new Date().getFullYear();
+  const yr1 = PRODUCTS[0] ? (PRODUCTS[0].year_prev ?? '?') : new Date().getFullYear() - 1;
 
   let header = `Codigo,Descripcion,Stock ${NAME1},Smin ${NAME1},V.${yr0} ${NAME1},V.${yr1} ${NAME1}`;
-  if (hasSit) header += `,S365 ${NAME1}`;
+  if (hasSit) header += `,Parado ${NAME1}`;
   header += `,Pedido ${NAME1},Stock ${NAME2},Smin ${NAME2},V.${yr0} ${NAME2},V.${yr1} ${NAME2}`;
-  if (hasSit) header += `,S365 ${NAME2}`;
+  if (hasSit) header += `,Parado ${NAME2}`;
   header += `,Pedido ${NAME2}\n`;
 
   const visible = Array.from(document.querySelectorAll('tbody tr.data-row:not(.hidden-row)'));

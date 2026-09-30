@@ -31,6 +31,18 @@ Cada resultado conserva `sources`, `description_candidates` y `description_sourc
 
 Las descripciones se imprimen completas con altura de fila adaptable en los PDF de comparativa, plantilla y pedido.
 
+`presentacion_inconsistente` distingue diferencias de cantidad, unidad o protección solar para el mismo código. Admite cantidades pegadas al nombre y compara unidades equivalentes (100 ml = 0,1 l) sin cambiar el texto original. Gramos y mililitros no se convierten entre sí. Los nombres alternativos y su procedencia permanecen disponibles para revisión.
+
+## Controles del documento completo
+
+Los extractores devuelven `DocumentProducts`, compatible con el diccionario anterior, y metadatos en `.metadata`. Cada página conserva su número de productos, clasificación, controles de pies y advertencias. Los pies «Totales» y «Suma y Sigue» se contrastan con las filas acumuladas hasta esa página; no se suman entre páginas. El resumen anual final se valida por año y por mes.
+
+Una fila omitida, una página ilegible o un acumulado discrepante producen un aviso documental y suspenden los pedidos automáticos afectados. Las páginas que contienen únicamente criterios se reconocen como tales. Una tabla desconocida con criterios debajo sigue requiriendo revisión.
+
+Se conserva el rango declarado y la opción «Mes actual». `compare_document_metadata` avisa cuando difieren los periodos o criterios de ventas entre farmacias. La web, el pedido y el PDF muestran los criterios sin recortar los meses ni inventar un periodo común. Las series de años distintos se alinean por año; ausencia de datos conserva valores desconocidos.
+
+El recuento de cada farmacia en la cabecera del PDF incluye la unión de ventas y situación, indicando aparte cuántos artículos aparecen en ventas. El stock de un código que figura en ambos informes no se suma dos veces. La columna «Parado» corresponde a los criterios originales del informe, que pueden ser días o fechas explícitas.
+
 ## Lectura visual alternativa
 
 Si hay una clave Anthropic configurada, `_apply_vision_fallback` envía recortes de las filas dudosas a la lectura visual, con un máximo de ocho filas por documento. Solo acepta el mismo código y una estructura válida; los meses deben tener doce valores y cuadrar con el total impreso. No sobrescribe cifras ya verificadas para reparar únicamente un nombre.
@@ -56,3 +68,11 @@ PHARMACY_PDF_FIXTURE_DIR=/ruta/a/los/cuatro/originales bin/python -B -m pytest -
 ```
 
 Se han comprobado, entre otros, agua de 5000 ml, algodón de 50 g, cepillo coral, lipgloss Nº3, devoluciones negativas y stock negativo. Las ventas coinciden con los totales originales: Zarzuelo 539/1034 y Barris 700/1863 para 2026/2025.
+
+La validación del corpus de varios laboratorios utiliza un manifiesto privado, fuera de Git:
+
+```bash
+PHARMACY_CORPUS_MANIFEST=exports/pdf-corpus/manifest.json bin/python -B -m pytest -q -p no:cacheprovider
+```
+
+Cada entrada contiene `path`, `kind_hint` (`sales`/`situation`) y `expected`: número de productos, stock, totales anuales en ventas y filas seleccionadas transcritas visualmente en `rows`. Los originales y sus cantidades quedan en el entorno local. Los casos públicos de regresión son sintéticos. Esta base permite comprobar cambios futuros; no constituye un entrenamiento de un modelo ni garantiza formatos aún no revisados.

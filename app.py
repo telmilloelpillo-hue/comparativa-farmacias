@@ -8,7 +8,8 @@ try:
     load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
 except ImportError:
     pass
-from pdf_parser import extract_products, compare_products, detect_lab, extract_situation, detect_pdf_header
+from pdf_parser import (extract_products, compare_products, detect_lab, extract_situation,
+                        detect_pdf_header, compare_document_metadata)
 
 try:
     import anthropic as _anthropic
@@ -107,6 +108,30 @@ C_PEDIDO    = colors.HexColor('#dcfce7')   # verde suave → pedido > 0
 def _pdf_value(value):
     """Distinguish an unread figure from zero or a non-applicable column."""
     return 'Revisar' if value is None or value == '⚠️' else str(value)
+
+
+def _document_summaries(documents, name1, name2):
+    """Describe the printed selection criteria without inventing a common period."""
+    summaries = []
+    for key, document in documents.items():
+        pharmacy = name1 if key in ('pdf1', 'sit1') else name2
+        sales = key in ('pdf1', 'pdf2')
+        period = document.get('period', {})
+        criteria = document.get('criteria', {})
+        if sales:
+            detail = (f'{period["from"]} a {period["to"]}'
+                      if period.get('from') and period.get('to') else 'Periodo no indicado')
+            if period.get('current_month') is not None:
+                detail += ' · Mes actual: ' + ('sí' if period['current_month'] else 'no')
+        elif criteria.get('inactive_days') is not None:
+            detail = f'Sin movimientos desde hace {criteria["inactive_days"]} días'
+        elif criteria.get('inactive_from') and criteria.get('inactive_to'):
+            detail = f'Sin movimientos: {criteria["inactive_from"]} a {criteria["inactive_to"]}'
+        else:
+            detail = 'Criterios de situación no indicados'
+        summaries.append({'label': f'{pharmacy} · {"Ventas" if sales else "Situación"}',
+                          'file': document.get('file', ''), 'detail': detail})
+    return summaries
 
 
 # ── Compatibilidad de enlaces antiguos ─────────────────────────────────────────
@@ -299,8 +324,10 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
             # Preserve the original upload name for each extraction source.
             for products, which in [(products1, 'pdf1'), (products2, 'pdf2'),
                                     (situation1, 'sit1'), (situation2, 'sit2')]:
-                if products and source_files.get(which):
+                if products is not None and source_files.get(which):
                     filename = os.path.basename(source_files[which])
+                    if hasattr(products, 'metadata'):
+                        products.metadata['file'] = filename
                     for product in products.values():
                         source_entries = (product.get('sources', [])
                                           + product.get('description_candidates', [])
@@ -314,6 +341,9 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
                 products1, products2, name1, name2,
                 situation1=situation1, situation2=situation2,
             )
+            document_info = compare_document_metadata(products1, products2, situation1, situation2)
+            document_info['document_summaries'] = _document_summaries(
+                document_info['documents'], name1, name2)
 
             upd(82, 'Generando informe PDF…')
             comp_token = str(uuid.uuid4())
@@ -324,6 +354,7 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
                 results, pdf_path, name1, name2,
                 len(products1), len(products2), lab1,
                 has_situation1=has_sit1, has_situation2=has_sit2,
+                document_info=document_info,
             )
 
             upd(93, 'Guardando datos…')
@@ -346,6 +377,7 @@ def _run_comparison(job_token, path1, path2, path_sit1, path_sit2,
                     'has_sit1':     has_sit1,
                     'has_sit2':     has_sit2,
                     'current_year': datetime.now().year,
+                    **document_info,
                 }, f, ensure_ascii=False)
 
             import shutil as _shutil
@@ -685,14 +717,14 @@ def pregunta():
   Ventas {p.get('year_current')}: {p.get('total1')}  |  Ventas {p.get('year_prev')}: {p.get('total1_prev')}
   Consumo medio mensual (últ. 3 meses): {p.get('avgMonthly1', '—')} uds
   Tendencia: {p.get('trend1', '—')}  |  Días de cobertura: {p.get('diasCobertura1', '—')}
-  Stock parado 365d: {p.get('s365_1')}
+  Stock sin movimientos según informe: {p.get('s365_1')}
 
 {name2}:
   Stock actual: {p.get('stock2')}  |  Stock mínimo: {p.get('smin2')}
   Ventas {p.get('year_current')}: {p.get('total2')}  |  Ventas {p.get('year_prev')}: {p.get('total2_prev')}
   Consumo medio mensual (últ. 3 meses): {p.get('avgMonthly2', '—')} uds
   Tendencia: {p.get('trend2', '—')}  |  Días de cobertura: {p.get('diasCobertura2', '—')}
-  Stock parado 365d: {p.get('s365_2')}"""
+  Stock sin movimientos según informe: {p.get('s365_2')}"""
 
     prompt = (
         "Eres un experto en gestión de stock de farmacia. Responde de forma concisa y directa "
@@ -807,7 +839,8 @@ def too_large(e):
 
 # ── Generación del PDF ─────────────────────────────────────────────────────────
 def generate_pdf(results, output_path, name1, name2, count1, count2,
-                 lab_name='', has_situation1=False, has_situation2=False):
+                 lab_name='', has_situation1=False, has_situation2=False,
+                 document_info=None):
 
     from datetime import datetime as _dt
 
@@ -830,8 +863,8 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
 
     show_s365 = has_situation1 or has_situation2
 
-    yr_cur  = results[0]['year_current'] if results else datetime.now().year
-    yr_prev = results[0]['year_prev']    if results else datetime.now().year - 1
+    yr_cur  = (results[0].get('year_current') or '?') if results else datetime.now().year
+    yr_prev = (results[0].get('year_prev') or '?') if results else datetime.now().year - 1
 
     today   = _dt.today().strftime('%d/%m/%Y')
     n_both  = sum(1 for r in results if r['status'] == 'both')
@@ -843,7 +876,8 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     lab_part   = f"  ·  {lab_name}" if lab_name else ""
     title_text = f"Comparativa de Stock{lab_part}  ·  {name1} vs {name2}  ·  {today}"
     stats_parts = [
-        f"{name1}: {count1} prod.", f"{name2}: {count2} prod.",
+        f"{name1}: {n_both + n_only1} prod. ({count1} en ventas)",
+        f"{name2}: {n_both + n_only2} prod. ({count2} en ventas)",
         f"Total: {len(results)}", f"Ambas: {n_both}",
         f"Solo {name1}: {n_only1}", f"Solo {name2}: {n_only2}",
     ]
@@ -869,10 +903,10 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
             hdr('Cód', size=7), hdr('Descripción', size=7),
             hdr('Stock',size=7), hdr('S.min',size=7),
             hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7),
-            hdr('S.365',size=7), hdr('Pedido',size=7),
+            hdr('Parado',size=7), hdr('Pedido',size=7),
             hdr('Stock',size=7), hdr('S.min',size=7),
             hdr(f'V.{yr_cur}',size=7), hdr(f'V.{yr_prev}',size=7),
-            hdr('S.365',size=7), hdr('Pedido',size=7),
+            hdr('Parado',size=7), hdr('Pedido',size=7),
         ]
         span1_end = 7; span2_start = 8; span2_end = 13
         divider_col = 7
@@ -880,8 +914,8 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
         pedido1_col = 7; pedido2_col = 13
         col_widths = [
             1.6*cm, 5.5*cm,
-            1.1*cm, 1.1*cm, 1.2*cm, 1.2*cm, 1.1*cm, 1.2*cm,
-            1.1*cm, 1.1*cm, 1.2*cm, 1.2*cm, 1.1*cm, 1.2*cm,
+            1.1*cm, 1.1*cm, 1.2*cm, 1.2*cm, 1.3*cm, 1.2*cm,
+            1.1*cm, 1.1*cm, 1.2*cm, 1.2*cm, 1.3*cm, 1.2*cm,
         ]
     else:
         # Cols 0-1: Cód/Desc | 2-6: Farm1 | 7-11: Farm2
@@ -1009,7 +1043,7 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
     ]
     if show_s365:
         legend_items.append((C_PARADO, colors.HexColor('#e65100'),
-                             'Stock parado (+365d) · celda naranja = S.365'))
+                             'Stock sin movimientos según informe'))
 
     legend_data = [[]]
     for bg, fg, label in legend_items:
@@ -1041,7 +1075,19 @@ def generate_pdf(results, output_path, name1, name2, count1, count2,
         ('LEFTPADDING',(0,0),(-1,0),10),('RIGHTPADDING',(0,0),(-1,0),10),
     ]))
 
-    elements = [title_table, Spacer(1,0.2*cm), legend_table, Spacer(1,0.15*cm), table]
+    elements = [title_table, Spacer(1,0.2*cm)]
+    document_info = document_info or {}
+    summaries = document_info.get('document_summaries', _document_summaries(
+        document_info.get('documents', {}), name1, name2))
+    for summary in summaries:
+        elements.append(Paragraph(xml_escape(f'{summary["label"]}: {summary["detail"]}'), cell_style))
+    notice_style = ParagraphStyle('document_notice', parent=cell_style,
+        textColor=colors.HexColor('#92400e'), spaceBefore=3, spaceAfter=3)
+    for warning in document_info.get('document_warnings', []):
+        elements.append(Paragraph(xml_escape(warning), notice_style))
+    if document_info.get('periods_differ'):
+        elements.append(Paragraph('Revisa los periodos antes de usar el pedido sugerido.', notice_style))
+    elements += [Spacer(1,0.15*cm), legend_table, Spacer(1,0.15*cm), table]
 
     # ── Tabla logística (solo si hay informe de situación) ────────────────────
     if show_s365:
@@ -1197,7 +1243,7 @@ def _build_logistics_table(results, name1, name2,
 
         e_data = [[
             log_hdr('Código'), log_hdr('Descripción'),
-            log_hdr(f'S.365 {name1}'), log_hdr(f'S.365 {name2}'),
+            log_hdr(f'Parado {name1}'), log_hdr(f'Parado {name2}'),
         ]]
         for c in casos_exceso:
             e_data.append([
@@ -1227,7 +1273,7 @@ def _build_logistics_table(results, name1, name2,
 
         c_data = [[
             log_hdr('Código'), log_hdr('Descripción'),
-            log_hdr('Farmacia'), log_hdr('S.365'), log_hdr('Caduca'), log_hdr('Meses restantes'),
+            log_hdr('Farmacia'), log_hdr('Parado'), log_hdr('Caduca'), log_hdr('Meses restantes'),
         ]]
         for c in casos_caducidad:
             c_data.append([
@@ -1396,8 +1442,8 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab,
         ),
     ]
 
-    yr_cur  = results[0]['year_current'] if results else hoy.year
-    yr_prev = results[0]['year_prev']    if results else hoy.year - 1
+    yr_cur  = (results[0].get('year_current') or '?') if results else hoy.year
+    yr_prev = (results[0].get('year_prev') or '?') if results else hoy.year - 1
 
     # ── Anchos de columna (landscape A4 usable ≈ 27.1cm) ──────────────────────
     # verde | cód | desc | st1 | smin1 | vcur1 | vprev1 | [s365_1] | ped1
@@ -1443,7 +1489,7 @@ def _generate_plantilla_pdf(results, output_path, name1, name2, lab,
             Paragraph('S.min',       hdr_c_st),
             Paragraph(f'V.{yr_cur}', hdr_c_st),
             Paragraph(f'V.{yr_prev}',hdr_c_st),
-            Paragraph('S.365',       hdr_c_st),
+            Paragraph('Parado',      hdr_c_st),
             Paragraph('Ped.',        hdr_c_st),
         ]
     else:
